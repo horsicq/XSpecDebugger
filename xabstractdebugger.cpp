@@ -743,6 +743,10 @@ QString XAbstractDebugger::debugActionToString(DEBUG_ACTION debugAction)
     {
         sResult=QString("SetSoftBP %1").arg(debugAction.var[0].toULongLong(),0,16);
     }
+    else if(debugAction.type==DBT_REMOVESOFTWAREBREAKPOINT)
+    {
+        sResult=QString("RemoveSoftBP %1").arg(debugAction.var[0].toULongLong(),0,16);
+    }
 
     // TODO
 
