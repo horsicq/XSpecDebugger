@@ -159,6 +159,19 @@ public:
         quint64 nParameter9;
     };
 
+    enum DBT
+    {
+        DBT_UNKNOWN=0,
+        DBT_SETSOFTWAREBREAKPOINT,
+        DBT_REMOVESOFTWAREBREAKPOINT
+    };
+
+    struct DEBUG_ACTION
+    {
+        DBT type;
+        QVariant var[4];
+    };
+
     explicit XAbstractDebugger(QObject *pParent=nullptr);
     virtual bool load()=0;
     virtual bool stop();
@@ -192,6 +205,8 @@ public:
     bool removeBP(qint64 nAddress,BPT bpType);
 
     bool setSoftwareBreakpoint(qint64 nAddress,qint32 nCount=-1,QString sInfo=QString());
+    bool removeSoftwareBreakpoint(qint64 nAddress);
+    bool isSoftwareBreakpointPresent(qint64 nAddress);
 
     bool setFunctionHook(QString sFunctionName);
     bool removeFunctionHook(QString sFunctionName);
@@ -246,6 +261,9 @@ public:
     bool bIsSystemCode(qint64 nAddress);
 
     bool dumpToFile(QString sFileName);
+
+    static QString debugActionToString(DEBUG_ACTION debugAction);
+    static DEBUG_ACTION stringToDebugAction(QString sString);
 
 public slots:
     void process();

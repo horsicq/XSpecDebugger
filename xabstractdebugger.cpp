@@ -204,6 +204,16 @@ bool XAbstractDebugger::setSoftwareBreakpoint(qint64 nAddress, qint32 nCount, QS
     return setBP(nAddress,BPT_CODE_SOFTWARE,BPI_USER,nCount,sInfo);
 }
 
+bool XAbstractDebugger::removeSoftwareBreakpoint(qint64 nAddress)
+{
+    return removeBP(nAddress,BPT_CODE_SOFTWARE);
+}
+
+bool XAbstractDebugger::isSoftwareBreakpointPresent(qint64 nAddress)
+{
+    return g_mapSoftwareBreakpoints.contains(nAddress);
+}
+
 bool XAbstractDebugger::setFunctionHook(QString sFunctionName)
 {
     bool bResult=false;
@@ -723,6 +733,29 @@ bool XAbstractDebugger::dumpToFile(QString sFileName)
     }
 
     return bResult;
+}
+
+QString XAbstractDebugger::debugActionToString(DEBUG_ACTION debugAction)
+{
+    QString sResult;
+
+    if(debugAction.type==DBT_SETSOFTWAREBREAKPOINT)
+    {
+        sResult=QString("SetSoftBP %1").arg(debugAction.var[0].toULongLong(),0,16);
+    }
+
+    // TODO
+
+    return sResult;
+}
+
+XAbstractDebugger::DEBUG_ACTION XAbstractDebugger::stringToDebugAction(QString sString)
+{
+    DEBUG_ACTION result={};
+
+    // TODO
+
+    return result;
 }
 
 void XAbstractDebugger::process()
