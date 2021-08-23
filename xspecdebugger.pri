@@ -17,6 +17,11 @@ linux {
     SOURCES += $$PWD/xlinuxdebugger.cpp
 }
 
+osx {
+    HEADERS += $$PWD/xosxdebugger.h
+    SOURCES += $$PWD/xosxdebugger.cpp
+}
+
 !contains(XCONFIG, xprocess) {
     XCONFIG += xprocess
     include($$PWD/../XProcess/xprocess.pri)

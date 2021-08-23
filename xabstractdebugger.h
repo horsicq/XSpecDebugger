@@ -34,6 +34,7 @@ public:
     struct OPTIONS
     {
         QString sFileName;
+        QString sDirectory;
         QString sArguments;
         bool bShowConsole;
         bool bBreakpointOnTargetEntryPoint;
