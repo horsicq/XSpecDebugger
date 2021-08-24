@@ -45,6 +45,7 @@ bool XOSXDebugger::load()
             // TODO redirect console
 
             // TODO Execute
+            // TODO Execute function for OSX/Linux
 
             // Never reach
         }
