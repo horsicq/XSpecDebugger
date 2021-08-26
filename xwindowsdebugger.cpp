@@ -29,7 +29,7 @@ bool XWindowsDebugger::load()
 {
     bool bResult=false;
 
-    qint32 nFlags=DEBUG_PROCESS|DEBUG_ONLY_THIS_PROCESS|CREATE_SUSPENDED;
+    qint32 nFlags=DEBUG_PROCESS|DEBUG_ONLY_THIS_PROCESS|CREATE_SUSPENDED; // TODO check CREATE_UNICODE_ENVIRONMENT | CREATE_NEW_CONSOLE;
 
     if(!(getOptions()->bShowConsole))
     {
@@ -62,7 +62,7 @@ bool XWindowsDebugger::load()
             while(g_bIsDebugActive)
             {
                 DEBUG_EVENT dbgEvent={0};
-                WaitForDebugEvent(&dbgEvent,INFINITE);
+                WaitForDebugEvent(&dbgEvent,INFINITE); // TODO CHeck return
 
                 quint32 nStatus=DBG_CONTINUE;
 

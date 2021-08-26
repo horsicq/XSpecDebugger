@@ -26,6 +26,8 @@
 #include "xbinary.h"
 #include "xcapstone.h"
 
+// TODO Attach
+// TODO Detach
 class XAbstractDebugger : public QObject
 {
     Q_OBJECT
