@@ -762,6 +762,19 @@ XAbstractDebugger::DEBUG_ACTION XAbstractDebugger::stringToDebugAction(QString s
     return result;
 }
 
+bool XAbstractDebugger::stepInto(void *hThread)
+{
+    return setSingleStep(hThread);
+}
+
+bool XAbstractDebugger::stepOver(void *hThread)
+{
+    // TODO
+    // BP on next instruction if invalid instruction setSingleStep
+
+    return false;
+}
+
 void XAbstractDebugger::process()
 {
     load();

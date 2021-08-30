@@ -268,6 +268,9 @@ public:
     static QString debugActionToString(DEBUG_ACTION debugAction);
     static DEBUG_ACTION stringToDebugAction(QString sString);
 
+    bool stepInto(void *hThread);
+    bool stepOver(void *hThread);
+
 public slots:
     void process();
 
