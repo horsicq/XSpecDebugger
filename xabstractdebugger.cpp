@@ -575,6 +575,25 @@ bool XAbstractDebugger::setCurrentAddress(void *hThread, qint64 nAddress)
     return bResult;
 }
 
+qint64 XAbstractDebugger::getCurrentAddress(void *hThread)
+{
+    qint64 nAddress=0;
+#ifdef Q_OS_WIN
+    CONTEXT context={0};
+    context.ContextFlags=CONTEXT_CONTROL; // EIP
+
+    if(GetThreadContext(hThread,&context))
+    {
+#ifndef Q_OS_WIN64
+        nAddress=context.Eip;
+#else
+        nAddress=context.Rip;
+#endif
+    }
+#endif
+    return nAddress;
+}
+
 bool XAbstractDebugger::_setStep(void *hThread)
 {
     bool bResult=false;
@@ -769,10 +788,23 @@ bool XAbstractDebugger::stepInto(void *hThread)
 
 bool XAbstractDebugger::stepOver(void *hThread)
 {
-    // TODO
-    // BP on next instruction if invalid instruction setSingleStep
+    bool bResult=false;
 
-    return false;
+    qint64 nAddress=getCurrentAddress(hThread);
+    QByteArray baData=read_array(nAddress,15);
+
+    XCapstone::OPCODE_ID opcodeID=XCapstone::getOpcodeID(g_handle,nAddress,baData.data(),baData.size());
+
+    if(XCapstone::isRetOpcode(opcodeID.nOpcodeID)||XCapstone::isJmpOpcode(opcodeID.nOpcodeID))
+    {
+        bResult=setSingleStep(hThread);
+    }
+    else
+    {
+        bResult=setBP(nAddress+opcodeID.nSize,BPT_CODE_SOFTWARE,BPI_STEPOVER,1);
+    }
+
+    return bResult;
 }
 
 void XAbstractDebugger::process()

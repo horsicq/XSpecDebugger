@@ -64,7 +64,8 @@ public:
         BPI_PROCESSENTRYPOINT,
         BPI_FUNCTIONENTER,
         BPI_FUNCTIONLEAVE,
-        BPI_STEP
+        BPI_STEPINTO,
+        BPI_STEPOVER
     };
 
     struct BREAKPOINT
@@ -250,6 +251,7 @@ public:
     bool resumeOtherThreads(void *hCurrentThread);
 
     bool setCurrentAddress(void *hThread,qint64 nAddress);
+    qint64 getCurrentAddress(void *hThread);
     bool _setStep(void *hThread);
     bool setSingleStep(void *hThread,QString sInfo="");
 
