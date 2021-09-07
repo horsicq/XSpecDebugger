@@ -646,6 +646,7 @@ QMap<QString, QVariant> XAbstractDebugger::getRegisters(void *hThread)
         mapResult.insert("DS",(quint32)(context.SegDs));
         mapResult.insert("CS",(quint32)(context.SegCs));
         mapResult.insert("SS",(quint32)(context.SegSs));
+    #ifndef Q_OS_WIN64
         mapResult.insert("EDI",(quint32)(context.Edi));
         mapResult.insert("ESI",(quint32)(context.Esi));
         mapResult.insert("EBX",(quint32)(context.Ebx));
@@ -655,6 +656,26 @@ QMap<QString, QVariant> XAbstractDebugger::getRegisters(void *hThread)
         mapResult.insert("EBP",(quint32)(context.Ebp));
         mapResult.insert("EIP",(quint32)(context.Eip));
         mapResult.insert("ESP",(quint32)(context.Esp));
+    #else
+        mapResult.insert("RDI",(quint32)(context.Rdi));
+        mapResult.insert("RSI",(quint32)(context.Rsi));
+        mapResult.insert("RBX",(quint32)(context.Rbx));
+        mapResult.insert("RDX",(quint32)(context.Rdx));
+        mapResult.insert("RCX",(quint32)(context.Rcx));
+        mapResult.insert("RAX",(quint32)(context.Rax));
+        mapResult.insert("RBP",(quint32)(context.Rbp));
+        mapResult.insert("RIP",(quint32)(context.Rip));
+        mapResult.insert("RSP",(quint32)(context.Rsp));
+
+        mapResult.insert("R8",(quint32)(context.R8));
+        mapResult.insert("R9",(quint32)(context.R9));
+        mapResult.insert("R10",(quint32)(context.R10));
+        mapResult.insert("R11",(quint32)(context.R11));
+        mapResult.insert("R12",(quint32)(context.R12));
+        mapResult.insert("R13",(quint32)(context.R13));
+        mapResult.insert("R14",(quint32)(context.R14));
+        mapResult.insert("R15",(quint32)(context.R15));
+    #endif
         mapResult.insert("EFLAGS",(quint32)(context.EFlags));
     }
 #endif
@@ -671,10 +692,15 @@ XAbstractDebugger::FUNCTION_INFO XAbstractDebugger::getFunctionInfo(void *hThrea
 
     if(GetThreadContext(hThread,&context))
     {
-        // TODO 64
+    #ifndef Q_OS_WIN64
         quint64 nSP=(quint32)(context.Esp);
         quint64 nIP=(quint32)(context.Eip);
+    #else
+        quint64 nSP=(quint64)(context.Rsp);
+        quint64 nIP=(quint64)(context.Rip);
+    #endif
 
+        // TODO 64!
         result.nAddress=nIP;
         result.nRetAddress=read_uint32((quint32)nSP);
         result.nParameter0=read_uint32((quint32)(nSP+4+0*4));
@@ -704,10 +730,13 @@ qint64 XAbstractDebugger::getRetAddress(void *hThread)
 
     if(GetThreadContext(hThread,&context))
     {
-        // TODO 64
+    #ifndef Q_OS_WIN64
         quint64 nSP=(quint32)(context.Esp);
-
         nAddress=read_uint32((quint32)nSP);
+    #else
+        quint64 nSP=(quint64)(context.Rsp);
+        nAddress=read_uint64((quint64)nSP);
+    #endif
     }
 #endif
 

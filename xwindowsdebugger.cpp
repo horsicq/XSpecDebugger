@@ -135,14 +135,25 @@ void XWindowsDebugger::cleanUp()
 
 QString XWindowsDebugger::getArch()
 {
-    // TODO
-    return "386";
+    QString sResult;
+    // TODO ARM!
+#ifndef Q_OS_WIN64
+    sResult="386";
+#else
+    sResult="AMD64";
+#endif
+    return sResult;
 }
 
 XBinary::MODE XWindowsDebugger::getMode()
 {
-    // TODO
-    return XBinary::MODE_32;
+    XBinary::MODE result=XBinary::MODE_32;
+#ifndef Q_OS_WIN64
+    result=XBinary::MODE_32;
+#else
+    result=XBinary::MODE_64;
+#endif
+    return result;
 }
 
 QList<XBinary::SYMBOL_RECORD> XWindowsDebugger::loadSymbols(QString sFileName, qint64 nModuleAddress)
