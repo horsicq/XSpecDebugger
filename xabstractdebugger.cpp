@@ -624,7 +624,7 @@ bool XAbstractDebugger::setSingleStep(void *hThread, QString sInfo)
     return _setStep(hThread);
 }
 
-QMap<QString, QVariant> XAbstractDebugger::getRegisters(void *hThread)
+QMap<QString, QVariant> XAbstractDebugger::getRegisters(void *hThread, REG_OPTIONS regOptions)
 {
     QMap<QString, QVariant> mapResult;
 #ifdef Q_OS_WIN

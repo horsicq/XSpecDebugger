@@ -42,6 +42,13 @@ public:
         bool bBreakpointOnTargetEntryPoint;
     };
 
+    struct REG_OPTIONS
+    {
+        bool bGeneral;
+        bool bIP;
+        bool bFlags;
+    };
+
     enum MT
     {
         MT_UNKNOWN=0,
@@ -255,7 +262,7 @@ public:
     bool _setStep(void *hThread);
     bool setSingleStep(void *hThread,QString sInfo="");
 
-    QMap<QString,QVariant> getRegisters(void *hThread);
+    QMap<QString,QVariant> getRegisters(void *hThread,REG_OPTIONS regOptions);
 
     FUNCTION_INFO getFunctionInfo(void *hThread,QString sName);
     qint64 getRetAddress(void *hThread);
