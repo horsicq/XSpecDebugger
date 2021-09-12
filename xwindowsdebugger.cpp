@@ -461,9 +461,9 @@ quint32 XWindowsDebugger::on_OUTPUT_DEBUG_STRING_EVENT(DEBUG_EVENT *pDebugEvent)
     {
         debugStringInfo.sDebugString=read_ansiString((qint64)(pDebugEvent->u.DebugString.lpDebugStringData),pDebugEvent->u.DebugString.nDebugStringLength);
     }
-
+#ifdef QT_DEBUG
     qDebug(debugStringInfo.sDebugString.toLatin1().data());
-
+#endif
     emit eventDebugString(&debugStringInfo);
 
     return DBG_CONTINUE;
@@ -471,7 +471,8 @@ quint32 XWindowsDebugger::on_OUTPUT_DEBUG_STRING_EVENT(DEBUG_EVENT *pDebugEvent)
 
 quint32 XWindowsDebugger::on_RIP_EVENT(DEBUG_EVENT *pDebugEvent)
 {
+#ifdef QT_DEBUG
     qDebug("on_RIP_EVENT");
-
+#endif
     return DBG_CONTINUE;
 }

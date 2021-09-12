@@ -85,8 +85,9 @@ XAbstractDebugger::PROCESS_INFO *XAbstractDebugger::getProcessInfo()
 
 void XAbstractDebugger::_messageString(XAbstractDebugger::MT messageType, QString sText)
 {
+#ifdef QT_DEBUG
     qDebug("%s",sText.toLatin1().data());
-
+#endif
     emit messageString(messageType,sText);
 }
 
