@@ -837,6 +837,18 @@ bool XAbstractDebugger::stepOver(void *hThread)
     return bResult;
 }
 
+char *XAbstractDebugger::allocateAnsiStringMemory(QString sFileName)
+{
+    char *pResult=nullptr;
+
+    qint32 nSize=sFileName.length();
+
+    pResult=new char[nSize+1];
+    XBinary::_copyMemory(pResult,sFileName.toLatin1().data(),nSize);
+
+    return pResult;
+}
+
 void XAbstractDebugger::process()
 {
     load();

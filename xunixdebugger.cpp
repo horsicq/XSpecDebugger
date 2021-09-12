@@ -18,32 +18,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#ifndef XOSXDEBUGGER_H
-#define XOSXDEBUGGER_H
+#include "xunixdebugger.h"
 
-#include "xabstractdebugger.h"
-#include <stdio.h>
-#include <sys/types.h>
-#include <unistd.h>
-
-#ifdef Q_OS_OSX
-#include <sys/types.h>
-#include <sys/ptrace.h>
-#endif
-
-class XOSXDebugger : public XAbstractDebugger
+XUnixDebugger::XUnixDebugger(QObject *pParent) : XAbstractDebugger(pParent)
 {
-    Q_OBJECT
 
-public:
-    explicit XOSXDebugger(QObject *pParent=nullptr);
-    virtual bool load();
-    virtual void cleanUp();
-    virtual QString getArch();
-    virtual XBinary::MODE getMode();
+}
 
-signals:
+void XUnixDebugger::executeProcess(QString sFileName)
+{
+    char **ppArgv=new char *[2];
 
-};
+    ppArgv[0]=allocateAnsiStringMemory(sFileName);
 
-#endif // XOSXDEBUGGER_H
+    execv(ppArgv[0],ppArgv); // TODO Unicode
+
+    for(int i=0;i<2;i++)
+    {
+        delete [] ppArgv[i];
+    }
+
+    delete [] ppArgv;
+}

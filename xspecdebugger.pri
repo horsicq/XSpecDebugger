@@ -10,16 +10,41 @@ SOURCES += \
 win32 {
     HEADERS += $$PWD/xwindowsdebugger.h
     SOURCES += $$PWD/xwindowsdebugger.cpp
+
+    !contains(XCONFIG, xpe) {
+        XCONFIG += xpe
+        include($$PWD/../Formats/xpe.pri)
+    }
 }
 
 linux {
-    HEADERS += $$PWD/xlinuxdebugger.h
-    SOURCES += $$PWD/xlinuxdebugger.cpp
+    HEADERS += \
+        $$PWD/xunixdebugger.h \
+        $$PWD/xlinuxdebugger.h
+
+    SOURCES += \
+        $$PWD/xunixdebugger.cpp \
+        $$PWD/xlinuxdebugger.cpp
+
+    !contains(XCONFIG, xelf) {
+        XCONFIG += xelf
+        include($$PWD/../Formats/xelf.pri)
+    }
 }
 
 osx {
-    HEADERS += $$PWD/xosxdebugger.h
-    SOURCES += $$PWD/xosxdebugger.cpp
+    HEADERS += \
+        $$PWD/xunixdebugger.h \
+        $$PWD/xosxdebugger.h
+
+    SOURCES += \
+        $$PWD/xunixdebugger.cpp \
+        $$PWD/xosxdebugger.cpp
+
+    !contains(XCONFIG, xmach) {
+        XCONFIG += xmach
+        include($$PWD/../Formats/xmach.pri)
+    }
 }
 
 !contains(XCONFIG, xprocess) {
@@ -35,25 +60,4 @@ osx {
 !contains(XCONFIG, xbinary) {
     XCONFIG += xbinary
     include($$PWD/../Formats/xbinary.pri)
-}
-
-win32 {
-    !contains(XCONFIG, xpe) {
-        XCONFIG += xpe
-        include($$PWD/../Formats/xpe.pri)
-    }
-}
-
-linux {
-    !contains(XCONFIG, xelf) {
-        XCONFIG += xelf
-        include($$PWD/../Formats/xelf.pri)
-    }
-}
-
-osx {
-    !contains(XCONFIG, xmach) {
-        XCONFIG += xmach
-        include($$PWD/../Formats/xmach.pri)
-    }
 }

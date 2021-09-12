@@ -280,6 +280,9 @@ public:
     bool stepInto(void *hThread);
     bool stepOver(void *hThread);
 
+
+    char *allocateAnsiStringMemory(QString sFileName);
+
 public slots:
     void process();
 

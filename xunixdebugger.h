@@ -18,32 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#ifndef XOSXDEBUGGER_H
-#define XOSXDEBUGGER_H
+#ifndef XUNIXDEBUGGER_H
+#define XUNIXDEBUGGER_H
 
 #include "xabstractdebugger.h"
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/ptrace.h>
 #include <unistd.h>
 
-#ifdef Q_OS_OSX
-#include <sys/types.h>
-#include <sys/ptrace.h>
-#endif
-
-class XOSXDebugger : public XAbstractDebugger
+class XUnixDebugger : public XAbstractDebugger
 {
     Q_OBJECT
 
 public:
-    explicit XOSXDebugger(QObject *pParent=nullptr);
-    virtual bool load();
-    virtual void cleanUp();
-    virtual QString getArch();
-    virtual XBinary::MODE getMode();
+    explicit XUnixDebugger(QObject *pParent=nullptr);
 
-signals:
-
+    void executeProcess(QString sFileName); // TODO args, TODO sDirectory
 };
 
-#endif // XOSXDEBUGGER_H
+#endif // XUNIXDEBUGGER_H

@@ -21,14 +21,12 @@
 #ifndef XLINUXDEBUGGER_H
 #define XLINUXDEBUGGER_H
 
-#include "xabstractdebugger.h"
-#include <stdio.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include "xunixdebugger.h"
 
-class XLinuxDebugger : public XAbstractDebugger
+class XLinuxDebugger : public XUnixDebugger
 {
     Q_OBJECT
+
 public:
     explicit XLinuxDebugger(QObject *pParent=nullptr);
     virtual bool load();

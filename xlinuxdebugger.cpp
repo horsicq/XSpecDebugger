@@ -20,7 +20,7 @@
 //
 #include "xlinuxdebugger.h"
 
-XLinuxDebugger::XLinuxDebugger(QObject *pParent) : XAbstractDebugger(pParent)
+XLinuxDebugger::XLinuxDebugger(QObject *pParent) : XUnixDebugger(pParent)
 {
 
 }
@@ -38,11 +38,20 @@ bool XLinuxDebugger::load()
         if(nPID==0)
         {
             // Child process
-            //ptrace(PTRACE_TRACEME, 0, nullptr, nullptr);
+            ptrace(PTRACE_TRACEME, 0, nullptr, nullptr);
+            // TODO redirect I/O
+
+            executeProcess(sFileName);
         }
         else if(nPID>0)
         {
             // Parent
+            // TODO
+        }
+        else if(nPID<0) // -1
+        {
+            // Error
+            // TODO
         }
     }
 
