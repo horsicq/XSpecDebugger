@@ -37,12 +37,23 @@ osx {
     include($$PWD/../Formats/xbinary.pri)
 }
 
-!contains(XCONFIG, xpe) {
-    XCONFIG += xpe
-    include($$PWD/../Formats/xpe.pri)
+win32 {
+    !contains(XCONFIG, xpe) {
+        XCONFIG += xpe
+        include($$PWD/../Formats/xpe.pri)
+    }
 }
 
-!contains(XCONFIG, xelf) {
-    XCONFIG += xelf
-    include($$PWD/../Formats/xelf.pri)
+linux {
+    !contains(XCONFIG, xelf) {
+        XCONFIG += xelf
+        include($$PWD/../Formats/xelf.pri)
+    }
+}
+
+osx {
+    !contains(XCONFIG, xmach) {
+        XCONFIG += xmach
+        include($$PWD/../Formats/xmach.pri)
+    }
 }
