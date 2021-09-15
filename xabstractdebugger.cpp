@@ -620,7 +620,12 @@ bool XAbstractDebugger::_setStep(void *hThread)
 
 bool XAbstractDebugger::setSingleStep(void *hThread, QString sInfo)
 {
-    g_mapThreadSteps.insert(hThread,sInfo);
+    BREAKPOINT breakPoint={};
+    breakPoint.bpType=BPT_CODE_HARDWARE;
+    breakPoint.bpInfo=BPI_STEP;
+    breakPoint.sInfo=sInfo;
+
+    g_mapThreadSteps.insert(hThread,breakPoint);
 
     return _setStep(hThread);
 }
@@ -813,7 +818,13 @@ XAbstractDebugger::DEBUG_ACTION XAbstractDebugger::stringToDebugAction(QString s
 
 bool XAbstractDebugger::stepInto(void *hThread)
 {
-    return setSingleStep(hThread);
+    BREAKPOINT breakPoint={};
+    breakPoint.bpType=BPT_CODE_HARDWARE;
+    breakPoint.bpInfo=BPI_STEPINTO;
+
+    g_mapThreadSteps.insert(hThread,breakPoint);
+
+    return _setStep(hThread);
 }
 
 bool XAbstractDebugger::stepOver(void *hThread)
@@ -827,7 +838,13 @@ bool XAbstractDebugger::stepOver(void *hThread)
 
     if(XCapstone::isRetOpcode(opcodeID.nOpcodeID)||XCapstone::isJmpOpcode(opcodeID.nOpcodeID))
     {
-        bResult=setSingleStep(hThread);
+        BREAKPOINT breakPoint={};
+        breakPoint.bpType=BPT_CODE_HARDWARE;
+        breakPoint.bpInfo=BPI_STEPOVER;
+
+        g_mapThreadSteps.insert(hThread,breakPoint);
+
+        return _setStep(hThread);
     }
     else
     {

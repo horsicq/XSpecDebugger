@@ -43,13 +43,19 @@ bool XWindowsDebugger::load()
     // TODO 32/64 !!! do not load if not the same(WOW64)
     sturtupInfo.cb=sizeof(sturtupInfo);
 
-    QString sArguments=QString("\"%1\" \"%2\"").arg(getOptions()->sFileName).arg(getOptions()->sArguments);
+    QString sArguments=QString("\"%1\" \"%2\"").arg(getOptions()->sFileName,getOptions()->sArguments);
     BOOL bCreateProcess=CreateProcessW((const wchar_t*)(getOptions()->sFileName.utf16()),(wchar_t*)sArguments.utf16(),nullptr,nullptr,0,nFlags,nullptr,nullptr,&sturtupInfo,&processInfo);
 
     if(bCreateProcess)
     {
         cleanUp();
-        setDisasmMode(XBinary::DM_X86_32); // TODO 64
+
+    #ifndef Q_OS_WIN64
+        setDisasmMode(XBinary::DM_X86_32);
+    #else
+        setDisasmMode(XBinary::DM_X86_64);
+    #endif
+
         setTraceFileName(XBinary::getResultFileName(getOptions()->sFileName,"trace.txt"));
 
         bResult=true;
@@ -242,6 +248,10 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                     {
                         emit eventEntryPoint(&breakPointInfo); // TODO for DLL
                     }
+                    else if(breakPointInfo.bpInfo==BPI_STEPOVER)
+                    {
+                        emit eventStepOver(&breakPointInfo);
+                    }
                     else
                     {
                         emit eventBreakPoint(&breakPointInfo);
@@ -282,7 +292,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
         if(g_mapThreadSteps.contains(hThread))
         {
-            QString sInfo=g_mapThreadSteps.value(hThread);
+            BREAKPOINT stepBP=g_mapThreadSteps.value(hThread);
 
             g_mapThreadSteps.remove(hThread);
 
@@ -291,13 +301,25 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             XAbstractDebugger::BREAKPOINT_INFO breakPointInfo={};
 
             breakPointInfo.nAddress=nExceptionAddress;
-            breakPointInfo.bpType=BPT_CODE_HARDWARE;
+            breakPointInfo.bpType=stepBP.bpType;
+            breakPointInfo.bpInfo=stepBP.bpInfo;
             breakPointInfo.hThread=hThread;
             breakPointInfo.hProcess=getProcessInfo()->hProcess;
             breakPointInfo.nThreadID=pDebugEvent->dwThreadId;
-            breakPointInfo.sInfo=sInfo;
+            breakPointInfo.sInfo=stepBP.sInfo;
 
-            emit eventStep(&breakPointInfo);
+            if(breakPointInfo.bpInfo==BPI_STEP)
+            {
+                emit eventStep(&breakPointInfo);
+            }
+            else if(breakPointInfo.bpInfo==BPI_STEPINTO)
+            {
+                emit eventStepInto(&breakPointInfo);
+            }
+            else if(breakPointInfo.bpInfo==BPI_STEPOVER)
+            {
+                emit eventStepOver(&breakPointInfo);
+            }
 
             if(bThreadsSuspended)
             {

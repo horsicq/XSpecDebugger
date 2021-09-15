@@ -71,6 +71,7 @@ public:
         BPI_PROCESSENTRYPOINT,
         BPI_FUNCTIONENTER,
         BPI_FUNCTIONLEAVE,
+        BPI_STEP,
         BPI_STEPINTO,
         BPI_STEPOVER
     };
@@ -299,11 +300,13 @@ signals:
     void eventBreakPoint(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);
     void eventEntryPoint(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo); // If options.bBreakpointOnTargetEntryPoint
     void eventStep(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);
+    void eventStepInto(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);
+    void eventStepOver(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);
     void eventFunctionEnter(XAbstractDebugger::FUNCTION_INFO *pFunctionInfo);
     void eventFunctionLeave(XAbstractDebugger::FUNCTION_INFO *pFunctionInfo);
 
 protected:
-    QMap<void *,QString> g_mapThreadSteps; // mb TODO move to private set/get functions
+    QMap<void *,BREAKPOINT> g_mapThreadSteps; // mb TODO move to private set/get functions
 
 private:
     OPTIONS g_options;
