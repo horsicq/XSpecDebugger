@@ -836,7 +836,26 @@ bool XAbstractDebugger::stepOver(void *hThread)
 
     XCapstone::OPCODE_ID opcodeID=XCapstone::getOpcodeID(g_handle,nAddress,baData.data(),baData.size());
 
-    if(XCapstone::isRetOpcode(opcodeID.nOpcodeID)||XCapstone::isJmpOpcode(opcodeID.nOpcodeID))
+//    if(XCapstone::isRetOpcode(opcodeID.nOpcodeID)||XCapstone::isJmpOpcode(opcodeID.nOpcodeID))
+//    {
+//        BREAKPOINT breakPoint={};
+//        breakPoint.bpType=BPT_CODE_HARDWARE;
+//        breakPoint.bpInfo=BPI_STEPOVER;
+
+//        g_mapThreadSteps.insert(hThread,breakPoint);
+
+//        return _setStep(hThread);
+//    }
+//    else
+//    {
+//        bResult=setBP(nAddress+opcodeID.nSize,BPT_CODE_SOFTWARE,BPI_STEPOVER,1);
+//    }
+
+    if(XCapstone::isCallOpcode(opcodeID.nOpcodeID))
+    {
+        bResult=setBP(nAddress+opcodeID.nSize,BPT_CODE_SOFTWARE,BPI_STEPOVER,1);
+    }
+    else
     {
         BREAKPOINT breakPoint={};
         breakPoint.bpType=BPT_CODE_HARDWARE;
@@ -845,10 +864,6 @@ bool XAbstractDebugger::stepOver(void *hThread)
         g_mapThreadSteps.insert(hThread,breakPoint);
 
         return _setStep(hThread);
-    }
-    else
-    {
-        bResult=setBP(nAddress+opcodeID.nSize,BPT_CODE_SOFTWARE,BPI_STEPOVER,1);
     }
 
     return bResult;
