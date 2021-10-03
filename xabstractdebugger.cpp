@@ -635,53 +635,87 @@ QMap<QString, QVariant> XAbstractDebugger::getRegisters(void *hThread, REG_OPTIO
     QMap<QString, QVariant> mapResult;
 #ifdef Q_OS_WIN
     CONTEXT context={0};
-    context.ContextFlags=CONTEXT_ALL; // All registers
+    context.ContextFlags=CONTEXT_ALL; // All registers TODO Check regOptions
 
     if(GetThreadContext(hThread,&context))
     {
-        // TODO 64
-        mapResult.insert("DR0",(quint32)(context.Dr0));
-        mapResult.insert("DR1",(quint32)(context.Dr1));
-        mapResult.insert("DR2",(quint32)(context.Dr2));
-        mapResult.insert("DR3",(quint32)(context.Dr3));
-        mapResult.insert("DR6",(quint32)(context.Dr6));
-        mapResult.insert("DR7",(quint32)(context.Dr7));
-        mapResult.insert("GS",(quint32)(context.SegGs));
-        mapResult.insert("FS",(quint32)(context.SegFs));
-        mapResult.insert("ES",(quint32)(context.SegEs));
-        mapResult.insert("DS",(quint32)(context.SegDs));
-        mapResult.insert("CS",(quint32)(context.SegCs));
-        mapResult.insert("SS",(quint32)(context.SegSs));
     #ifndef Q_OS_WIN64
-        mapResult.insert("EDI",(quint32)(context.Edi));
-        mapResult.insert("ESI",(quint32)(context.Esi));
-        mapResult.insert("EBX",(quint32)(context.Ebx));
-        mapResult.insert("EDX",(quint32)(context.Edx));
-        mapResult.insert("ECX",(quint32)(context.Ecx));
-        mapResult.insert("EAX",(quint32)(context.Eax));
-        mapResult.insert("EBP",(quint32)(context.Ebp));
-        mapResult.insert("EIP",(quint32)(context.Eip));
-        mapResult.insert("ESP",(quint32)(context.Esp));
+        if(regOptions.bGeneral)
+        {
+            mapResult.insert("EAX",(quint32)(context.Eax));
+            mapResult.insert("EBX",(quint32)(context.Ebx));
+            mapResult.insert("ECX",(quint32)(context.Ecx));
+            mapResult.insert("EDX",(quint32)(context.Edx));
+            mapResult.insert("EBP",(quint32)(context.Ebp));
+            mapResult.insert("ESP",(quint32)(context.Esp));
+            mapResult.insert("ESI",(quint32)(context.Esi));
+            mapResult.insert("EDI",(quint32)(context.Edi));
+        }
+
+        if(regOptions.bIP)
+        {
+            mapResult.insert("EIP",(quint32)(context.Eip));
+        }
     #else
-        mapResult.insert("RDI",(quint64)(context.Rdi));
-        mapResult.insert("RSI",(quint64)(context.Rsi));
-        mapResult.insert("RBX",(quint64)(context.Rbx));
-        mapResult.insert("RDX",(quint64)(context.Rdx));
-        mapResult.insert("RCX",(quint64)(context.Rcx));
-        mapResult.insert("RAX",(quint64)(context.Rax));
-        mapResult.insert("RBP",(quint64)(context.Rbp));
-        mapResult.insert("RIP",(quint64)(context.Rip));
-        mapResult.insert("RSP",(quint64)(context.Rsp));
-        mapResult.insert("R8",(quint64)(context.R8));
-        mapResult.insert("R9",(quint64)(context.R9));
-        mapResult.insert("R10",(quint64)(context.R10));
-        mapResult.insert("R11",(quint64)(context.R11));
-        mapResult.insert("R12",(quint64)(context.R12));
-        mapResult.insert("R13",(quint64)(context.R13));
-        mapResult.insert("R14",(quint64)(context.R14));
-        mapResult.insert("R15",(quint64)(context.R15));
+        if(regOptions.bGeneral)
+        {
+            mapResult.insert("RAX",(quint64)(context.Rax));
+            mapResult.insert("RBX",(quint64)(context.Rbx));
+            mapResult.insert("RCX",(quint64)(context.Rcx));
+            mapResult.insert("RDX",(quint64)(context.Rdx));
+            mapResult.insert("RBP",(quint64)(context.Rbp));
+            mapResult.insert("RSP",(quint64)(context.Rsp));
+            mapResult.insert("RSI",(quint64)(context.Rsi));
+            mapResult.insert("RDI",(quint64)(context.Rdi));
+            mapResult.insert("R8",(quint64)(context.R8));
+            mapResult.insert("R9",(quint64)(context.R9));
+            mapResult.insert("R10",(quint64)(context.R10));
+            mapResult.insert("R11",(quint64)(context.R11));
+            mapResult.insert("R12",(quint64)(context.R12));
+            mapResult.insert("R13",(quint64)(context.R13));
+            mapResult.insert("R14",(quint64)(context.R14));
+            mapResult.insert("R15",(quint64)(context.R15));
+        }
+
+        if(regOptions.bIP)
+        {
+            mapResult.insert("RIP",(quint64)(context.Rip));
+        }
     #endif
-        mapResult.insert("EFLAGS",(quint32)(context.EFlags));
+        if(regOptions.bFlags)
+        {
+            mapResult.insert("EFLAGS",(quint32)(context.EFlags));
+
+            mapResult.insert("CF",(bool)((context.EFlags)&0x0001));
+            mapResult.insert("PF",(bool)((context.EFlags)&0x0004));
+            mapResult.insert("AF",(bool)((context.EFlags)&0x0010));
+            mapResult.insert("ZF",(bool)((context.EFlags)&0x0040));
+            mapResult.insert("SF",(bool)((context.EFlags)&0x0080));
+            mapResult.insert("TF",(bool)((context.EFlags)&0x0100));
+            mapResult.insert("IF",(bool)((context.EFlags)&0x0200));
+            mapResult.insert("DF",(bool)((context.EFlags)&0x0400));
+            mapResult.insert("OF",(bool)((context.EFlags)&0x0800));
+        }
+
+        if(regOptions.bSegments)
+        {
+            mapResult.insert("GS",(quint32)(context.SegGs));
+            mapResult.insert("FS",(quint32)(context.SegFs));
+            mapResult.insert("ES",(quint32)(context.SegEs));
+            mapResult.insert("DS",(quint32)(context.SegDs));
+            mapResult.insert("CS",(quint32)(context.SegCs));
+            mapResult.insert("SS",(quint32)(context.SegSs));
+        }
+
+        if(regOptions.bDebug)
+        {
+            mapResult.insert("DR0",(quint32)(context.Dr0));
+            mapResult.insert("DR1",(quint32)(context.Dr1));
+            mapResult.insert("DR2",(quint32)(context.Dr2));
+            mapResult.insert("DR3",(quint32)(context.Dr3));
+            mapResult.insert("DR6",(quint32)(context.Dr6));
+            mapResult.insert("DR7",(quint32)(context.Dr7));
+        }
     }
 #endif
     return mapResult;

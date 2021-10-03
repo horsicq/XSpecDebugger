@@ -47,6 +47,8 @@ public:
         bool bGeneral;
         bool bIP;
         bool bFlags;
+        bool bSegments;
+        bool bDebug;
     };
 
     enum MT
