@@ -31,6 +31,11 @@ bool XLinuxDebugger::load()
 
     QString sFileName=getOptions()->sFileName;
 
+    quint32 nMapSize=0x1000;
+    char *pMapMemory=(char *)mmap(nullptr,nMapSize,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
+
+    XBinary::_zeroMemory(pMapMemory,nMapSize);
+
     if(XBinary::isFileExists(sFileName))
     {
         int nPID=fork();
@@ -38,20 +43,48 @@ bool XLinuxDebugger::load()
         if(nPID==0)
         {
             // Child process
-            ptrace(PTRACE_TRACEME, 0, nullptr, nullptr);
+            ptrace(PTRACE_TRACEME,0,nullptr,nullptr);
             // TODO redirect I/O
 
-            executeProcess(sFileName);
+            EXECUTEPROCESS ep=executeProcess(sFileName);
+
+            XBinary::_copyMemory(pMapMemory,ep.sStatus.toLatin1().data(),ep.sStatus.toLatin1().size());
+
+            abort();
         }
         else if(nPID>0)
         {
             // Parent
             // TODO
+            // TODO init
+        #ifdef QT_DEBUG
+            qDebug("Forked");
+        #endif
+
+            pid_t ret;
+
+            int nStatus=0;
+
+            do
+            {
+                ret=waitpid(nPID,&nStatus,__WALL);
+            }
+            while((ret==-1)&&(errno==EINTR));
+
+            QString sStatusString=pMapMemory;
+            munmap(pMapMemory,nMapSize);
+
+        #ifdef QT_DEBUG
+            qDebug("Status %s",sStatusString.toLatin1().data());
+        #endif
         }
         else if(nPID<0) // -1
         {
             // Error
             // TODO
+        #ifdef QT_DEBUG
+            qDebug("Cannot fork");
+        #endif
         }
     }
 

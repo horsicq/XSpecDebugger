@@ -25,6 +25,8 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/ptrace.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 class XUnixDebugger : public XAbstractDebugger
@@ -32,9 +34,13 @@ class XUnixDebugger : public XAbstractDebugger
     Q_OBJECT
 
 public:
-    explicit XUnixDebugger(QObject *pParent=nullptr);
+    struct EXECUTEPROCESS
+    {
+        QString sStatus;
+    };
 
-    void executeProcess(QString sFileName); // TODO args, TODO sDirectory
+    explicit XUnixDebugger(QObject *pParent=nullptr);
+    EXECUTEPROCESS executeProcess(QString sFileName); // TODO args, TODO sDirectory
 };
 
 #endif // XUNIXDEBUGGER_H

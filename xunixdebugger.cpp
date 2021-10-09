@@ -25,13 +25,28 @@ XUnixDebugger::XUnixDebugger(QObject *pParent) : XAbstractDebugger(pParent)
 
 }
 
-void XUnixDebugger::executeProcess(QString sFileName)
+XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName)
 {
+    EXECUTEPROCESS result={};
+
     char **ppArgv=new char *[2];
 
     ppArgv[0]=allocateAnsiStringMemory(sFileName);
 
-    execv(ppArgv[0],ppArgv); // TODO Unicode
+#ifdef QT_DEBUG
+    qDebug("FileName %s",ppArgv[0]);
+#endif
+
+    int nRet=execv(ppArgv[0],ppArgv); // TODO Unicode
+
+    if(nRet==-1)
+    {
+        result.sStatus=QString("execv() failed: %1").arg(strerror(errno));
+
+    #ifdef QT_DEBUG
+        qDebug("Status %s",result.sStatus.toLatin1().data());
+    #endif
+    }
 
     for(int i=0;i<2;i++)
     {
@@ -39,4 +54,6 @@ void XUnixDebugger::executeProcess(QString sFileName)
     }
 
     delete [] ppArgv;
+
+    return result;
 }

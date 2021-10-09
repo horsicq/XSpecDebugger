@@ -909,6 +909,7 @@ char *XAbstractDebugger::allocateAnsiStringMemory(QString sFileName)
     qint32 nSize=sFileName.length();
 
     pResult=new char[nSize+1];
+    XBinary::_zeroMemory(pResult,nSize+1);
     XBinary::_copyMemory(pResult,sFileName.toLatin1().data(),nSize);
 
     return pResult;
