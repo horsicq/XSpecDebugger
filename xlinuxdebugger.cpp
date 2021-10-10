@@ -61,6 +61,16 @@ bool XLinuxDebugger::load()
             qDebug("Forked");
         #endif
 
+            QString sStatusString=pMapMemory;
+            munmap(pMapMemory,nMapSize);
+
+        #ifdef QT_DEBUG
+            if(sStatusString!="")
+            {
+                qDebug("Status %s",sStatusString.toLatin1().data());
+            }
+        #endif
+
             pid_t ret;
 
             int nStatus=0;
@@ -71,12 +81,27 @@ bool XLinuxDebugger::load()
             }
             while((ret==-1)&&(errno==EINTR));
 
-            QString sStatusString=pMapMemory;
-            munmap(pMapMemory,nMapSize);
+            if(ret==-1)
+            {
+                qDebug("waitpid failed: %s",strerror(errno));
+            }
+            else if(WIFEXITED(nStatus))
+            {
+                qDebug("process exited with code %x",WEXITSTATUS(nStatus));
+            }
+            else if(WIFSIGNALED(nStatus))
+            {
+                qDebug("process killed by signal %x",WTERMSIG(nStatus));
+            }
+            else if(WIFSTOPPED(nStatus)&&(WSTOPSIG(nStatus)==SIGABRT))
+            {
+                qDebug("process unexpectedly aborted");
+            }
 
-        #ifdef QT_DEBUG
-            qDebug("Status %s",sStatusString.toLatin1().data());
-        #endif
+            // TODO fast events
+
+
+            qDebug("STATUS: %x",nStatus);
         }
         else if(nPID<0) // -1
         {
