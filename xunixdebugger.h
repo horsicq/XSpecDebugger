@@ -41,6 +41,7 @@ public:
 
     explicit XUnixDebugger(QObject *pParent=nullptr);
     EXECUTEPROCESS executeProcess(QString sFileName); // TODO args, TODO sDirectory
+    void setPtraceOptions(qint64 nThreadID);
 };
 
 #endif // XUNIXDEBUGGER_H

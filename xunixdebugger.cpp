@@ -57,3 +57,18 @@ XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName)
 
     return result;
 }
+
+void XUnixDebugger::setPtraceOptions(qint64 nThreadID)
+{
+    // TODO result bool
+    long options=PTRACE_O_TRACECLONE;
+
+    if(ptrace(PTRACE_SETOPTIONS,nThreadID,0,options)==-1)
+    {
+    #ifdef QT_DEBUG
+        qDebug("Cannot PTRACE_SETOPTIONS");
+    #endif
+    }
+
+    // mb TODO
+}

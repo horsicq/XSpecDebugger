@@ -97,11 +97,13 @@ bool XLinuxDebugger::load()
             {
                 qDebug("process unexpectedly aborted");
             }
-
             // TODO fast events
 
-
             qDebug("STATUS: %x",nStatus);
+
+            setPtraceOptions(nPID);
+
+            // TODO Create process
         }
         else if(nPID<0) // -1
         {
