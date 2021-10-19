@@ -682,6 +682,7 @@ QMap<QString, QVariant> XAbstractDebugger::getRegisters(void *hThread, REG_OPTIO
             mapResult.insert("RIP",(quint64)(context.Rip));
         }
     #endif
+
         if(regOptions.bFlags)
         {
             mapResult.insert("EFLAGS",(quint32)(context.EFlags));
@@ -716,6 +717,15 @@ QMap<QString, QVariant> XAbstractDebugger::getRegisters(void *hThread, REG_OPTIO
             mapResult.insert("DR6",(quint32)(context.Dr6));
             mapResult.insert("DR7",(quint32)(context.Dr7));
         }
+
+//    #ifdef QT_DEBUG
+//        qDebug("DebugControl %s",XBinary::valueToHex((quint64)(context.DebugControl)).toLatin1().data());
+//        qDebug("LastBranchToRip %s",XBinary::valueToHex((quint64)(context.LastBranchToRip)).toLatin1().data());
+//        qDebug("LastBranchFromRip %s",XBinary::valueToHex((quint64)(context.LastBranchFromRip)).toLatin1().data());
+//        qDebug("LastExceptionToRip %s",XBinary::valueToHex((quint64)(context.LastExceptionToRip)).toLatin1().data());
+//        qDebug("LastExceptionFromRip %s",XBinary::valueToHex((quint64)(context.LastExceptionFromRip)).toLatin1().data());
+//    #endif
+
     }
 #endif
     return mapResult;
