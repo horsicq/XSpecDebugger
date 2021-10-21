@@ -514,10 +514,10 @@ bool XAbstractDebugger::suspendOtherThreads(void *hCurrentThread)
 
     QList<THREAD_INFO> listThreads=g_mapThreadInfos.values();
 
-    int nCount=listThreads.count();
+    qint32 nCount=listThreads.count();
 
     // Suspend all other threads
-    for(int i=0;i<nCount;i++)
+    for(qint32 i=0;i<nCount;i++)
     {
         if(hCurrentThread!=listThreads.at(i).hThread)
         {

@@ -104,6 +104,7 @@ bool XLinuxDebugger::load()
             setPtraceOptions(nPID);
 
             // TODO Create process
+            // TODO open memory
         }
         else if(nPID<0) // -1
         {
