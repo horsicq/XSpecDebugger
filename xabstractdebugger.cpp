@@ -639,9 +639,10 @@ QMap<QString, QVariant> XAbstractDebugger::getRegisters(void *hThread, REG_OPTIO
 
     if(GetThreadContext(hThread,&context))
     {
-    #ifndef Q_OS_WIN64
+
         if(regOptions.bGeneral)
         {
+        #ifndef Q_OS_WIN64
             mapResult.insert("EAX",(quint32)(context.Eax));
             mapResult.insert("EBX",(quint32)(context.Ebx));
             mapResult.insert("ECX",(quint32)(context.Ecx));
@@ -650,15 +651,7 @@ QMap<QString, QVariant> XAbstractDebugger::getRegisters(void *hThread, REG_OPTIO
             mapResult.insert("ESP",(quint32)(context.Esp));
             mapResult.insert("ESI",(quint32)(context.Esi));
             mapResult.insert("EDI",(quint32)(context.Edi));
-        }
-
-        if(regOptions.bIP)
-        {
-            mapResult.insert("EIP",(quint32)(context.Eip));
-        }
-    #else
-        if(regOptions.bGeneral)
-        {
+        #else
             mapResult.insert("RAX",(quint64)(context.Rax));
             mapResult.insert("RBX",(quint64)(context.Rbx));
             mapResult.insert("RCX",(quint64)(context.Rcx));
@@ -675,13 +668,17 @@ QMap<QString, QVariant> XAbstractDebugger::getRegisters(void *hThread, REG_OPTIO
             mapResult.insert("R13",(quint64)(context.R13));
             mapResult.insert("R14",(quint64)(context.R14));
             mapResult.insert("R15",(quint64)(context.R15));
+        #endif
         }
 
         if(regOptions.bIP)
         {
+        #ifndef Q_OS_WIN64
+            mapResult.insert("EIP",(quint32)(context.Eip));
+        #else
             mapResult.insert("RIP",(quint64)(context.Rip));
+        #endif
         }
-    #endif
 
         if(regOptions.bFlags)
         {
@@ -710,12 +707,21 @@ QMap<QString, QVariant> XAbstractDebugger::getRegisters(void *hThread, REG_OPTIO
 
         if(regOptions.bDebug)
         {
+        #ifndef Q_OS_WIN64
             mapResult.insert("DR0",(quint32)(context.Dr0));
             mapResult.insert("DR1",(quint32)(context.Dr1));
             mapResult.insert("DR2",(quint32)(context.Dr2));
             mapResult.insert("DR3",(quint32)(context.Dr3));
             mapResult.insert("DR6",(quint32)(context.Dr6));
             mapResult.insert("DR7",(quint32)(context.Dr7));
+        #else
+            mapResult.insert("DR0",(quint64)(context.Dr0));
+            mapResult.insert("DR1",(quint64)(context.Dr1));
+            mapResult.insert("DR2",(quint64)(context.Dr2));
+            mapResult.insert("DR3",(quint64)(context.Dr3));
+            mapResult.insert("DR6",(quint64)(context.Dr6));
+            mapResult.insert("DR7",(quint64)(context.Dr7));
+        #endif
         }
 
 //    #ifdef QT_DEBUG
