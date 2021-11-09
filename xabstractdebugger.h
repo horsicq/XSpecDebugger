@@ -49,6 +49,7 @@ public:
         bool bFlags;
         bool bSegments;
         bool bDebug;
+        bool bXMM;
     };
 
     enum MT
@@ -265,7 +266,7 @@ public:
     bool _setStep(void *hThread);
     bool setSingleStep(void *hThread,QString sInfo="");
 
-    QMap<QString,QVariant> getRegisters(void *hThread,REG_OPTIONS regOptions);
+    QMap<QString,XBinary::XVARIANT> getRegisters(void *hThread,REG_OPTIONS regOptions);
 
     FUNCTION_INFO getFunctionInfo(void *hThread,QString sName);
     qint64 getRetAddress(void *hThread);

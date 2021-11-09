@@ -630,107 +630,191 @@ bool XAbstractDebugger::setSingleStep(void *hThread, QString sInfo)
     return _setStep(hThread);
 }
 
-QMap<QString, QVariant> XAbstractDebugger::getRegisters(void *hThread, REG_OPTIONS regOptions)
+QMap<QString, XBinary::XVARIANT> XAbstractDebugger::getRegisters(void *hThread, REG_OPTIONS regOptions)
 {
-    QMap<QString, QVariant> mapResult;
+    QMap<QString, XBinary::XVARIANT> mapResult;
 #ifdef Q_OS_WIN
     CONTEXT context={0};
     context.ContextFlags=CONTEXT_ALL; // All registers TODO Check regOptions
 
     if(GetThreadContext(hThread,&context))
     {
+        XBinary::XVARIANT xVariant={};
+        xVariant.bIsBigEndian=false;
 
         if(regOptions.bGeneral)
         {
         #ifndef Q_OS_WIN64
-            mapResult.insert("EAX",(quint32)(context.Eax));
-            mapResult.insert("EBX",(quint32)(context.Ebx));
-            mapResult.insert("ECX",(quint32)(context.Ecx));
-            mapResult.insert("EDX",(quint32)(context.Edx));
-            mapResult.insert("EBP",(quint32)(context.Ebp));
-            mapResult.insert("ESP",(quint32)(context.Esp));
-            mapResult.insert("ESI",(quint32)(context.Esi));
-            mapResult.insert("EDI",(quint32)(context.Edi));
+            xVariant.mode=XBinary::MODE_32;
+            xVariant.var.v_uint32=(quint32)(context.Eax);
+            mapResult.insert("EAX",xVariant);
+            xVariant.var.v_uint32=(quint32)(context.Ebx);
+            mapResult.insert("EBX",xVariant);
+            xVariant.var.v_uint32=(quint32)(context.Ecx);
+            mapResult.insert("ECX",xVariant);
+            xVariant.var.v_uint32=(quint32)(context.Edx);
+            mapResult.insert("EDX",xVariant);
+            xVariant.var.v_uint32=(quint32)(context.Ebp);
+            mapResult.insert("EBP",xVariant);
+            xVariant.var.v_uint32=(quint32)(context.Esp);
+            mapResult.insert("ESP",xVariant);
+            xVariant.var.v_uint32=(quint32)(context.Esi);
+            mapResult.insert("ESI",xVariant);
+            xVariant.var.v_uint32=(quint32)(context.Edi);
+            mapResult.insert("EDI",xVariant);
         #else
-            mapResult.insert("RAX",(quint64)(context.Rax));
-            mapResult.insert("RBX",(quint64)(context.Rbx));
-            mapResult.insert("RCX",(quint64)(context.Rcx));
-            mapResult.insert("RDX",(quint64)(context.Rdx));
-            mapResult.insert("RBP",(quint64)(context.Rbp));
-            mapResult.insert("RSP",(quint64)(context.Rsp));
-            mapResult.insert("RSI",(quint64)(context.Rsi));
-            mapResult.insert("RDI",(quint64)(context.Rdi));
-            mapResult.insert("R8",(quint64)(context.R8));
-            mapResult.insert("R9",(quint64)(context.R9));
-            mapResult.insert("R10",(quint64)(context.R10));
-            mapResult.insert("R11",(quint64)(context.R11));
-            mapResult.insert("R12",(quint64)(context.R12));
-            mapResult.insert("R13",(quint64)(context.R13));
-            mapResult.insert("R14",(quint64)(context.R14));
-            mapResult.insert("R15",(quint64)(context.R15));
+            xVariant.mode=XBinary::MODE_64;
+            xVariant.var.v_uint64=(quint64)(context.Rax);
+            mapResult.insert("RAX",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.Rbx);
+            mapResult.insert("RBX",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.Rcx);
+            mapResult.insert("RCX",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.Rdx);
+            mapResult.insert("RDX",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.Rbp);
+            mapResult.insert("RBP",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.Rsp);
+            mapResult.insert("RSP",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.Rsi);
+            mapResult.insert("RSI",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.Rdi);
+            mapResult.insert("RDI",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.R8);
+            mapResult.insert("R8",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.R9);
+            mapResult.insert("R9",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.R10);
+            mapResult.insert("R10",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.R11);
+            mapResult.insert("R11",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.R12);
+            mapResult.insert("R12",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.R13);
+            mapResult.insert("R13",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.R14);
+            mapResult.insert("R14",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.R15);
+            mapResult.insert("R15",xVariant);
         #endif
         }
 
         if(regOptions.bIP)
         {
         #ifndef Q_OS_WIN64
-            mapResult.insert("EIP",(quint32)(context.Eip));
+            xVariant.mode=XBinary::MODE_32;
+            xVariant.var.v_uint32=(quint32)(context.Eip);
+            mapResult.insert("EIP",xVariant);
         #else
-            mapResult.insert("RIP",(quint64)(context.Rip));
+            xVariant.mode=XBinary::MODE_64;
+            xVariant.var.v_uint64=(quint64)(context.Rip);
+            mapResult.insert("RIP",xVariant);
         #endif
         }
 
         if(regOptions.bFlags)
         {
-            mapResult.insert("EFLAGS",(quint32)(context.EFlags));
+            xVariant.mode=XBinary::MODE_32;
+            xVariant.var.v_uint32=(quint32)(context.EFlags);
+            mapResult.insert("EFLAGS",xVariant);
 
-            mapResult.insert("CF",(bool)((context.EFlags)&0x0001));
-            mapResult.insert("PF",(bool)((context.EFlags)&0x0004));
-            mapResult.insert("AF",(bool)((context.EFlags)&0x0010));
-            mapResult.insert("ZF",(bool)((context.EFlags)&0x0040));
-            mapResult.insert("SF",(bool)((context.EFlags)&0x0080));
-            mapResult.insert("TF",(bool)((context.EFlags)&0x0100));
-            mapResult.insert("IF",(bool)((context.EFlags)&0x0200));
-            mapResult.insert("DF",(bool)((context.EFlags)&0x0400));
-            mapResult.insert("OF",(bool)((context.EFlags)&0x0800));
+            xVariant.mode=XBinary::MODE_BIT;
+            xVariant.var.v_bool=(bool)((context.EFlags)&0x0001);
+            mapResult.insert("CF",xVariant);
+            xVariant.var.v_bool=(bool)((context.EFlags)&0x0004);
+            mapResult.insert("PF",xVariant);
+            xVariant.var.v_bool=(bool)((context.EFlags)&0x0010);
+            mapResult.insert("AF",xVariant);
+            xVariant.var.v_bool=(bool)((context.EFlags)&0x0040);
+            mapResult.insert("ZF",xVariant);
+            xVariant.var.v_bool=(bool)((context.EFlags)&0x0080);
+            mapResult.insert("SF",xVariant);
+            xVariant.var.v_bool=(bool)((context.EFlags)&0x0100);
+            mapResult.insert("TF",xVariant);
+            xVariant.var.v_bool=(bool)((context.EFlags)&0x0200);
+            mapResult.insert("IF",xVariant);
+            xVariant.var.v_bool=(bool)((context.EFlags)&0x0400);
+            mapResult.insert("DF",xVariant);
+            xVariant.var.v_bool=(bool)((context.EFlags)&0x0800);
+            mapResult.insert("OF",xVariant);
         }
 
         if(regOptions.bSegments)
         {
-            mapResult.insert("GS",(quint32)(context.SegGs));
-            mapResult.insert("FS",(quint32)(context.SegFs));
-            mapResult.insert("ES",(quint32)(context.SegEs));
-            mapResult.insert("DS",(quint32)(context.SegDs));
-            mapResult.insert("CS",(quint32)(context.SegCs));
-            mapResult.insert("SS",(quint32)(context.SegSs));
+            xVariant.mode=XBinary::MODE_16;
+            xVariant.var.v_uint16=(quint16)(context.SegGs);
+            mapResult.insert("GS",xVariant);
+            xVariant.var.v_uint16=(quint16)(context.SegFs);
+            mapResult.insert("FS",xVariant);
+            xVariant.var.v_uint16=(quint16)(context.SegEs);
+            mapResult.insert("ES",xVariant);
+            xVariant.var.v_uint16=(quint16)(context.SegDs);
+            mapResult.insert("DS",xVariant);
+            xVariant.var.v_uint16=(quint16)(context.SegCs);
+            mapResult.insert("CS",xVariant);
+            xVariant.var.v_uint16=(quint16)(context.SegSs);
+            mapResult.insert("SS",xVariant);
         }
 
         if(regOptions.bDebug)
         {
         #ifndef Q_OS_WIN64
-            mapResult.insert("DR0",(quint32)(context.Dr0));
-            mapResult.insert("DR1",(quint32)(context.Dr1));
-            mapResult.insert("DR2",(quint32)(context.Dr2));
-            mapResult.insert("DR3",(quint32)(context.Dr3));
-            mapResult.insert("DR6",(quint32)(context.Dr6));
-            mapResult.insert("DR7",(quint32)(context.Dr7));
+            xVariant.mode=XBinary::MODE_32;
+            xVariant.var.v_uint32=(quint32)(context.Dr0);
+            mapResult.insert("DR0",xVariant);
+            xVariant.var.v_uint32=(quint32)(context.Dr1);
+            mapResult.insert("DR1",xVariant);
+            xVariant.var.v_uint32=(quint32)(context.Dr2);
+            mapResult.insert("DR2",xVariant);
+            xVariant.var.v_uint32=(quint32)(context.Dr3);
+            mapResult.insert("DR3",xVariant);
+            xVariant.var.v_uint32=(quint32)(context.Dr6);
+            mapResult.insert("DR6",xVariant);
+            xVariant.var.v_uint32=(quint32)(context.Dr7);
+            mapResult.insert("DR7",xVariant);
         #else
-            mapResult.insert("DR0",(quint64)(context.Dr0));
-            mapResult.insert("DR1",(quint64)(context.Dr1));
-            mapResult.insert("DR2",(quint64)(context.Dr2));
-            mapResult.insert("DR3",(quint64)(context.Dr3));
-            mapResult.insert("DR6",(quint64)(context.Dr6));
-            mapResult.insert("DR7",(quint64)(context.Dr7));
+            xVariant.mode=XBinary::MODE_64;
+            xVariant.var.v_uint64=(quint64)(context.Dr0);
+            mapResult.insert("DR0",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.Dr0);
+            mapResult.insert("DR1",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.Dr0);
+            mapResult.insert("DR2",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.Dr0);
+            mapResult.insert("DR3",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.Dr0);
+            mapResult.insert("DR6",xVariant);
+            xVariant.var.v_uint64=(quint64)(context.Dr0);
+            mapResult.insert("DR7",xVariant);
         #endif
         }
 
-//    #ifdef QT_DEBUG
+        if(regOptions.bXMM)
+        {
+//            mapResult.insert("MxCsr",(quint32)(context.MxCsr));
+//            mapResult.insert("XMM0L",(quint64)(context.Xmm0.Low));
+//            mapResult.insert("XMM0H",(qint64)(context.Xmm0.High));
+//            mapResult.insert("XMM1L",(quint64)(context.Xmm1.Low));
+//            mapResult.insert("XMM1H",(qint64)(context.Xmm1.High));
+        }
+
+    #ifdef QT_DEBUG
 //        qDebug("DebugControl %s",XBinary::valueToHex((quint64)(context.DebugControl)).toLatin1().data());
 //        qDebug("LastBranchToRip %s",XBinary::valueToHex((quint64)(context.LastBranchToRip)).toLatin1().data());
 //        qDebug("LastBranchFromRip %s",XBinary::valueToHex((quint64)(context.LastBranchFromRip)).toLatin1().data());
 //        qDebug("LastExceptionToRip %s",XBinary::valueToHex((quint64)(context.LastExceptionToRip)).toLatin1().data());
 //        qDebug("LastExceptionFromRip %s",XBinary::valueToHex((quint64)(context.LastExceptionFromRip)).toLatin1().data());
-//    #endif
+
+        qDebug("P1Home %s",XBinary::valueToHex((quint64)(context.P1Home)).toLatin1().data());
+        qDebug("P2Home %s",XBinary::valueToHex((quint64)(context.P2Home)).toLatin1().data());
+        qDebug("P3Home %s",XBinary::valueToHex((quint64)(context.P3Home)).toLatin1().data());
+        qDebug("P4Home %s",XBinary::valueToHex((quint64)(context.P4Home)).toLatin1().data());
+        qDebug("P5Home %s",XBinary::valueToHex((quint64)(context.P5Home)).toLatin1().data());
+        qDebug("P6Home %s",XBinary::valueToHex((quint64)(context.P6Home)).toLatin1().data());
+        qDebug("ContextFlags %s",XBinary::valueToHex((quint32)(context.ContextFlags)).toLatin1().data());
+        qDebug("MxCsr %s",XBinary::valueToHex((quint32)(context.MxCsr)).toLatin1().data());
+
+    #endif
 
     }
 #endif
