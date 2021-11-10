@@ -75,6 +75,7 @@ bool XLinuxDebugger::load()
 
             int nStatus=0;
 
+            // TODO a function
             do
             {
                 ret=waitpid(nPID,&nStatus,__WALL);
@@ -105,6 +106,7 @@ bool XLinuxDebugger::load()
 
             // TODO Create process
             // TODO open memory
+            // TODO debug loop
         }
         else if(nPID<0) // -1
         {
