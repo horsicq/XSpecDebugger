@@ -791,6 +791,10 @@ QMap<QString, XBinary::XVARIANT> XAbstractDebugger::getRegisters(void *hThread, 
 
         if(regOptions.bXMM)
         {
+            xVariant.mode=XBinary::MODE_128;
+            xVariant.var.v_uint128.low=(quint64)(context.Xmm0.Low);
+            xVariant.var.v_uint128.high=(quint64)(context.Xmm0.High);
+            mapResult.insert("XMM0",xVariant);
 //            mapResult.insert("MxCsr",(quint32)(context.MxCsr));
 //            mapResult.insert("XMM0L",(quint64)(context.Xmm0.Low));
 //            mapResult.insert("XMM0H",(qint64)(context.Xmm0.High));
