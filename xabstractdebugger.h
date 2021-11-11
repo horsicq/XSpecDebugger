@@ -49,6 +49,7 @@ public:
         bool bFlags;
         bool bSegments;
         bool bDebug;
+        bool bFloat;
         bool bXMM;
     };
 

@@ -635,7 +635,7 @@ QMap<QString, XBinary::XVARIANT> XAbstractDebugger::getRegisters(void *hThread, 
     QMap<QString, XBinary::XVARIANT> mapResult;
 #ifdef Q_OS_WIN
     CONTEXT context={0};
-    context.ContextFlags=CONTEXT_ALL; // All registers TODO Check regOptions
+    context.ContextFlags=CONTEXT_ALL; // All registers TODO Check regOptions | CONTEXT_FLOATING_POINT | CONTEXT_EXTENDED_REGISTERS;
 
     if(GetThreadContext(hThread,&context))
     {
@@ -792,14 +792,56 @@ QMap<QString, XBinary::XVARIANT> XAbstractDebugger::getRegisters(void *hThread, 
         if(regOptions.bXMM)
         {
             xVariant.mode=XBinary::MODE_128;
-            xVariant.var.v_uint128.low=(quint64)(context.Xmm0.Low);
-            xVariant.var.v_uint128.high=(quint64)(context.Xmm0.High);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[0].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[0].High);
             mapResult.insert("XMM0",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[1].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[1].High);
+            mapResult.insert("XMM1",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[2].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[2].High);
+            mapResult.insert("XMM2",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[3].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[3].High);
+            mapResult.insert("XMM3",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[4].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[4].High);
+            mapResult.insert("XMM4",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[5].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[5].High);
+            mapResult.insert("XMM5",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[6].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[6].High);
+            mapResult.insert("XMM6",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[7].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[7].High);
+            mapResult.insert("XMM7",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[8].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[8].High);
+            mapResult.insert("XMM8",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[9].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[9].High);
+            mapResult.insert("XMM9",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[10].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[10].High);
+            mapResult.insert("XMM10",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[11].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[11].High);
+            mapResult.insert("XMM11",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[12].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[12].High);
+            mapResult.insert("XMM12",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[13].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[13].High);
+            mapResult.insert("XMM13",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[14].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[14].High);
+            mapResult.insert("XMM14",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[15].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[15].High);
+            mapResult.insert("XMM15",xVariant);
+
 //            mapResult.insert("MxCsr",(quint32)(context.MxCsr));
-//            mapResult.insert("XMM0L",(quint64)(context.Xmm0.Low));
-//            mapResult.insert("XMM0H",(qint64)(context.Xmm0.High));
-//            mapResult.insert("XMM1L",(quint64)(context.Xmm1.Low));
-//            mapResult.insert("XMM1H",(qint64)(context.Xmm1.High));
         }
 
     #ifdef QT_DEBUG
