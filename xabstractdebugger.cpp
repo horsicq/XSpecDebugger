@@ -789,6 +789,36 @@ QMap<QString, XBinary::XVARIANT> XAbstractDebugger::getRegisters(void *hThread, 
         #endif
         }
 
+        if(regOptions.bFloat)
+        {
+            xVariant.mode=XBinary::MODE_128;
+
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[0].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[0].High);
+            mapResult.insert("ST0",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[1].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[1].High);
+            mapResult.insert("ST1",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[2].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[2].High);
+            mapResult.insert("ST2",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[3].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[3].High);
+            mapResult.insert("ST3",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[4].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[4].High);
+            mapResult.insert("ST4",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[5].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[5].High);
+            mapResult.insert("ST5",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[6].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[6].High);
+            mapResult.insert("ST6",xVariant);
+            xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[7].Low);
+            xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[7].High);
+            mapResult.insert("ST7",xVariant);
+        }
+
         if(regOptions.bXMM)
         {
             xVariant.mode=XBinary::MODE_128;
