@@ -937,25 +937,46 @@ XAbstractDebugger::FUNCTION_INFO XAbstractDebugger::getFunctionInfo(void *hThrea
 
 qint64 XAbstractDebugger::getRetAddress(void *hThread)
 {
-    qint64 nAddress=0;
+    qint64 nResult=0;
 
 #ifdef Q_OS_WIN
     CONTEXT context={0};
-    context.ContextFlags=CONTEXT_CONTROL; // Full
+    context.ContextFlags=CONTEXT_CONTROL;
 
     if(GetThreadContext(hThread,&context))
     {
     #ifndef Q_OS_WIN64
         quint64 nSP=(quint32)(context.Esp);
-        nAddress=read_uint32((quint32)nSP);
+        nResult=read_uint32((quint32)nSP);
     #else
         quint64 nSP=(quint64)(context.Rsp);
-        nAddress=read_uint64((quint64)nSP);
+        nResult=read_uint64((quint64)nSP);
     #endif
     }
 #endif
 
-    return nAddress;
+    return nResult;
+}
+
+qint64 XAbstractDebugger::getStackPointer(void *hThread)
+{
+    qint64 nResult=0;
+
+#ifdef Q_OS_WIN
+    CONTEXT context={0};
+    context.ContextFlags=CONTEXT_CONTROL;
+
+    if(GetThreadContext(hThread,&context))
+    {
+    #ifndef Q_OS_WIN64
+        nResult=(quint32)(context.Esp);
+    #else
+        nResult=(quint64)(context.Rsp);
+    #endif
+    }
+#endif
+
+    return nResult;
 }
 
 XCapstone::DISASM_STRUCT XAbstractDebugger::disasm(qint64 nAddress)

@@ -267,10 +267,11 @@ public:
     bool _setStep(void *hThread);
     bool setSingleStep(void *hThread,QString sInfo="");
 
-    QMap<QString,XBinary::XVARIANT> getRegisters(void *hThread,REG_OPTIONS regOptions);
+    QMap<QString,XBinary::XVARIANT> getRegisters(void *hThread,REG_OPTIONS regOptions); // TODO make virtual
 
     FUNCTION_INFO getFunctionInfo(void *hThread,QString sName);
     qint64 getRetAddress(void *hThread);
+    qint64 getStackPointer(void *hThread);
 
     XCapstone::DISASM_STRUCT disasm(qint64 nAddress);
 
