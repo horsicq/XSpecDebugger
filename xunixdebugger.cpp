@@ -72,3 +72,37 @@ void XUnixDebugger::setPtraceOptions(qint64 nThreadID)
 
     // mb TODO
 }
+
+void XUnixDebugger::waitForSignal(qint64 nProcessID)
+{
+    pid_t ret;
+
+    int nStatus=0;
+
+    // TODO a function
+    do
+    {
+        ret=waitpid(nProcessID,&nStatus,__WALL);
+    }
+    while((ret==-1)&&(errno==EINTR));
+
+    if(ret==-1)
+    {
+        qDebug("waitpid failed: %s",strerror(errno));
+    }
+    else if(WIFEXITED(nStatus))
+    {
+        qDebug("process exited with code %x",WEXITSTATUS(nStatus));
+    }
+    else if(WIFSIGNALED(nStatus))
+    {
+        qDebug("process killed by signal %x",WTERMSIG(nStatus));
+    }
+    else if(WIFSTOPPED(nStatus)&&(WSTOPSIG(nStatus)==SIGABRT))
+    {
+        qDebug("process unexpectedly aborted");
+    }
+    // TODO fast events
+
+    qDebug("STATUS: %x",nStatus);
+}

@@ -38,9 +38,9 @@ bool XLinuxDebugger::load()
 
     if(XBinary::isFileExists(sFileName))
     {
-        int nPID=fork();
+        int nProcessID=fork();
 
-        if(nPID==0)
+        if(nProcessID==0)
         {
             // Child process
             ptrace(PTRACE_TRACEME,0,nullptr,nullptr);
@@ -52,7 +52,7 @@ bool XLinuxDebugger::load()
 
             abort();
         }
-        else if(nPID>0)
+        else if(nProcessID>0)
         {
             // Parent
             // TODO
@@ -71,44 +71,26 @@ bool XLinuxDebugger::load()
             }
         #endif
 
-            pid_t ret;
+            waitForSignal(nProcessID);
 
-            int nStatus=0;
+            setPtraceOptions(nProcessID);
 
-            // TODO a function
-            do
-            {
-                ret=waitpid(nPID,&nStatus,__WALL);
-            }
-            while((ret==-1)&&(errno==EINTR));
+            XAbstractDebugger::PROCESS_INFO processInfo={};
+            processInfo.nProcessID=nProcessID;
+            // TODO more
 
-            if(ret==-1)
-            {
-                qDebug("waitpid failed: %s",strerror(errno));
-            }
-            else if(WIFEXITED(nStatus))
-            {
-                qDebug("process exited with code %x",WEXITSTATUS(nStatus));
-            }
-            else if(WIFSIGNALED(nStatus))
-            {
-                qDebug("process killed by signal %x",WTERMSIG(nStatus));
-            }
-            else if(WIFSTOPPED(nStatus)&&(WSTOPSIG(nStatus)==SIGABRT))
-            {
-                qDebug("process unexpectedly aborted");
-            }
-            // TODO fast events
+            emit eventCreateProcess(&processInfo);
 
-            qDebug("STATUS: %x",nStatus);
+            // TODO eventCreateProcess
+            // TODO set on entryPoint
 
-            setPtraceOptions(nPID);
+
 
             // TODO Create process
             // TODO open memory
             // TODO debug loop
         }
-        else if(nPID<0) // -1
+        else if(nProcessID<0) // -1
         {
             // Error
             // TODO
