@@ -38,7 +38,7 @@ bool XLinuxDebugger::load()
 
     if(XBinary::isFileExists(sFileName))
     {
-        int nProcessID=fork();
+        qint32 nProcessID=fork();
 
         if(nProcessID==0)
         {

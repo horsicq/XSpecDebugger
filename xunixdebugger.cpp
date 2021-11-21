@@ -37,7 +37,7 @@ XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName)
     qDebug("FileName %s",ppArgv[0]);
 #endif
 
-    int nRet=execv(ppArgv[0],ppArgv); // TODO Unicode
+    qint32 nRet=execv(ppArgv[0],ppArgv); // TODO Unicode
 
     if(nRet==-1)
     {
@@ -48,7 +48,7 @@ XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName)
     #endif
     }
 
-    for(int i=0;i<2;i++)
+    for(qint32 i=0;i<2;i++)
     {
         delete [] ppArgv[i];
     }
