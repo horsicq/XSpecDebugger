@@ -106,3 +106,9 @@ void XUnixDebugger::waitForSignal(qint64 nProcessID)
 
     qDebug("STATUS: %x",nStatus);
 }
+
+void XUnixDebugger::continueThread(qint64 nThreadID)
+{
+    // TODO
+    ptrace(PTRACE_CONT,nThreadID,0,0);
+}

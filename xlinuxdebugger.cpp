@@ -71,6 +71,8 @@ bool XLinuxDebugger::load()
             }
         #endif
 
+            // TODO wait
+
             waitForSignal(nProcessID);
 
             setPtraceOptions(nProcessID);
@@ -78,11 +80,14 @@ bool XLinuxDebugger::load()
             XAbstractDebugger::PROCESS_INFO processInfo={};
             processInfo.nProcessID=nProcessID;
             // TODO more
+            // TODO show regs
 
             emit eventCreateProcess(&processInfo);
 
             // TODO eventCreateProcess
             // TODO set on entryPoint
+
+            continueThread(processInfo.nProcessID);
 
 
 

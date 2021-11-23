@@ -39,7 +39,9 @@ public:
         QString sDirectory;
         QString sArguments;
         bool bShowConsole;
-        bool bBreakpointOnTargetEntryPoint;
+        bool bBreakpointOnEntryPoint;
+        bool bBreakPointOnDLLMain;
+        bool bBreakPointOnTLSFunction;      // For windows TLS
     };
 
     struct REG_OPTIONS
@@ -73,6 +75,7 @@ public:
         BPI_UNKNOWN=0,
         BPI_USER,
         BPI_PROCESSENTRYPOINT,
+        BPI_TLSFUNCTION, // TODO
         BPI_FUNCTIONENTER,
         BPI_FUNCTIONLEAVE,
         BPI_STEP,
@@ -303,6 +306,7 @@ signals:
     void eventDebugString(XAbstractDebugger::DEBUGSTRING_INFO *pDebugString);
     void eventBreakPoint(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);
     void eventEntryPoint(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo); // If options.bBreakpointOnTargetEntryPoint
+    void eventTLSFunction(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo); // TODO
     void eventStep(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);
     void eventStepInto(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);
     void eventStepOver(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);

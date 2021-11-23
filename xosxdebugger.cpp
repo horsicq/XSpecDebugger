@@ -34,9 +34,9 @@ bool XOSXDebugger::load()
 
     if(XBinary::isFileExists(sFileName))
     {
-        int nPID=fork();
+        qint32 nProcessID=fork();
 
-        if(nPID==0)
+        if(nProcessID==0)
         {
             // Child process
             //ptrace(PTRACE_TRACEME, 0, nullptr, nullptr);
@@ -49,11 +49,11 @@ bool XOSXDebugger::load()
 
             // Never reach
         }
-        else if(nPID>0)
+        else if(nProcessID>0)
         {
             // Parent
         }
-        else if(nPID==-1)
+        else if(nProcessID==-1)
         {
             // TODO error
         }

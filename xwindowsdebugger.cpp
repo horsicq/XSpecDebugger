@@ -248,6 +248,11 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                     {
                         emit eventEntryPoint(&breakPointInfo); // TODO for DLL
                     }
+                    else if(breakPointInfo.bpInfo==BPI_TLSFUNCTION)
+                    {
+                        emit eventTLSFunction(&breakPointInfo); // TODO
+                        // TODO set BP on next TLS function
+                    }
                     else if(breakPointInfo.bpInfo==BPI_STEPOVER)
                     {
                         emit eventStepOver(&breakPointInfo);
@@ -398,10 +403,11 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
     threadInfo.nThreadLocalBase=(qint64)(pDebugEvent->u.CreateProcessInfo.lpThreadLocalBase);
     addThreadInfo(&threadInfo);
 
-    if(getOptions()->bBreakpointOnTargetEntryPoint) // TODO DLL
+    if(getOptions()->bBreakpointOnEntryPoint)
     {
         setBP((qint64)(pDebugEvent->u.CreateProcessInfo.lpStartAddress),BPT_CODE_SOFTWARE,BPI_PROCESSENTRYPOINT,1);
     }
+    // TODO DLLMain
 
     emit eventCreateProcess(&processInfo);
 

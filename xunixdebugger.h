@@ -43,6 +43,7 @@ public:
     EXECUTEPROCESS executeProcess(QString sFileName); // TODO args, TODO sDirectory
     void setPtraceOptions(qint64 nThreadID);
     void waitForSignal(qint64 nProcessID);
+    void continueThread(qint64 nThreadID);
 };
 
 #endif // XUNIXDEBUGGER_H
