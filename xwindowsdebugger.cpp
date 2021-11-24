@@ -185,6 +185,288 @@ QList<XBinary::SYMBOL_RECORD> XWindowsDebugger::loadSymbols(QString sFileName, q
     return listResult;
 }
 
+QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions)
+{
+    QMap<QString, XBinary::XVARIANT> mapResult;
+
+    if(handleID.hHandle)
+    {
+        CONTEXT context={0};
+        context.ContextFlags=CONTEXT_ALL; // All registers TODO Check regOptions | CONTEXT_FLOATING_POINT | CONTEXT_EXTENDED_REGISTERS;
+
+        if(GetThreadContext(handleID.hHandle,&context))
+        {
+            XBinary::XVARIANT xVariant={};
+            xVariant.bIsBigEndian=false;
+
+            if(regOptions.bGeneral)
+            {
+            #ifndef Q_OS_WIN64
+                xVariant.mode=XBinary::MODE_32;
+                xVariant.var.v_uint32=(quint32)(context.Eax);
+                mapResult.insert("EAX",xVariant);
+                xVariant.var.v_uint32=(quint32)(context.Ebx);
+                mapResult.insert("EBX",xVariant);
+                xVariant.var.v_uint32=(quint32)(context.Ecx);
+                mapResult.insert("ECX",xVariant);
+                xVariant.var.v_uint32=(quint32)(context.Edx);
+                mapResult.insert("EDX",xVariant);
+                xVariant.var.v_uint32=(quint32)(context.Ebp);
+                mapResult.insert("EBP",xVariant);
+                xVariant.var.v_uint32=(quint32)(context.Esp);
+                mapResult.insert("ESP",xVariant);
+                xVariant.var.v_uint32=(quint32)(context.Esi);
+                mapResult.insert("ESI",xVariant);
+                xVariant.var.v_uint32=(quint32)(context.Edi);
+                mapResult.insert("EDI",xVariant);
+            #else
+                xVariant.mode=XBinary::MODE_64;
+                xVariant.var.v_uint64=(quint64)(context.Rax);
+                mapResult.insert("RAX",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.Rbx);
+                mapResult.insert("RBX",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.Rcx);
+                mapResult.insert("RCX",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.Rdx);
+                mapResult.insert("RDX",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.Rbp);
+                mapResult.insert("RBP",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.Rsp);
+                mapResult.insert("RSP",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.Rsi);
+                mapResult.insert("RSI",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.Rdi);
+                mapResult.insert("RDI",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.R8);
+                mapResult.insert("R8",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.R9);
+                mapResult.insert("R9",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.R10);
+                mapResult.insert("R10",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.R11);
+                mapResult.insert("R11",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.R12);
+                mapResult.insert("R12",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.R13);
+                mapResult.insert("R13",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.R14);
+                mapResult.insert("R14",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.R15);
+                mapResult.insert("R15",xVariant);
+            #endif
+            }
+
+            if(regOptions.bIP)
+            {
+            #ifndef Q_OS_WIN64
+                xVariant.mode=XBinary::MODE_32;
+                xVariant.var.v_uint32=(quint32)(context.Eip);
+                mapResult.insert("EIP",xVariant);
+            #else
+                xVariant.mode=XBinary::MODE_64;
+                xVariant.var.v_uint64=(quint64)(context.Rip);
+                mapResult.insert("RIP",xVariant);
+            #endif
+            }
+
+            if(regOptions.bFlags)
+            {
+                xVariant.mode=XBinary::MODE_32;
+                xVariant.var.v_uint32=(quint32)(context.EFlags);
+                mapResult.insert("EFLAGS",xVariant);
+
+                xVariant.mode=XBinary::MODE_BIT;
+                xVariant.var.v_bool=(bool)((context.EFlags)&0x0001);
+                mapResult.insert("CF",xVariant);
+                xVariant.var.v_bool=(bool)((context.EFlags)&0x0004);
+                mapResult.insert("PF",xVariant);
+                xVariant.var.v_bool=(bool)((context.EFlags)&0x0010);
+                mapResult.insert("AF",xVariant);
+                xVariant.var.v_bool=(bool)((context.EFlags)&0x0040);
+                mapResult.insert("ZF",xVariant);
+                xVariant.var.v_bool=(bool)((context.EFlags)&0x0080);
+                mapResult.insert("SF",xVariant);
+                xVariant.var.v_bool=(bool)((context.EFlags)&0x0100);
+                mapResult.insert("TF",xVariant);
+                xVariant.var.v_bool=(bool)((context.EFlags)&0x0200);
+                mapResult.insert("IF",xVariant);
+                xVariant.var.v_bool=(bool)((context.EFlags)&0x0400);
+                mapResult.insert("DF",xVariant);
+                xVariant.var.v_bool=(bool)((context.EFlags)&0x0800);
+                mapResult.insert("OF",xVariant);
+            }
+
+            if(regOptions.bSegments)
+            {
+                xVariant.mode=XBinary::MODE_16;
+                xVariant.var.v_uint16=(quint16)(context.SegGs);
+                mapResult.insert("GS",xVariant);
+                xVariant.var.v_uint16=(quint16)(context.SegFs);
+                mapResult.insert("FS",xVariant);
+                xVariant.var.v_uint16=(quint16)(context.SegEs);
+                mapResult.insert("ES",xVariant);
+                xVariant.var.v_uint16=(quint16)(context.SegDs);
+                mapResult.insert("DS",xVariant);
+                xVariant.var.v_uint16=(quint16)(context.SegCs);
+                mapResult.insert("CS",xVariant);
+                xVariant.var.v_uint16=(quint16)(context.SegSs);
+                mapResult.insert("SS",xVariant);
+            }
+
+            if(regOptions.bDebug)
+            {
+            #ifndef Q_OS_WIN64
+                xVariant.mode=XBinary::MODE_32;
+                xVariant.var.v_uint32=(quint32)(context.Dr0);
+                mapResult.insert("DR0",xVariant);
+                xVariant.var.v_uint32=(quint32)(context.Dr1);
+                mapResult.insert("DR1",xVariant);
+                xVariant.var.v_uint32=(quint32)(context.Dr2);
+                mapResult.insert("DR2",xVariant);
+                xVariant.var.v_uint32=(quint32)(context.Dr3);
+                mapResult.insert("DR3",xVariant);
+                xVariant.var.v_uint32=(quint32)(context.Dr6);
+                mapResult.insert("DR6",xVariant);
+                xVariant.var.v_uint32=(quint32)(context.Dr7);
+                mapResult.insert("DR7",xVariant);
+            #else
+                xVariant.mode=XBinary::MODE_64;
+                xVariant.var.v_uint64=(quint64)(context.Dr0);
+                mapResult.insert("DR0",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.Dr0);
+                mapResult.insert("DR1",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.Dr0);
+                mapResult.insert("DR2",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.Dr0);
+                mapResult.insert("DR3",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.Dr0);
+                mapResult.insert("DR6",xVariant);
+                xVariant.var.v_uint64=(quint64)(context.Dr0);
+                mapResult.insert("DR7",xVariant);
+            #endif
+            }
+
+            if(regOptions.bFloat)
+            {
+                xVariant.mode=XBinary::MODE_128;
+
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[0].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[0].High);
+                mapResult.insert("ST0",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[1].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[1].High);
+                mapResult.insert("ST1",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[2].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[2].High);
+                mapResult.insert("ST2",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[3].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[3].High);
+                mapResult.insert("ST3",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[4].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[4].High);
+                mapResult.insert("ST4",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[5].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[5].High);
+                mapResult.insert("ST5",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[6].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[6].High);
+                mapResult.insert("ST6",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[7].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[7].High);
+                mapResult.insert("ST7",xVariant);
+            }
+
+            if(regOptions.bXMM)
+            {
+                xVariant.mode=XBinary::MODE_128;
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[0].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[0].High);
+                mapResult.insert("XMM0",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[1].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[1].High);
+                mapResult.insert("XMM1",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[2].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[2].High);
+                mapResult.insert("XMM2",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[3].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[3].High);
+                mapResult.insert("XMM3",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[4].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[4].High);
+                mapResult.insert("XMM4",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[5].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[5].High);
+                mapResult.insert("XMM5",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[6].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[6].High);
+                mapResult.insert("XMM6",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[7].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[7].High);
+                mapResult.insert("XMM7",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[8].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[8].High);
+                mapResult.insert("XMM8",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[9].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[9].High);
+                mapResult.insert("XMM9",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[10].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[10].High);
+                mapResult.insert("XMM10",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[11].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[11].High);
+                mapResult.insert("XMM11",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[12].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[12].High);
+                mapResult.insert("XMM12",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[13].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[13].High);
+                mapResult.insert("XMM13",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[14].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[14].High);
+                mapResult.insert("XMM14",xVariant);
+                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[15].Low);
+                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[15].High);
+                mapResult.insert("XMM15",xVariant);
+
+    //            mapResult.insert("MxCsr",(quint32)(context.MxCsr));
+            }
+
+        #ifdef QT_DEBUG
+    //        qDebug("DebugControl %s",XBinary::valueToHex((quint64)(context.DebugControl)).toLatin1().data());
+    //        qDebug("LastBranchToRip %s",XBinary::valueToHex((quint64)(context.LastBranchToRip)).toLatin1().data());
+    //        qDebug("LastBranchFromRip %s",XBinary::valueToHex((quint64)(context.LastBranchFromRip)).toLatin1().data());
+    //        qDebug("LastExceptionToRip %s",XBinary::valueToHex((quint64)(context.LastExceptionToRip)).toLatin1().data());
+    //        qDebug("LastExceptionFromRip %s",XBinary::valueToHex((quint64)(context.LastExceptionFromRip)).toLatin1().data());
+
+            qDebug("P1Home %s",XBinary::valueToHex((quint64)(context.P1Home)).toLatin1().data());
+            qDebug("P2Home %s",XBinary::valueToHex((quint64)(context.P2Home)).toLatin1().data());
+            qDebug("P3Home %s",XBinary::valueToHex((quint64)(context.P3Home)).toLatin1().data());
+            qDebug("P4Home %s",XBinary::valueToHex((quint64)(context.P4Home)).toLatin1().data());
+            qDebug("P5Home %s",XBinary::valueToHex((quint64)(context.P5Home)).toLatin1().data());
+            qDebug("P6Home %s",XBinary::valueToHex((quint64)(context.P6Home)).toLatin1().data());
+            qDebug("ContextFlags %s",XBinary::valueToHex((quint32)(context.ContextFlags)).toLatin1().data());
+            qDebug("MxCsr %s",XBinary::valueToHex((quint32)(context.MxCsr)).toLatin1().data());
+
+        #endif
+        }
+
+
+    }
+    else if(handleID.nID)
+    {
+        handleID.hHandle=XProcess::openThread(handleID.nID);
+
+        if(handleID.hHandle)
+        {
+            mapResult=getRegisters(handleID,regOptions);
+
+            XProcess::closeThread(handleID.hHandle);
+        }
+    }
+
+    return mapResult;
+}
+
 quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
     quint32 nResult=DBG_EXCEPTION_NOT_HANDLED;
@@ -192,17 +474,23 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     quint32 nExceptionCode=pDebugEvent->u.Exception.ExceptionRecord.ExceptionCode;
     quint64 nExceptionAddress=(qint64)(pDebugEvent->u.Exception.ExceptionRecord.ExceptionAddress);
 
-    HANDLE hThread=getThreadInfos()->value(pDebugEvent->dwThreadId).hThread;
+    XProcess::HANDLEID handleIDThread={};
+    handleIDThread.hHandle=getThreadInfos()->value(pDebugEvent->dwThreadId).hThread;
+    handleIDThread.nID=pDebugEvent->dwThreadId;
+
+    XProcess::HANDLEID handleIDProcess={};
+    handleIDProcess.hHandle=getProcessInfo()->hProcess;
+    handleIDProcess.nID=getProcessInfo()->nProcessID;
 
     if((nExceptionCode==EXCEPTION_BREAKPOINT)||(nExceptionCode==0x4000001f)) // 4000001f WOW64 breakpoint
     {
         if(getSoftwareBreakpoints()->contains(nExceptionAddress))
         {
-            bool bThreadsSuspended=suspendOtherThreads(hThread);
+            bool bThreadsSuspended=suspendOtherThreads(handleIDThread);
 
             BREAKPOINT _currentBP=getSoftwareBreakpoints()->value(nExceptionAddress);
 
-            setCurrentAddress(hThread,nExceptionAddress); // go to prev instruction address
+            setCurrentAddress(handleIDThread,nExceptionAddress); // go to prev instruction address
 
             removeBP(nExceptionAddress,_currentBP.bpType);
 
@@ -213,7 +501,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                 if(_currentBP.bpInfo==BPI_FUNCTIONENTER)
                 {
                     QString sUUID=XBinary::generateUUID();
-                    FUNCTION_INFO functionInfo=getFunctionInfo(hThread,_currentBP.sInfo);
+                    FUNCTION_INFO functionInfo=getFunctionInfo(handleIDThread,_currentBP.sInfo);
 
                     g_mapFunctionInfos.insert(sUUID,functionInfo);
 
@@ -238,11 +526,10 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                 breakPointInfo.bpType=_currentBP.bpType;
                 breakPointInfo.bpInfo=_currentBP.bpInfo;
                 breakPointInfo.sInfo=_currentBP.sInfo;
-                breakPointInfo.hThread=hThread;
-                breakPointInfo.nThreadID=pDebugEvent->dwThreadId;
-                breakPointInfo.hProcess=getProcessInfo()->hProcess;
+                breakPointInfo.handleIDThread=handleIDThread;
+                breakPointInfo.handleIDProcess=handleIDProcess;
 
-                if(!g_mapThreadSteps.contains(hThread)) // If not step. For step there is an another callback
+                if(!g_mapThreadSteps.contains(pDebugEvent->dwThreadId)) // If not step. For step there is an another callback
                 {
                     if(breakPointInfo.bpInfo==BPI_PROCESSENTRYPOINT)
                     {
@@ -272,12 +559,12 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             if(_currentBP.nCount)
             {
                 g_mapThreadBPToRestore.insert(pDebugEvent->dwThreadId,_currentBP);
-                _setStep(hThread);
+                _setStep(handleIDThread);
             }
 
             if(bThreadsSuspended)
             {
-                resumeOtherThreads(hThread);
+                resumeOtherThreads(handleIDThread);
             }
 
             nResult=DBG_CONTINUE;
@@ -295,22 +582,21 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             nResult=DBG_CONTINUE;
         }
 
-        if(g_mapThreadSteps.contains(hThread))
+        if(g_mapThreadSteps.contains(pDebugEvent->dwThreadId))
         {
-            BREAKPOINT stepBP=g_mapThreadSteps.value(hThread);
+            BREAKPOINT stepBP=g_mapThreadSteps.value(pDebugEvent->dwThreadId);
 
-            g_mapThreadSteps.remove(hThread);
+            g_mapThreadSteps.remove(pDebugEvent->dwThreadId);
 
-            bool bThreadsSuspended=suspendOtherThreads(hThread);
+            bool bThreadsSuspended=suspendOtherThreads(handleIDThread);
 
             XAbstractDebugger::BREAKPOINT_INFO breakPointInfo={};
 
             breakPointInfo.nAddress=nExceptionAddress;
             breakPointInfo.bpType=stepBP.bpType;
             breakPointInfo.bpInfo=stepBP.bpInfo;
-            breakPointInfo.hThread=hThread;
-            breakPointInfo.hProcess=getProcessInfo()->hProcess;
-            breakPointInfo.nThreadID=pDebugEvent->dwThreadId;
+            breakPointInfo.handleIDThread=handleIDThread;
+            breakPointInfo.handleIDProcess=handleIDProcess;
             breakPointInfo.sInfo=stepBP.sInfo;
 
             if(breakPointInfo.bpInfo==BPI_STEP)
@@ -328,7 +614,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
             if(bThreadsSuspended)
             {
-                resumeOtherThreads(hThread);
+                resumeOtherThreads(handleIDThread);
             }
 
             nResult=DBG_CONTINUE;

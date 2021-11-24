@@ -38,6 +38,7 @@ public:
     virtual XBinary::MODE getMode();
 
     virtual QList<XBinary::SYMBOL_RECORD> loadSymbols(QString sFileName,qint64 nModuleAddress);
+    virtual QMap<QString,XBinary::XVARIANT> getRegisters(XProcess::HANDLEID handleID,REG_OPTIONS regOptions);
 
 private:
     quint32 on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent);

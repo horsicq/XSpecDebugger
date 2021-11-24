@@ -150,9 +150,8 @@ public:
         BPT bpType;
         BPI bpInfo;
         QString sInfo;
-        void *hProcess;
-        void *hThread;
-        qint64 nThreadID;
+        XProcess::HANDLEID handleIDProcess;
+        XProcess::HANDLEID handleIDThread;
     };
 
     struct FUNCTIONHOOK_INFO
@@ -260,21 +259,21 @@ public:
     QString read_ansiString(qint64 nAddress,qint64 nMaxSize=256);
     QString read_unicodeString(qint64 nAddress, qint64 nMaxSize=256);
 
-    static bool suspendThread(void *hThread);
-    static bool resumeThread(void *hThread);
-    bool suspendOtherThreads(void *hCurrentThread);
-    bool resumeOtherThreads(void *hCurrentThread);
+    static bool suspendThread(XProcess::HANDLEID handleID);
+    static bool resumeThread(XProcess::HANDLEID handleID);
+    bool suspendOtherThreads(XProcess::HANDLEID handleID);
+    bool resumeOtherThreads(XProcess::HANDLEID handleID);
 
-    bool setCurrentAddress(void *hThread,qint64 nAddress);
-    qint64 getCurrentAddress(void *hThread);
-    bool _setStep(void *hThread);
-    bool setSingleStep(void *hThread,QString sInfo="");
+    bool setCurrentAddress(XProcess::HANDLEID handleID,qint64 nAddress);
+    qint64 getCurrentAddress(XProcess::HANDLEID handleID);
+    bool _setStep(XProcess::HANDLEID handleID);
+    bool setSingleStep(XProcess::HANDLEID handleID,QString sInfo="");
 
-    QMap<QString,XBinary::XVARIANT> getRegisters(void *hThread,REG_OPTIONS regOptions); // TODO make virtual
+    virtual QMap<QString,XBinary::XVARIANT> getRegisters(XProcess::HANDLEID handleID,REG_OPTIONS regOptions);
 
-    FUNCTION_INFO getFunctionInfo(void *hThread,QString sName);
-    qint64 getRetAddress(void *hThread);
-    qint64 getStackPointer(void *hThread);
+    FUNCTION_INFO getFunctionInfo(XProcess::HANDLEID handleID,QString sName);
+    qint64 getRetAddress(XProcess::HANDLEID handleID);
+    qint64 getStackPointer(XProcess::HANDLEID handleID);
 
     XCapstone::DISASM_STRUCT disasm(qint64 nAddress);
 
@@ -286,8 +285,8 @@ public:
     static QString debugActionToString(DEBUG_ACTION debugAction);
     static DEBUG_ACTION stringToDebugAction(QString sString);
 
-    bool stepInto(void *hThread);
-    bool stepOver(void *hThread);
+    bool stepInto(XProcess::HANDLEID handleID);
+    bool stepOver(XProcess::HANDLEID handleID);
 
     char *allocateAnsiStringMemory(QString sFileName);
 
@@ -314,7 +313,7 @@ signals:
     void eventFunctionLeave(XAbstractDebugger::FUNCTION_INFO *pFunctionInfo);
 
 protected:
-    QMap<void *,BREAKPOINT> g_mapThreadSteps; // mb TODO move to private set/get functions
+    QMap<qint64,BREAKPOINT> g_mapThreadSteps; // mb TODO move to private set/get functions
 
 private:
     OPTIONS g_options;

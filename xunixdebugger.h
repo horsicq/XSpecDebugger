@@ -44,6 +44,7 @@ public:
     void setPtraceOptions(qint64 nThreadID);
     void waitForSignal(qint64 nProcessID);
     void continueThread(qint64 nThreadID);
+    virtual QMap<QString,XBinary::XVARIANT> getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions);
 };
 
 #endif // XUNIXDEBUGGER_H

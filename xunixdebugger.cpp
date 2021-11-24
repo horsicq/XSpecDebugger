@@ -112,3 +112,12 @@ void XUnixDebugger::continueThread(qint64 nThreadID)
     // TODO
     ptrace(PTRACE_CONT,nThreadID,0,0);
 }
+
+QMap<QString, XBinary::XVARIANT> XUnixDebugger::getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions)
+{
+    QMap<QString, XBinary::XVARIANT> mapResult;
+
+    // TODO
+
+    return mapResult;
+}
