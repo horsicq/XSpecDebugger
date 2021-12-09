@@ -21,10 +21,10 @@
 #ifndef XABSTRACTDEBUGGER_H
 #define XABSTRACTDEBUGGER_H
 
-#include "xprocess.h"
-#include "xprocessdevice.h"
 #include "xbinary.h"
 #include "xcapstone.h"
+#include "xprocess.h"
+#include "xprocessdevice.h"
 
 // TODO Attach
 // TODO Detach
