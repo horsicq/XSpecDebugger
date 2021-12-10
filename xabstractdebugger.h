@@ -41,7 +41,7 @@ public:
         bool bShowConsole;
         bool bBreakpointOnEntryPoint;
         bool bBreakPointOnDLLMain;
-        bool bBreakPointOnTLSFunction;      // For windows TLS
+        bool bBreakPointOnTLSFunction;      // For Windows TLS
     };
 
     struct REG_OPTIONS
