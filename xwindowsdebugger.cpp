@@ -68,7 +68,7 @@ bool XWindowsDebugger::load()
             while(g_bIsDebugActive)
             {
                 DEBUG_EVENT dbgEvent={0};
-                WaitForDebugEvent(&dbgEvent,INFINITE); // TODO CHeck return
+                WaitForDebugEvent(&dbgEvent,INFINITE); // TODO Check return
 
                 quint32 nStatus=DBG_CONTINUE;
 
