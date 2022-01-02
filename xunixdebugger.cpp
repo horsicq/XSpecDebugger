@@ -90,22 +90,18 @@ void XUnixDebugger::waitForSignal(qint64 nProcessID)
     {
         qDebug("waitpid failed: %s",strerror(errno));
     }
-    else if(WEXITSTATUS(nStatus))
-    {
-        qDebug("WEXITSTATUS %x",WEXITSTATUS(nStatus));
-    }
-    else if(WTERMSIG(nStatus))
-    {
-        qDebug("WTERMSIG %x",WTERMSIG(nStatus));
-    }
-    else if(WSTOPSIG(nStatus))
-    {
-        qDebug("WSTOPSIG %x",WSTOPSIG(nStatus));
-    }
-    else if(WTERMSIG(nStatus))
-    {
-        qDebug("WTERMSIG %x",WTERMSIG(nStatus));
-    }
+//    else if(WEXITSTATUS(nStatus))
+//    {
+//        qDebug("WEXITSTATUS %x",WEXITSTATUS(nStatus));
+//    }
+//    else if(WSTOPSIG(nStatus))
+//    {
+//        qDebug("WSTOPSIG %x",WSTOPSIG(nStatus));
+//    }
+//    else if(WTERMSIG(nStatus))
+//    {
+//        qDebug("WTERMSIG %x",WTERMSIG(nStatus));
+//    }
     else if(WIFEXITED(nStatus))
     {
         qDebug("process exited with code %x",WEXITSTATUS(nStatus));

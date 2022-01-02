@@ -273,7 +273,7 @@ qint64 XAbstractDebugger::getFunctionAddress(QString sFunctionName)
 
     if(sharedObjectInfo.sName!="")
     {
-        QList<XBinary::SYMBOL_RECORD> listSymbols=loadSymbols(sharedObjectInfo.sFileName,sharedObjectInfo.nImageBase); // TODO Cache
+        QList<XBinary::SYMBOL_RECORD> listSymbols=loadSymbols(sharedObjectInfo.sFileName,sharedObjectInfo.nImageBase); // TODO Cache !!!
 
         XBinary::SYMBOL_RECORD functionAddress={};
 
