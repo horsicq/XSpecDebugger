@@ -89,8 +89,6 @@ bool XLinuxDebugger::load()
 
             continueThread(processInfo.nProcessID);
 
-
-
             // TODO Create process
             // TODO open memory
             // TODO debug loop
