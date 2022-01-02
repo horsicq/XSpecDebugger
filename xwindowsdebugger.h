@@ -52,7 +52,6 @@ private:
     quint32 on_RIP_EVENT(DEBUG_EVENT *pDebugEvent);
 
 private:
-    bool g_bIsDebugActive;
     QMap<qint64,BREAKPOINT> g_mapThreadBPToRestore;
     QMap<QString,FUNCTION_INFO> g_mapFunctionInfos;
 //    QMap<qint64,XBinary::FUNCTION_ADDRESS> g_mapFunctionAddresses; // mb TODO move to Abstarct

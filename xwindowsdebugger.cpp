@@ -201,6 +201,7 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
 
             if(regOptions.bGeneral)
             {
+                xVariant={};
             #ifndef Q_OS_WIN64
                 xVariant.mode=XBinary::MODE_32;
                 xVariant.var.v_uint32=(quint32)(context.Eax);
@@ -258,6 +259,7 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
 
             if(regOptions.bIP)
             {
+                xVariant={};
             #ifndef Q_OS_WIN64
                 xVariant.mode=XBinary::MODE_32;
                 xVariant.var.v_uint32=(quint32)(context.Eip);
@@ -271,10 +273,13 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
 
             if(regOptions.bFlags)
             {
+                xVariant={};
+
                 xVariant.mode=XBinary::MODE_32;
                 xVariant.var.v_uint32=(quint32)(context.EFlags);
                 mapResult.insert("EFLAGS",xVariant);
 
+                xVariant={};
                 xVariant.mode=XBinary::MODE_BIT;
                 xVariant.var.v_bool=(bool)((context.EFlags)&0x0001);
                 mapResult.insert("CF",xVariant);
@@ -298,6 +303,8 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
 
             if(regOptions.bSegments)
             {
+                xVariant={};
+
                 xVariant.mode=XBinary::MODE_16;
                 xVariant.var.v_uint16=(quint16)(context.SegGs);
                 mapResult.insert("GS",xVariant);
@@ -315,6 +322,7 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
 
             if(regOptions.bDebug)
             {
+                xVariant={};
             #ifndef Q_OS_WIN64
                 xVariant.mode=XBinary::MODE_32;
                 xVariant.var.v_uint32=(quint32)(context.Dr0);
@@ -348,6 +356,7 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
 
             if(regOptions.bFloat)
             {
+                xVariant={};
                 xVariant.mode=XBinary::MODE_128;
 
                 xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[0].Low);
@@ -378,6 +387,7 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
 
             if(regOptions.bXMM)
             {
+                xVariant={};
                 xVariant.mode=XBinary::MODE_128;
                 xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[0].Low);
                 xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[0].High);

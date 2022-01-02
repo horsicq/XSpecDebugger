@@ -75,27 +75,55 @@ bool XLinuxDebugger::load()
 
             waitForSignal(nProcessID);
 
-            setPtraceOptions(nProcessID);
+            setPtraceOptions(nProcessID); // Set options
 
             XAbstractDebugger::PROCESS_INFO processInfo={};
             processInfo.nProcessID=nProcessID;
             // TODO more
             // TODO show regs
 
+            XProcess::HANDLEID handleID={};
+            handleID.nID=nProcessID;
+
+            REG_OPTIONS regOptions={};
+            regOptions.bGeneral=true;
+            regOptions.bFlags=true;
+            regOptions.bFloat=true;
+            regOptions.bIP=true;
+            regOptions.bSegments=true;
+            regOptions.bXMM=true;
+
+            QMap<QString,XBinary::XVARIANT> mapRegisters=getRegisters(handleID,regOptions);
+
             emit eventCreateProcess(&processInfo);
 
             // TODO eventCreateProcess
             // TODO set on entryPoint
+            // TODO here set Breakpoints
 
             continueThread(processInfo.nProcessID);
 
             // TODO open memory
             // TODO debug loop
 
-            while(true)
+            setDebugActive(true);
+
+            int nTest=1;
+
+            while(isDebugActive())
             {
                 waitForSignal(nProcessID);
+//                int wait_status;
+//                waitpid(processInfo.nProcessID,&wait_status,0);
+
                 qDebug("WAIT");
+
+                if(nTest>0)
+                {
+                    continueThread(processInfo.nProcessID);
+                    nTest--;
+                }
+//                continueThread(processInfo.nProcessID);
             }
         }
         else if(nProcessID<0) // -1

@@ -290,6 +290,9 @@ public:
 
     char *allocateAnsiStringMemory(QString sFileName);
 
+    void setDebugActive(bool bState);
+    bool isDebugActive();
+
 public slots:
     void process();
 
@@ -325,6 +328,7 @@ private:
     QMap<QString,FUNCTIONHOOK_INFO> g_mapFunctionHookInfos;
     csh g_handle;
     QString g_sTraceFileName;
+    bool g_bIsDebugActive;
 };
 
 #endif // XABSTRACTDEBUGGER_H

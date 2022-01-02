@@ -23,6 +23,7 @@
 XAbstractDebugger::XAbstractDebugger(QObject *pParent) : QObject(pParent)
 {
     g_handle=0;
+    g_bIsDebugActive=false;
 }
 
 bool XAbstractDebugger::stop()
@@ -861,6 +862,16 @@ char *XAbstractDebugger::allocateAnsiStringMemory(QString sFileName)
     XBinary::_copyMemory(pResult,sFileName.toLatin1().data(),nSize);
 
     return pResult;
+}
+
+void XAbstractDebugger::setDebugActive(bool bState)
+{
+    g_bIsDebugActive=bState;
+}
+
+bool XAbstractDebugger::isDebugActive()
+{
+    return g_bIsDebugActive;
 }
 
 void XAbstractDebugger::process()

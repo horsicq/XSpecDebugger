@@ -27,6 +27,7 @@
 #include <sys/ptrace.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
+#include <sys/user.h>
 #include <unistd.h>
 
 class XUnixDebugger : public XAbstractDebugger
