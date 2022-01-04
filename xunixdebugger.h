@@ -44,8 +44,9 @@ public:
     EXECUTEPROCESS executeProcess(QString sFileName); // TODO args, TODO sDirectory
     void setPtraceOptions(qint64 nThreadID);
     void waitForSignal(qint64 nProcessID);
-    void continueThread(qint64 nThreadID);
+    void continueThread(qint64 nThreadID); // TODO rename to resumrThread
     virtual QMap<QString,XBinary::XVARIANT> getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions);
+    virtual bool _setStep(XProcess::HANDLEID handleID);
 };
 
 #endif // XUNIXDEBUGGER_H

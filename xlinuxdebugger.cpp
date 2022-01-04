@@ -93,7 +93,7 @@ bool XLinuxDebugger::load()
             regOptions.bSegments=true;
             regOptions.bXMM=true;
 
-            QMap<QString,XBinary::XVARIANT> mapRegisters=getRegisters(handleID,regOptions);
+
 
             emit eventCreateProcess(&processInfo);
 
@@ -101,14 +101,26 @@ bool XLinuxDebugger::load()
             // TODO set on entryPoint
             // TODO here set Breakpoints
 
-            continueThread(processInfo.nProcessID);
+//            continueThread(processInfo.nProcessID);
+
+            QMap<QString,XBinary::XVARIANT> mapRegisters;
+
+            mapRegisters=getRegisters(handleID,regOptions);
+
+            qDebug("RIP: %s",XBinary::valueToHex(mapRegisters.value("RIP").var.v_uint64).toLatin1().data());
+
+            _setStep(handleID);
+
+            mapRegisters=getRegisters(handleID,regOptions);
+
+            qDebug("RIP: %s",XBinary::valueToHex(mapRegisters.value("RIP").var.v_uint64).toLatin1().data());
 
             // TODO open memory
             // TODO debug loop
 
             setDebugActive(true);
 
-            int nTest=1;
+//            int nTest=1;
 
             while(isDebugActive())
             {
@@ -118,11 +130,11 @@ bool XLinuxDebugger::load()
 
                 qDebug("WAIT");
 
-                if(nTest>0)
-                {
-                    continueThread(processInfo.nProcessID);
-                    nTest--;
-                }
+//                if(nTest>0)
+//                {
+//                    continueThread(processInfo.nProcessID);
+//                    nTest--;
+//                }
 //                continueThread(processInfo.nProcessID);
             }
         }
