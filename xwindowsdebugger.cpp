@@ -63,9 +63,9 @@ bool XWindowsDebugger::load()
 
         if(ResumeThread(processInfo.hThread)!=((DWORD)-1))
         {
-            g_bIsDebugActive=true;
+            setDebugActive(true);
 
-            while(g_bIsDebugActive)
+            while(isDebugActive())
             {
                 DEBUG_EVENT dbgEvent={0};
                 WaitForDebugEvent(&dbgEvent,INFINITE); // TODO Check return
@@ -134,7 +134,7 @@ void XWindowsDebugger::cleanUp()
     XWindowsDebugger::stop();
 
     XAbstractDebugger::cleanUp();
-    g_bIsDebugActive=false;
+    setDebugActive(false);
     g_mapThreadBPToRestore.clear();
     g_mapThreadSteps.clear();
 }
@@ -477,6 +477,29 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
     return mapResult;
 }
 
+bool XWindowsDebugger::_setStep(XProcess::HANDLEID handleID)
+{
+    bool bResult=false;
+
+    CONTEXT context={0};
+    context.ContextFlags=CONTEXT_CONTROL; // EFLAGS
+
+    if(GetThreadContext(handleID.hHandle,&context))
+    {
+        if(!(context.EFlags&0x100))
+        {
+            context.EFlags|=0x100;
+        }
+
+        if(SetThreadContext(handleID.hHandle,&context))
+        {
+            bResult=true;
+        }
+    }
+
+    return bResult;
+}
+
 quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
     quint32 nResult=DBG_EXCEPTION_NOT_HANDLED;
@@ -726,7 +749,7 @@ quint32 XWindowsDebugger::on_EXIT_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
 quint32 XWindowsDebugger::on_EXIT_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
-    g_bIsDebugActive=false;
+    setDebugActive(false);
 
     EXITPROCESS_INFO exitProcessInfo={};
     exitProcessInfo.nProcessID=pDebugEvent->dwProcessId;

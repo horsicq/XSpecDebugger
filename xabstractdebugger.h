@@ -266,7 +266,7 @@ public:
 
     bool setCurrentAddress(XProcess::HANDLEID handleID,qint64 nAddress);
     qint64 getCurrentAddress(XProcess::HANDLEID handleID);
-    bool _setStep(XProcess::HANDLEID handleID);
+    virtual bool _setStep(XProcess::HANDLEID handleID);
     bool setSingleStep(XProcess::HANDLEID handleID,QString sInfo="");
 
     virtual QMap<QString,XBinary::XVARIANT> getRegisters(XProcess::HANDLEID handleID,REG_OPTIONS regOptions);

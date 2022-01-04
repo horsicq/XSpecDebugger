@@ -607,23 +607,7 @@ qint64 XAbstractDebugger::getCurrentAddress(XProcess::HANDLEID handleID)
 bool XAbstractDebugger::_setStep(XProcess::HANDLEID handleID)
 {
     bool bResult=false;
-#ifdef Q_OS_WIN
-    CONTEXT context={0};
-    context.ContextFlags=CONTEXT_CONTROL; // EFLAGS
 
-    if(GetThreadContext(handleID.hHandle,&context))
-    {
-        if(!(context.EFlags&0x100))
-        {
-            context.EFlags|=0x100;
-        }
-
-        if(SetThreadContext(handleID.hHandle,&context))
-        {
-            bResult=true;
-        }
-    }
-#endif
     return bResult;
 }
 
