@@ -25,6 +25,25 @@ XUnixDebugger::XUnixDebugger(QObject *pParent) : XAbstractDebugger(pParent)
 
 }
 
+bool XUnixDebugger::stop()
+{
+    bool bResult=false;
+
+    if(kill(getProcessInfo()->nProcessID,SIGKILL)!=-1)
+    {
+        bResult=true;
+    }
+
+    sleep(1000);
+
+    return bResult;
+}
+
+void XUnixDebugger::cleanUp()
+{
+    XUnixDebugger::stop();
+}
+
 XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName)
 {
     EXECUTEPROCESS result={};
@@ -74,16 +93,16 @@ void XUnixDebugger::setPtraceOptions(qint64 nThreadID)
     // mb TODO
 }
 
-void XUnixDebugger::waitForSignal(qint64 nProcessID)
+qint32 XUnixDebugger::waitForSignal(qint64 nProcessID)
 {
-    pid_t ret;
+    qint32 nResult=0;
 
-    int nStatus=0;
+    pid_t ret=0;
 
     // TODO a function
     do
     {
-        ret=waitpid(nProcessID,&nStatus,__WALL);
+        ret=waitpid(nProcessID,&nResult,__WALL);
     }
     while((ret==-1)&&(errno==EINTR));
 
@@ -91,37 +110,39 @@ void XUnixDebugger::waitForSignal(qint64 nProcessID)
     {
         qDebug("waitpid failed: %s",strerror(errno));
     }
-//    else if(WEXITSTATUS(nStatus))
-//    {
-//        qDebug("WEXITSTATUS %x",WEXITSTATUS(nStatus));
-//    }
-//    else if(WSTOPSIG(nStatus))
-//    {
-//        qDebug("WSTOPSIG %x",WSTOPSIG(nStatus));
-//    }
-//    else if(WTERMSIG(nStatus))
-//    {
-//        qDebug("WTERMSIG %x",WTERMSIG(nStatus));
-//    }
-    else if(WIFEXITED(nStatus))
+    else if(WEXITSTATUS(nResult))
     {
-        qDebug("process exited with code %x",WEXITSTATUS(nStatus));
+        qDebug("WEXITSTATUS %x",WEXITSTATUS(nResult));
     }
-    else if(WIFSIGNALED(nStatus))
+    else if(WSTOPSIG(nResult))
     {
-        qDebug("process killed by signal %x",WTERMSIG(nStatus));
+        qDebug("WSTOPSIG %x",WSTOPSIG(nResult));
     }
-    else if(WIFSTOPPED(nStatus)&&(WSTOPSIG(nStatus)==SIGABRT))
+    else if(WTERMSIG(nResult))
+    {
+        qDebug("WTERMSIG %x",WTERMSIG(nResult));
+    }
+    else if(WIFEXITED(nResult))
+    {
+        qDebug("process exited with code %x",WEXITSTATUS(nResult));
+    }
+    else if(WIFSIGNALED(nResult))
+    {
+        qDebug("process killed by signal %x",WTERMSIG(nResult));
+    }
+    else if(WIFSTOPPED(nResult)&&(WSTOPSIG(nResult)==SIGABRT))
     {
         qDebug("process unexpectedly aborted");
     }
-    else if(WIFCONTINUED(nStatus))
+    else if(WIFCONTINUED(nResult))
     {
-        qDebug("WIFCONTINUED %x",WIFCONTINUED(nStatus));
+        qDebug("WIFCONTINUED %x",WIFCONTINUED(nResult));
     }
     // TODO fast events
 
-    qDebug("STATUS: %x",nStatus);
+    qDebug("STATUS: %x",nResult);
+
+    return nResult;
 }
 
 void XUnixDebugger::continueThread(qint64 nThreadID)
@@ -132,6 +153,19 @@ void XUnixDebugger::continueThread(qint64 nThreadID)
     int wait_status;
     waitpid(nThreadID,&wait_status,0);
     // TODO result
+}
+
+bool XUnixDebugger::resumeThread(XProcess::HANDLEID handleID)
+{
+    bool bResult=false;
+
+    if(ptrace(PTRACE_CONT,handleID.nID,0,0))
+    {
+        int wait_status;
+        waitpid(handleID.nID,&wait_status,0);
+    }
+
+    return bResult;
 }
 
 QMap<QString, XBinary::XVARIANT> XUnixDebugger::getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions)

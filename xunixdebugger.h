@@ -41,10 +41,15 @@ public:
     };
 
     explicit XUnixDebugger(QObject *pParent=nullptr);
+
+    virtual bool stop();
+    virtual void cleanUp();
+
     EXECUTEPROCESS executeProcess(QString sFileName); // TODO args, TODO sDirectory
     void setPtraceOptions(qint64 nThreadID);
-    void waitForSignal(qint64 nProcessID);
+    qint32 waitForSignal(qint64 nProcessID);
     void continueThread(qint64 nThreadID); // TODO rename to resumrThread
+    static bool resumeThread(XProcess::HANDLEID handleID);
     virtual QMap<QString,XBinary::XVARIANT> getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions);
     virtual bool _setStep(XProcess::HANDLEID handleID);
 };

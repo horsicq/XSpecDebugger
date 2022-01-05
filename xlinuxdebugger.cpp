@@ -79,6 +79,8 @@ bool XLinuxDebugger::load()
 
             XAbstractDebugger::PROCESS_INFO processInfo={};
             processInfo.nProcessID=nProcessID;
+
+            setProcessInfo(&processInfo);
             // TODO more
             // TODO show regs
 
@@ -92,8 +94,6 @@ bool XLinuxDebugger::load()
             regOptions.bIP=true;
             regOptions.bSegments=true;
             regOptions.bXMM=true;
-
-
 
             emit eventCreateProcess(&processInfo);
 
@@ -136,6 +136,7 @@ bool XLinuxDebugger::load()
 //                    nTest--;
 //                }
 //                continueThread(processInfo.nProcessID);
+                break;
             }
         }
         else if(nProcessID<0) // -1

@@ -459,8 +459,6 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
 
         #endif
         }
-
-
     }
     else if(handleID.nID)
     {
@@ -481,19 +479,33 @@ bool XWindowsDebugger::_setStep(XProcess::HANDLEID handleID)
 {
     bool bResult=false;
 
-    CONTEXT context={0};
-    context.ContextFlags=CONTEXT_CONTROL; // EFLAGS
-
-    if(GetThreadContext(handleID.hHandle,&context))
+    if(handleID.hHandle)
     {
-        if(!(context.EFlags&0x100))
-        {
-            context.EFlags|=0x100;
-        }
+        CONTEXT context={0};
+        context.ContextFlags=CONTEXT_CONTROL; // EFLAGS
 
-        if(SetThreadContext(handleID.hHandle,&context))
+        if(GetThreadContext(handleID.hHandle,&context))
         {
-            bResult=true;
+            if(!(context.EFlags&0x100))
+            {
+                context.EFlags|=0x100;
+            }
+
+            if(SetThreadContext(handleID.hHandle,&context))
+            {
+                bResult=true;
+            }
+        }
+    }
+    else if(handleID.nID)
+    {
+        handleID.hHandle=XProcess::openThread(handleID.nID);
+
+        if(handleID.hHandle)
+        {
+            bResult=_setStep(handleID);
+
+            XProcess::closeThread(handleID.hHandle);
         }
     }
 
