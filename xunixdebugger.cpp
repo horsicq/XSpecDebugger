@@ -42,6 +42,12 @@ bool XUnixDebugger::stop()
 void XUnixDebugger::cleanUp()
 {
     XUnixDebugger::stop();
+
+    if(getProcessInfo()->hProcessIO)
+    {
+        XProcess::closeMemoryIO(getProcessInfo()->hProcessIO);
+        getProcessInfo()->hProcessIO=0;
+    }
 }
 
 XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName)
@@ -110,31 +116,31 @@ qint32 XUnixDebugger::waitForSignal(qint64 nProcessID)
     {
         qDebug("waitpid failed: %s",strerror(errno));
     }
-    else if(WEXITSTATUS(nResult))
+    if(WEXITSTATUS(nResult))
     {
         qDebug("WEXITSTATUS %x",WEXITSTATUS(nResult));
     }
-    else if(WSTOPSIG(nResult))
+    if(WSTOPSIG(nResult))
     {
         qDebug("WSTOPSIG %x",WSTOPSIG(nResult));
     }
-    else if(WTERMSIG(nResult))
-    {
-        qDebug("WTERMSIG %x",WTERMSIG(nResult));
-    }
-    else if(WIFEXITED(nResult))
+//    if(WTERMSIG(nResult))
+//    {
+//        qDebug("WTERMSIG %x",WTERMSIG(nResult));
+//    }
+    if(WIFEXITED(nResult))
     {
         qDebug("process exited with code %x",WEXITSTATUS(nResult));
     }
-    else if(WIFSIGNALED(nResult))
+    if(WIFSIGNALED(nResult))
     {
         qDebug("process killed by signal %x",WTERMSIG(nResult));
     }
-    else if(WIFSTOPPED(nResult)&&(WSTOPSIG(nResult)==SIGABRT))
+    if(WIFSTOPPED(nResult)&&(WSTOPSIG(nResult)==SIGABRT))
     {
         qDebug("process unexpectedly aborted");
     }
-    else if(WIFCONTINUED(nResult))
+    if(WIFCONTINUED(nResult))
     {
         qDebug("WIFCONTINUED %x",WIFCONTINUED(nResult));
     }
@@ -150,8 +156,8 @@ void XUnixDebugger::continueThread(qint64 nThreadID)
     // TODO
     ptrace(PTRACE_CONT,nThreadID,0,0);
 
-    int wait_status;
-    waitpid(nThreadID,&wait_status,0);
+//    int wait_status;
+//    waitpid(nThreadID,&wait_status,0);
     // TODO result
 }
 

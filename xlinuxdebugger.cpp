@@ -79,6 +79,8 @@ bool XLinuxDebugger::load()
 
             XAbstractDebugger::PROCESS_INFO processInfo={};
             processInfo.nProcessID=nProcessID;
+            processInfo.hProcessIO=XProcess::openMemoryIO(nProcessID);
+            // TODO more handles
 
             setProcessInfo(&processInfo);
             // TODO more
@@ -97,33 +99,39 @@ bool XLinuxDebugger::load()
 
             emit eventCreateProcess(&processInfo);
 
-            // TODO eventCreateProcess
-            // TODO set on entryPoint
-            // TODO here set Breakpoints
+            qint64 nCurrentAddress=getCurrentAddress(handleID);
 
-//            continueThread(processInfo.nProcessID);
+            setBP(nCurrentAddress,BPT_CODE_SOFTWARE,BPI_PROCESSENTRYPOINT);
 
-            QMap<QString,XBinary::XVARIANT> mapRegisters;
+//            // TODO eventCreateProcess
+//            // TODO set on entryPoint
+//            // TODO here set Breakpoints
 
-            mapRegisters=getRegisters(handleID,regOptions);
+////            continueThread(processInfo.nProcessID);
 
-            qDebug("RIP: %s",XBinary::valueToHex(mapRegisters.value("RIP").var.v_uint64).toLatin1().data());
+//            QMap<QString,XBinary::XVARIANT> mapRegisters;
 
-            _setStep(handleID);
+//            mapRegisters=getRegisters(handleID,regOptions);
 
-            mapRegisters=getRegisters(handleID,regOptions);
+//            qDebug("RIP: %s",XBinary::valueToHex(mapRegisters.value("RIP").var.v_uint64).toLatin1().data());
 
-            qDebug("RIP: %s",XBinary::valueToHex(mapRegisters.value("RIP").var.v_uint64).toLatin1().data());
+//            _setStep(handleID);
 
-            // TODO open memory
+//            mapRegisters=getRegisters(handleID,regOptions);
+
+//            qDebug("RIP: %s",XBinary::valueToHex(mapRegisters.value("RIP").var.v_uint64).toLatin1().data());
+
             // TODO debug loop
 
             setDebugActive(true);
+
+//            continueThread(processInfo.nProcessID);
 
 //            int nTest=1;
 
             while(isDebugActive())
             {
+                qDebug("WAIT_0");
                 waitForSignal(nProcessID);
 //                int wait_status;
 //                waitpid(processInfo.nProcessID,&wait_status,0);
@@ -136,7 +144,7 @@ bool XLinuxDebugger::load()
 //                    nTest--;
 //                }
 //                continueThread(processInfo.nProcessID);
-                break;
+//                break;
             }
         }
         else if(nProcessID<0) // -1

@@ -22,7 +22,6 @@
 #define XWINDOWSDEBUGGER_H
 
 #include "xabstractdebugger.h"
-#include "windows.h"
 #include "xpe.h"
 
 class XWindowsDebugger : public XAbstractDebugger

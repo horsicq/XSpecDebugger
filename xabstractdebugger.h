@@ -39,7 +39,7 @@ public:
         QString sDirectory;
         QString sArguments;
         bool bShowConsole;
-        bool bBreakpointOnEntryPoint;
+        bool bBreakpointOnProgramEntryPoint;
         bool bBreakPointOnDLLMain;
         bool bBreakPointOnTLSFunction;      // For Windows TLS
     };
@@ -75,6 +75,7 @@ public:
         BPI_UNKNOWN=0,
         BPI_USER,
         BPI_PROCESSENTRYPOINT,
+        BPI_PROGRAMENTRYPOINT,
         BPI_TLSFUNCTION, // TODO
         BPI_FUNCTIONENTER,
         BPI_FUNCTIONLEAVE,
@@ -119,7 +120,7 @@ public:
         qint64 nImageSize;
         qint64 nStartAddress;
         qint64 nThreadLocalBase;
-        void *hProcess;
+        void *hProcessIO;
         void *hMainThread;
     };
 
@@ -313,7 +314,7 @@ signals:
     void eventDebugString(XAbstractDebugger::DEBUGSTRING_INFO *pDebugString);
     void eventBreakPoint(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);
     void eventProcessEntry(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo); // Check windows set on startAddress
-    void eventEntryPoint(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo); // If options.bBreakpointOnTargetEntryPoint
+    void eventProgramEntryPoint(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo); // If options.bBreakpointOnTargetEntryPoint
     void eventTLSFunction(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo); // TODO
     void eventStep(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);
     void eventStepInto(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);
