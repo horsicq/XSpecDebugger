@@ -135,7 +135,8 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID)
     }
     else if(WIFEXITED(nResult))
     {
-        qDebug("process exited with code %x",WEXITSTATUS(nResult));
+        result.debuggerStatus=DEBUGGER_STATUS_EXIT;
+        result.nCode=WEXITSTATUS(nResult);
     }
     else if(WIFSIGNALED(nResult))
     {
@@ -295,13 +296,14 @@ QMap<QString, XBinary::XVARIANT> XUnixDebugger::getRegisters(XProcess::HANDLEID 
 
 bool XUnixDebugger::_setStep(XProcess::HANDLEID handleID)
 {
+    // TODO handle return
     bool bResult=true;
 
     ptrace(PTRACE_SINGLESTEP,handleID.nID,0,0);
 
-    int wait_status;
-    waitpid(handleID.nID,&wait_status,0);
-    // TODO result
+//    int wait_status;
+//    waitpid(handleID.nID,&wait_status,0);
+//    // TODO result
 
     return bResult;
 }

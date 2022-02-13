@@ -103,7 +103,8 @@ bool XLinuxDebugger::load()
 
             qint64 nCurrentAddress=getCurrentAddress(handleID);
 
-            setBP(nCurrentAddress,BPT_CODE_SOFTWARE,BPI_PROCESSENTRYPOINT);
+//            setBP(nCurrentAddress,BPT_CODE_SOFTWARE,BPI_PROCESSENTRYPOINT);
+            _setStep(handleID);
 
 //            XProcess::closeMemoryIO(processInfo.hProcessIO);
 
@@ -145,12 +146,18 @@ bool XLinuxDebugger::load()
                     qDebug("process killed by signal %x",state.nCode);
                     break;
                 }
+                else if(state.debuggerStatus==DEBUGGER_STATUS_EXIT)
+                {
+                    qDebug("process exited with code %x",state.nCode);
+                    break;
+                }
                 else if(state.debuggerStatus==DEBUGGER_STATUS_STOP)
                 {
                     qDebug("process stoped: %x",state.nCode);
 
                     if(state.nCode==5)
                     {
+                        qDebug("BREAKPOINT");
                         // TODO Breakpoint
                     }
                 }
@@ -168,6 +175,8 @@ bool XLinuxDebugger::load()
 //                continueThread(processInfo.nProcessID);
 //                break;
             }
+
+            setDebugActive(false);
         }
         else if(nProcessID<0) // -1
         {
