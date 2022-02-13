@@ -99,11 +99,12 @@ void XUnixDebugger::setPtraceOptions(qint64 nThreadID)
     // mb TODO
 }
 
-qint32 XUnixDebugger::waitForSignal(qint64 nProcessID)
+XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID)
 {
-    qint32 nResult=0;
+    STATE result={};
 
     pid_t ret=0;
+    qint32 nResult=0;
 
     // TODO a function
     do
@@ -116,39 +117,33 @@ qint32 XUnixDebugger::waitForSignal(qint64 nProcessID)
     {
         qDebug("waitpid failed: %s",strerror(errno));
     }
-    if(WEXITSTATUS(nResult))
+
+    if(WIFSTOPPED(nResult))
     {
-        qDebug("WEXITSTATUS %x",WEXITSTATUS(nResult));
-    }
-    if(WSTOPSIG(nResult))
-    {
+        if(WSTOPSIG(nResult)==SIGABRT)
+        {
+            qDebug("process unexpectedly aborted");
+        }
+        else
+        {
+
+        }
         qDebug("WSTOPSIG %x",WSTOPSIG(nResult));
     }
-//    if(WTERMSIG(nResult))
-//    {
-//        qDebug("WTERMSIG %x",WTERMSIG(nResult));
-//    }
-    if(WIFEXITED(nResult))
+    else if(WIFEXITED(nResult))
     {
         qDebug("process exited with code %x",WEXITSTATUS(nResult));
     }
-    if(WIFSIGNALED(nResult))
+    else if(WIFSIGNALED(nResult))
     {
-        qDebug("process killed by signal %x",WTERMSIG(nResult));
-    }
-    if(WIFSTOPPED(nResult)&&(WSTOPSIG(nResult)==SIGABRT))
-    {
-        qDebug("process unexpectedly aborted");
-    }
-    if(WIFCONTINUED(nResult))
-    {
-        qDebug("WIFCONTINUED %x",WIFCONTINUED(nResult));
+        result.debuggerStatus=DEBUGGER_STATUS_SIGNAL;
+        result.nCode=WTERMSIG(nResult);
     }
     // TODO fast events
 
     qDebug("STATUS: %x",nResult);
 
-    return nResult;
+    return result;
 }
 
 void XUnixDebugger::continueThread(qint64 nThreadID)

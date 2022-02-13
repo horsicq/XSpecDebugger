@@ -73,7 +73,7 @@ bool XLinuxDebugger::load()
 
             // TODO wait
 
-            waitForSignal(nProcessID);
+            waitForSignal(nProcessID); // TODO result
 
             setPtraceOptions(nProcessID); // Set options
 
@@ -99,9 +99,13 @@ bool XLinuxDebugger::load()
 
             emit eventCreateProcess(&processInfo);
 
+            qDebug("Address: %llX",getCurrentAddress(handleID));
+
             qint64 nCurrentAddress=getCurrentAddress(handleID);
 
             setBP(nCurrentAddress,BPT_CODE_SOFTWARE,BPI_PROCESSENTRYPOINT);
+
+//            XProcess::closeMemoryIO(processInfo.hProcessIO);
 
 //            // TODO eventCreateProcess
 //            // TODO set on entryPoint
@@ -125,14 +129,24 @@ bool XLinuxDebugger::load()
 
             setDebugActive(true);
 
-//            continueThread(processInfo.nProcessID);
+            continueThread(processInfo.nProcessID);
 
 //            int nTest=1;
 
             while(isDebugActive())
             {
                 qDebug("WAIT_0");
-                waitForSignal(nProcessID);
+                STATE state=waitForSignal(nProcessID);
+                qDebug("AddressXXX: %llX",getCurrentAddress(handleID));
+
+                if(state.debuggerStatus==DEBUGGER_STATUS_SIGNAL)
+                {
+                    // TODO emit signal
+                    qDebug("process killed by signal %x",WTERMSIG(state.nCode));
+                    break;
+                }
+
+
 //                int wait_status;
 //                waitpid(processInfo.nProcessID,&wait_status,0);
 

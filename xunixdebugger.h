@@ -33,6 +33,18 @@ public:
         QString sStatus;
     };
 
+    enum DEBUGGER_STATUS
+    {
+        DEBUGGER_STATUS_UNKNOWN=0,
+        DEBUGGER_STATUS_SIGNAL,
+    };
+
+    struct STATE
+    {
+        quint32 nCode;
+        DEBUGGER_STATUS debuggerStatus;
+    };
+
     explicit XUnixDebugger(QObject *pParent=nullptr);
 
     virtual bool stop();
@@ -40,7 +52,7 @@ public:
 
     EXECUTEPROCESS executeProcess(QString sFileName); // TODO args, TODO sDirectory
     void setPtraceOptions(qint64 nThreadID);
-    qint32 waitForSignal(qint64 nProcessID);
+    STATE waitForSignal(qint64 nProcessID);
     void continueThread(qint64 nThreadID); // TODO rename to resumrThread
     static bool resumeThread(XProcess::HANDLEID handleID);
     virtual QMap<QString,XBinary::XVARIANT> getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions);

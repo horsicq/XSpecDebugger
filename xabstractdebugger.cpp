@@ -446,7 +446,7 @@ quint64 XAbstractDebugger::read_uint64(qint64 nAddress)
     return XProcess::read_uint64(g_processInfo.hProcessIO,nAddress);
 }
 
-void XAbstractDebugger::write_uint8(qint64 nAddress, quint8 nValue)
+void XAbstractDebugger::write_uint8(qint64 nAddress,quint8 nValue)
 {
     XProcess::write_uint8(g_processInfo.hProcessIO,nAddress,nValue);
 }
@@ -609,7 +609,11 @@ qint64 XAbstractDebugger::getCurrentAddress(XProcess::HANDLEID handleID)
 
     if(ptrace(PTRACE_GETREGS,handleID.nID,nullptr,&regs)!=-1)
     {
+    #if defined(Q_PROCESSOR_X86_64)
         nAddress=regs.rip;
+    #elif defined(Q_PROCESSOR_X86)
+        nAddress=regs.eip;
+    #endif
     }
 #endif
     return nAddress;
