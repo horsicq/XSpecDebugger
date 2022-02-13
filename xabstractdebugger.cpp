@@ -611,7 +611,7 @@ qint64 XAbstractDebugger::getCurrentAddress(XProcess::HANDLEID handleID)
     {
     #if defined(Q_PROCESSOR_X86_64)
         nAddress=regs.rip;
-    #elif defined(Q_PROCESSOR_X86)
+    #elif defined(Q_PROCESSOR_X86_32)
         nAddress=regs.eip;
     #endif
     }

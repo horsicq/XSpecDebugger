@@ -314,7 +314,7 @@ signals:
     void eventUnloadSharedObject(XAbstractDebugger::SHAREDOBJECT_INFO *pSharedObjectInfo);
     void eventDebugString(XAbstractDebugger::DEBUGSTRING_INFO *pDebugString);
     void eventBreakPoint(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);
-    void eventProcessEntry(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo); // Check windows set on startAddress
+    void eventProcessEntryPoint(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo); // Check windows set on startAddress
     void eventProgramEntryPoint(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo); // If options.bBreakpointOnTargetEntryPoint
     void eventTLSFunction(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo); // TODO
     void eventStep(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);

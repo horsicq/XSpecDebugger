@@ -358,7 +358,7 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
             {
                 xVariant={};
                 xVariant.mode=XBinary::MODE_128;
-
+            #if defined(Q_PROCESSOR_X86_64)
                 xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[0].Low);
                 xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[0].High);
                 mapResult.insert("ST0",xVariant);
@@ -383,12 +383,14 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
                 xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[7].Low);
                 xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[7].High);
                 mapResult.insert("ST7",xVariant);
+            #endif
             }
 
             if(regOptions.bXMM)
             {
                 xVariant={};
                 xVariant.mode=XBinary::MODE_128;
+            #if defined(Q_PROCESSOR_X86_64)
                 xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[0].Low);
                 xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[0].High);
                 mapResult.insert("XMM0",xVariant);
@@ -437,7 +439,7 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
                 xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[15].Low);
                 xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[15].High);
                 mapResult.insert("XMM15",xVariant);
-
+            #endif
     //            mapResult.insert("MxCsr",(quint32)(context.MxCsr));
             }
 
@@ -447,7 +449,7 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
     //        qDebug("LastBranchFromRip %s",XBinary::valueToHex((quint64)(context.LastBranchFromRip)).toLatin1().data());
     //        qDebug("LastExceptionToRip %s",XBinary::valueToHex((quint64)(context.LastExceptionToRip)).toLatin1().data());
     //        qDebug("LastExceptionFromRip %s",XBinary::valueToHex((quint64)(context.LastExceptionFromRip)).toLatin1().data());
-
+         #if defined(Q_PROCESSOR_X86_64)
             qDebug("P1Home %s",XBinary::valueToHex((quint64)(context.P1Home)).toLatin1().data());
             qDebug("P2Home %s",XBinary::valueToHex((quint64)(context.P2Home)).toLatin1().data());
             qDebug("P3Home %s",XBinary::valueToHex((quint64)(context.P3Home)).toLatin1().data());
@@ -456,7 +458,7 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
             qDebug("P6Home %s",XBinary::valueToHex((quint64)(context.P6Home)).toLatin1().data());
             qDebug("ContextFlags %s",XBinary::valueToHex((quint32)(context.ContextFlags)).toLatin1().data());
             qDebug("MxCsr %s",XBinary::valueToHex((quint32)(context.MxCsr)).toLatin1().data());
-
+         #endif
         #endif
         }
     }

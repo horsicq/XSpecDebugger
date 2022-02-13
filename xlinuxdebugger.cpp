@@ -86,8 +86,8 @@ bool XLinuxDebugger::load()
             // TODO more
             // TODO show regs
 
-            XProcess::HANDLEID handleID={};
-            handleID.nID=nProcessID;
+            XProcess::HANDLEID handleProcessID={};
+            handleProcessID.nID=nProcessID;
 
             REG_OPTIONS regOptions={};
             regOptions.bGeneral=true;
@@ -99,12 +99,12 @@ bool XLinuxDebugger::load()
 
             emit eventCreateProcess(&processInfo);
 
-            qDebug("Address: %llX",getCurrentAddress(handleID));
+            qDebug("Address: %llX",getCurrentAddress(handleProcessID));
 
-            qint64 nCurrentAddress=getCurrentAddress(handleID);
+            qint64 nCurrentAddress=getCurrentAddress(handleProcessID);
 
             setBP(nCurrentAddress,BPT_CODE_SOFTWARE,BPI_PROCESSENTRYPOINT);
-//            _setStep(handleID);
+//            _setStep(handleProcessID);
 
 //            XProcess::closeMemoryIO(processInfo.hProcessIO);
 
@@ -138,7 +138,7 @@ bool XLinuxDebugger::load()
             {
                 qDebug("WAIT_0");
                 STATE state=waitForSignal(nProcessID);
-                qDebug("AddressXXX: %llX",getCurrentAddress(handleID));
+                qDebug("AddressXXX: %llX",getCurrentAddress(handleProcessID));
 
                 if(state.debuggerStatus==DEBUGGER_STATUS_SIGNAL)
                 {
@@ -159,15 +159,31 @@ bool XLinuxDebugger::load()
                     {
                         qDebug("BREAKPOINT");
                         // TODO Breakpoint
-                        qint64 nBreakPointAddress=findAddressByException(getCurrentAddress(handleID));
 
-                        if(nBreakPointAddress!=-1)
+                        qint64 nExceptionAddress=findAddressByException(getCurrentAddress(handleProcessID));
+
+                        if(nExceptionAddress!=-1)
                         {
+                            BREAKPOINT _currentBP=getSoftwareBreakpoints()->value(nExceptionAddress);
+                            removeBP(nExceptionAddress,_currentBP.bpType);
+                            // TODO set currentAddress
+
+                            XAbstractDebugger::BREAKPOINT_INFO breakPointInfo={};
+
+                            breakPointInfo.nAddress=nExceptionAddress;
+                            breakPointInfo.bpType=_currentBP.bpType;
+                            breakPointInfo.bpInfo=_currentBP.bpInfo;
+                            breakPointInfo.sInfo=_currentBP.sInfo;
+//                            breakPointInfo.handleIDThread=handleIDThread;
+                            breakPointInfo.handleIDProcess=handleProcessID;
+
+
+                            emit eventBreakPoint(&breakPointInfo);
                             // TODO
                         }
                         else
                         {
-                            continueThread(handleID.nID);
+                            continueThread(handleProcessID.nID);
                         }
                     }
                 }
