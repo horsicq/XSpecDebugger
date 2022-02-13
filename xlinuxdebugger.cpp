@@ -103,8 +103,8 @@ bool XLinuxDebugger::load()
 
             qint64 nCurrentAddress=getCurrentAddress(handleID);
 
-//            setBP(nCurrentAddress,BPT_CODE_SOFTWARE,BPI_PROCESSENTRYPOINT);
-            _setStep(handleID);
+            setBP(nCurrentAddress,BPT_CODE_SOFTWARE,BPI_PROCESSENTRYPOINT);
+//            _setStep(handleID);
 
 //            XProcess::closeMemoryIO(processInfo.hProcessIO);
 
