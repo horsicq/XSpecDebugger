@@ -120,6 +120,9 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID)
 
     if(WIFSTOPPED(nResult))
     {
+        result.debuggerStatus=DEBUGGER_STATUS_STOP;
+        result.nCode=WSTOPSIG(nResult);
+
         if(WSTOPSIG(nResult)==SIGABRT)
         {
             qDebug("process unexpectedly aborted");

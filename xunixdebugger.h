@@ -37,6 +37,7 @@ public:
     {
         DEBUGGER_STATUS_UNKNOWN=0,
         DEBUGGER_STATUS_SIGNAL,
+        DEBUGGER_STATUS_STOP
     };
 
     struct STATE

@@ -142,10 +142,18 @@ bool XLinuxDebugger::load()
                 if(state.debuggerStatus==DEBUGGER_STATUS_SIGNAL)
                 {
                     // TODO emit signal
-                    qDebug("process killed by signal %x",WTERMSIG(state.nCode));
+                    qDebug("process killed by signal %x",state.nCode);
                     break;
                 }
+                else if(state.debuggerStatus==DEBUGGER_STATUS_STOP)
+                {
+                    qDebug("process stoped: %x",state.nCode);
 
+                    if(state.nCode==5)
+                    {
+                        // TODO Breakpoint
+                    }
+                }
 
 //                int wait_status;
 //                waitpid(processInfo.nProcessID,&wait_status,0);
