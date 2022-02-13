@@ -638,6 +638,27 @@ bool XAbstractDebugger::setSingleStep(XProcess::HANDLEID handleID, QString sInfo
     return _setStep(handleID);
 }
 
+qint64 XAbstractDebugger::findAddressByException(qint64 nExeptionAddress)
+{
+    qint64 nResult=-1;
+
+    QMapIterator<qint64,BREAKPOINT> i(g_mapSoftwareBreakpoints);
+    while (i.hasNext())
+    {
+        i.next();
+        BREAKPOINT breakPoint=i.value();
+
+        if(breakPoint.nAddress==(nExeptionAddress-breakPoint.nOrigDataSize))
+        {
+            nResult=breakPoint.nAddress;
+
+            break;
+        }
+    }
+
+    return nResult;
+}
+
 QMap<QString, XBinary::XVARIANT> XAbstractDebugger::getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions)
 {
     Q_UNUSED(handleID)

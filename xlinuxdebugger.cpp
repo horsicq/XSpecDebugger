@@ -159,6 +159,16 @@ bool XLinuxDebugger::load()
                     {
                         qDebug("BREAKPOINT");
                         // TODO Breakpoint
+                        qint64 nBreakPointAddress=findAddressByException(getCurrentAddress(handleID));
+
+                        if(nBreakPointAddress!=-1)
+                        {
+                            // TODO
+                        }
+                        else
+                        {
+                            continueThread(handleID.nID);
+                        }
                     }
                 }
 

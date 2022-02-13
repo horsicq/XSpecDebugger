@@ -274,6 +274,7 @@ public:
     qint64 getCurrentAddress(XProcess::HANDLEID handleID);
     virtual bool _setStep(XProcess::HANDLEID handleID);
     bool setSingleStep(XProcess::HANDLEID handleID,QString sInfo="");
+    qint64 findAddressByException(qint64 nExeptionAddress);
 
     virtual QMap<QString,XBinary::XVARIANT> getRegisters(XProcess::HANDLEID handleID,REG_OPTIONS regOptions);
 
