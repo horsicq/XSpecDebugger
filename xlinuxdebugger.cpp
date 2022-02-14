@@ -77,17 +77,26 @@ bool XLinuxDebugger::load()
 
             setPtraceOptions(nProcessID); // Set options
 
+            XProcess::HANDLEID handleThreadID={};
+            handleThreadID.nID=nProcessID;
+
+            XProcess::HANDLEID handleMemoryIO={};
+            handleMemoryIO.nID=nProcessID;
+            handleMemoryIO.hHandle=XProcess::openMemoryIO(nProcessID);
+
+            XProcess::HANDLEID handleMemoryQuery={};
+            handleMemoryQuery.nID=nProcessID;
+            handleMemoryQuery.hHandle=XProcess::openMemoryQuery(nProcessID);
+
             XAbstractDebugger::PROCESS_INFO processInfo={};
             processInfo.nProcessID=nProcessID;
-            processInfo.hProcessIO=XProcess::openMemoryIO(nProcessID);
+            processInfo.hProcessMemoryIO=handleMemoryIO.hHandle;
+            processInfo.hProcessMemoryQuery=handleMemoryQuery.hHandle;
             // TODO more handles
 
             setProcessInfo(&processInfo);
             // TODO more
             // TODO show regs
-
-            XProcess::HANDLEID handleProcessID={};
-            handleProcessID.nID=nProcessID;
 
             REG_OPTIONS regOptions={};
             regOptions.bGeneral=true;
@@ -99,9 +108,9 @@ bool XLinuxDebugger::load()
 
             emit eventCreateProcess(&processInfo);
 
-            qDebug("Address: %llX",getCurrentAddress(handleProcessID));
+            qDebug("Address: %llX",getCurrentAddress(handleThreadID));
 
-            qint64 nCurrentAddress=getCurrentAddress(handleProcessID);
+            qint64 nCurrentAddress=getCurrentAddress(handleThreadID);
 
             setBP(nCurrentAddress,BPT_CODE_SOFTWARE,BPI_PROCESSENTRYPOINT);
 //            _setStep(handleProcessID);
@@ -138,7 +147,7 @@ bool XLinuxDebugger::load()
             {
                 qDebug("WAIT_0");
                 STATE state=waitForSignal(nProcessID);
-                qDebug("AddressXXX: %llX",getCurrentAddress(handleProcessID));
+                qDebug("AddressXXX: %llX",getCurrentAddress(handleThreadID));
 
                 if(state.debuggerStatus==DEBUGGER_STATUS_SIGNAL)
                 {
@@ -160,7 +169,7 @@ bool XLinuxDebugger::load()
                         qDebug("BREAKPOINT");
                         // TODO Breakpoint
 
-                        qint64 nExceptionAddress=findAddressByException(getCurrentAddress(handleProcessID));
+                        qint64 nExceptionAddress=findAddressByException(getCurrentAddress(handleThreadID));
 
                         if(nExceptionAddress!=-1)
                         {
@@ -175,15 +184,16 @@ bool XLinuxDebugger::load()
                             breakPointInfo.bpInfo=_currentBP.bpInfo;
                             breakPointInfo.sInfo=_currentBP.sInfo;
 //                            breakPointInfo.handleIDThread=handleIDThread;
-                            breakPointInfo.handleIDProcess=handleProcessID;
-
+                            breakPointInfo.handleProcessMemoryIO=handleMemoryIO;
+                            breakPointInfo.handleProcessMemoryQuery=handleMemoryQuery;
+                            breakPointInfo.handleThread=handleThreadID;
 
                             emit eventBreakPoint(&breakPointInfo);
                             // TODO
                         }
                         else
                         {
-                            continueThread(handleProcessID.nID);
+                            continueThread(handleThreadID.nID);
                         }
                     }
                 }

@@ -126,7 +126,7 @@ bool XWindowsDebugger::load()
 
 bool XWindowsDebugger::stop()
 {
-    return (bool)TerminateProcess(getProcessInfo()->hProcessIO,0);
+    return (bool)TerminateProcess(getProcessInfo()->hProcessMemoryIO,0);
 }
 
 void XWindowsDebugger::cleanUp()
@@ -526,7 +526,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     handleIDThread.nID=pDebugEvent->dwThreadId;
 
     XProcess::HANDLEID handleIDProcess={};
-    handleIDProcess.hHandle=getProcessInfo()->hProcessIO;
+    handleIDProcess.hHandle=getProcessInfo()->hProcessMemoryIO;
     handleIDProcess.nID=getProcessInfo()->nProcessID;
 
     if((nExceptionCode==EXCEPTION_BREAKPOINT)||(nExceptionCode==0x4000001f)) // 4000001f WOW64 breakpoint
@@ -573,8 +573,9 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                 breakPointInfo.bpType=_currentBP.bpType;
                 breakPointInfo.bpInfo=_currentBP.bpInfo;
                 breakPointInfo.sInfo=_currentBP.sInfo;
-                breakPointInfo.handleIDThread=handleIDThread;
-                breakPointInfo.handleIDProcess=handleIDProcess;
+                breakPointInfo.handleThread=handleIDThread;
+                breakPointInfo.handleProcessMemoryIO=handleIDProcess;
+                breakPointInfo.handleProcessMemoryQuery=handleIDProcess;
 
                 if(!g_mapThreadSteps.contains(pDebugEvent->dwThreadId)) // If not step. For step there is an another callback
                 {
@@ -642,8 +643,8 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             breakPointInfo.nAddress=nExceptionAddress;
             breakPointInfo.bpType=stepBP.bpType;
             breakPointInfo.bpInfo=stepBP.bpInfo;
-            breakPointInfo.handleIDThread=handleIDThread;
-            breakPointInfo.handleIDProcess=handleIDProcess;
+            breakPointInfo.handleThread=handleIDThread;
+            breakPointInfo.handleProcessMemoryIO=handleIDProcess;
             breakPointInfo.sInfo=stepBP.sInfo;
 
             if(breakPointInfo.bpInfo==BPI_STEP)
@@ -703,10 +704,10 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
     PROCESS_INFO processInfo={};
     processInfo.nProcessID=pDebugEvent->dwProcessId;
     processInfo.nThreadID=pDebugEvent->dwThreadId;
-    processInfo.hProcessIO=pDebugEvent->u.CreateProcessInfo.hProcess;
+    processInfo.hProcessMemoryIO=pDebugEvent->u.CreateProcessInfo.hProcess;
     processInfo.hMainThread=pDebugEvent->u.CreateProcessInfo.hThread;
     processInfo.nImageBase=(qint64)(pDebugEvent->u.CreateProcessInfo.lpBaseOfImage);
-    processInfo.nImageSize=XProcess::getRegionAllocationSize(processInfo.hProcessIO,processInfo.nImageBase);
+    processInfo.nImageSize=XProcess::getRegionAllocationSize(processInfo.hProcessMemoryIO,processInfo.nImageBase);
     processInfo.nStartAddress=(qint64)(pDebugEvent->u.CreateProcessInfo.lpStartAddress); // TODO Check value
     processInfo.sFileName=XProcess::getFileNameByHandle(pDebugEvent->u.CreateProcessInfo.hFile);
     processInfo.nThreadLocalBase=(qint64)(pDebugEvent->u.CreateProcessInfo.lpThreadLocalBase);
@@ -782,7 +783,7 @@ quint32 XWindowsDebugger::on_LOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
     SHAREDOBJECT_INFO sharedObjectInfo={};
     sharedObjectInfo.nImageBase=(qint64)(pDebugEvent->u.LoadDll.lpBaseOfDll);
-    sharedObjectInfo.nImageSize=XProcess::getRegionAllocationSize(getProcessInfo()->hProcessIO,sharedObjectInfo.nImageBase);
+    sharedObjectInfo.nImageSize=XProcess::getRegionAllocationSize(getProcessInfo()->hProcessMemoryIO,sharedObjectInfo.nImageBase);
     sharedObjectInfo.sFileName=XProcess::getFileNameByHandle(pDebugEvent->u.LoadDll.hFile);
     sharedObjectInfo.sName=QFileInfo(sharedObjectInfo.sFileName).fileName().toUpper();
 

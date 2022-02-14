@@ -428,67 +428,67 @@ XAbstractDebugger::SHAREDOBJECT_INFO XAbstractDebugger::findSharedInfoByAddress(
 
 quint8 XAbstractDebugger::read_uint8(qint64 nAddress)
 {
-    return XProcess::read_uint8(g_processInfo.hProcessIO,nAddress);
+    return XProcess::read_uint8(g_processInfo.hProcessMemoryIO,nAddress);
 }
 
 quint16 XAbstractDebugger::read_uint16(qint64 nAddress)
 {
-    return XProcess::read_uint16(g_processInfo.hProcessIO,nAddress);
+    return XProcess::read_uint16(g_processInfo.hProcessMemoryIO,nAddress);
 }
 
 quint32 XAbstractDebugger::read_uint32(qint64 nAddress)
 {
-    return XProcess::read_uint32(g_processInfo.hProcessIO,nAddress);
+    return XProcess::read_uint32(g_processInfo.hProcessMemoryIO,nAddress);
 }
 
 quint64 XAbstractDebugger::read_uint64(qint64 nAddress)
 {
-    return XProcess::read_uint64(g_processInfo.hProcessIO,nAddress);
+    return XProcess::read_uint64(g_processInfo.hProcessMemoryIO,nAddress);
 }
 
 void XAbstractDebugger::write_uint8(qint64 nAddress,quint8 nValue)
 {
-    XProcess::write_uint8(g_processInfo.hProcessIO,nAddress,nValue);
+    XProcess::write_uint8(g_processInfo.hProcessMemoryIO,nAddress,nValue);
 }
 
 void XAbstractDebugger::write_uint16(qint64 nAddress, quint16 nValue)
 {
-    XProcess::write_uint16(g_processInfo.hProcessIO,nAddress,nValue);
+    XProcess::write_uint16(g_processInfo.hProcessMemoryIO,nAddress,nValue);
 }
 
 void XAbstractDebugger::write_uint32(qint64 nAddress, quint32 nValue)
 {
-    XProcess::write_uint32(g_processInfo.hProcessIO,nAddress,nValue);
+    XProcess::write_uint32(g_processInfo.hProcessMemoryIO,nAddress,nValue);
 }
 
 void XAbstractDebugger::write_uint64(qint64 nAddress, quint64 nValue)
 {
-    XProcess::write_uint64(g_processInfo.hProcessIO,nAddress,nValue);
+    XProcess::write_uint64(g_processInfo.hProcessMemoryIO,nAddress,nValue);
 }
 
 qint64 XAbstractDebugger::read_array(qint64 nAddress, char *pData, qint64 nSize)
 {
-    return XProcess::read_array(g_processInfo.hProcessIO,nAddress,pData,nSize);
+    return XProcess::read_array(g_processInfo.hProcessMemoryIO,nAddress,pData,nSize);
 }
 
 qint64 XAbstractDebugger::write_array(qint64 nAddress, char *pData, qint64 nSize)
 {
-    return XProcess::write_array(g_processInfo.hProcessIO,nAddress,pData,nSize);
+    return XProcess::write_array(g_processInfo.hProcessMemoryIO,nAddress,pData,nSize);
 }
 
 QByteArray XAbstractDebugger::read_array(qint64 nAddress, qint32 nSize)
 {
-    return XProcess::read_array(g_processInfo.hProcessIO,nAddress,nSize);
+    return XProcess::read_array(g_processInfo.hProcessMemoryIO,nAddress,nSize);
 }
 
 QString XAbstractDebugger::read_ansiString(qint64 nAddress, qint64 nMaxSize)
 {
-    return XProcess::read_ansiString(g_processInfo.hProcessIO,nAddress,nMaxSize);
+    return XProcess::read_ansiString(g_processInfo.hProcessMemoryIO,nAddress,nMaxSize);
 }
 
 QString XAbstractDebugger::read_unicodeString(qint64 nAddress, qint64 nMaxSize)
 {
-    return XProcess::read_unicodeString(g_processInfo.hProcessIO,nAddress,nMaxSize);
+    return XProcess::read_unicodeString(g_processInfo.hProcessMemoryIO,nAddress,nMaxSize);
 }
 
 bool XAbstractDebugger::suspendThread(XProcess::HANDLEID handleID)
@@ -781,7 +781,7 @@ bool XAbstractDebugger::dumpToFile(QString sFileName)
 
     XProcessDevice processDevice(this);
 
-    if(processDevice.openHandle(g_processInfo.hProcessIO,g_processInfo.nImageBase,g_processInfo.nImageSize,QIODevice::ReadOnly))
+    if(processDevice.openHandle(g_processInfo.hProcessMemoryIO,g_processInfo.nImageBase,g_processInfo.nImageSize,QIODevice::ReadOnly))
     {
         XBinary binary(&processDevice,true,g_processInfo.nImageBase);
 

@@ -120,7 +120,8 @@ public:
         qint64 nImageSize;
         qint64 nStartAddress;
         qint64 nThreadLocalBase;
-        void *hProcessIO;
+        void *hProcessMemoryIO;
+        void *hProcessMemoryQuery;
         void *hMainThread;
     };
 
@@ -151,8 +152,9 @@ public:
         BPT bpType;
         BPI bpInfo;
         QString sInfo;
-        XProcess::HANDLEID handleIDProcess;
-        XProcess::HANDLEID handleIDThread;
+        XProcess::HANDLEID handleProcessMemoryIO;
+        XProcess::HANDLEID handleProcessMemoryQuery;
+        XProcess::HANDLEID handleThread;
     };
 
     struct PROCESSENTRY_INFO

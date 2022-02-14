@@ -43,10 +43,16 @@ void XUnixDebugger::cleanUp()
 {
     XUnixDebugger::stop();
 
-    if(getProcessInfo()->hProcessIO)
+    if(getProcessInfo()->hProcessMemoryIO)
     {
-        XProcess::closeMemoryIO(getProcessInfo()->hProcessIO);
-        getProcessInfo()->hProcessIO=0;
+        XProcess::closeMemoryIO(getProcessInfo()->hProcessMemoryIO);
+        getProcessInfo()->hProcessMemoryIO=0;
+    }
+
+    if(getProcessInfo()->hProcessMemoryQuery)
+    {
+        XProcess::closeMemoryQuery(getProcessInfo()->hProcessMemoryQuery);
+        getProcessInfo()->hProcessMemoryQuery=0;
     }
 }
 
