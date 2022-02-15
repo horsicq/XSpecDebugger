@@ -86,7 +86,7 @@ public:
 
     struct BREAKPOINT
     {
-        qint64 nAddress;
+        quint64 nAddress;
         qint64 nSize;
         qint32 nCount;
         BPT bpType;
@@ -148,7 +148,7 @@ public:
 
     struct BREAKPOINT_INFO
     {
-        qint64 nAddress;
+        quint64 nAddress;
         BPT bpType;
         BPI bpInfo;
         QString sInfo;
@@ -159,19 +159,19 @@ public:
 
     struct PROCESSENTRY_INFO
     {
-        qint64 nAddress;
+        quint64 nAddress;
     };
 
     struct FUNCTIONHOOK_INFO
     {
         QString sName;
-        qint64 nAddress;
+        quint64 nAddress;
     };
 
     struct FUNCTION_INFO
     {
         QString sName;
-        qint64 nAddress;
+        quint64 nAddress;
         qint64 nRetAddress;
         quint64 nParameter0;
         quint64 nParameter1;
@@ -227,18 +227,18 @@ public:
     void _addBreakpoint(BREAKPOINT *pBreakpoint);
     void _removeBreakpoint(BREAKPOINT *pBreakpoint);
 
-    bool setBP(qint64 nAddress,BPT bpType=BPT_CODE_SOFTWARE,BPI bpInfo=BPI_UNKNOWN,qint32 nCount=-1,QString sInfo=QString(),QString sGUID=QString());
-    bool removeBP(qint64 nAddress,BPT bpType);
+    bool setBP(quint64 nAddress,BPT bpType=BPT_CODE_SOFTWARE,BPI bpInfo=BPI_UNKNOWN,qint32 nCount=-1,QString sInfo=QString(),QString sGUID=QString());
+    bool removeBP(quint64 nAddress,BPT bpType);
 
-    bool setSoftwareBreakpoint(qint64 nAddress,qint32 nCount=-1,QString sInfo=QString());
-    bool removeSoftwareBreakpoint(qint64 nAddress);
-    bool isSoftwareBreakpointPresent(qint64 nAddress);
+    bool setSoftwareBreakpoint(quint64 nAddress,qint32 nCount=-1,QString sInfo=QString());
+    bool removeSoftwareBreakpoint(quint64 nAddress);
+    bool isSoftwareBreakpointPresent(quint64 nAddress);
 
     bool setFunctionHook(QString sFunctionName);
     bool removeFunctionHook(QString sFunctionName);
 
     qint64 getFunctionAddress(QString sFunctionName);
-    QString getAddressSymbolString(qint64 nAddress);
+    QString getAddressSymbolString(quint64 nAddress);
 
     virtual QList<XBinary::SYMBOL_RECORD> loadSymbols(QString sFileName,qint64 nModuleAddress);
 
@@ -251,28 +251,28 @@ public:
     QMap<QString,FUNCTIONHOOK_INFO> *getFunctionHookInfos();
 
     SHAREDOBJECT_INFO findSharedInfoByName(QString sName);
-    SHAREDOBJECT_INFO findSharedInfoByAddress(qint64 nAddress);
+    SHAREDOBJECT_INFO findSharedInfoByAddress(quint64 nAddress);
 
-    quint8 read_uint8(qint64 nAddress);
-    quint16 read_uint16(qint64 nAddress);
-    quint32 read_uint32(qint64 nAddress);
-    quint64 read_uint64(qint64 nAddress);
-    void write_uint8(qint64 nAddress,quint8 nValue);
-    void write_uint16(qint64 nAddress,quint16 nValue);
-    void write_uint32(qint64 nAddress,quint32 nValue);
-    void write_uint64(qint64 nAddress,quint64 nValue);
-    qint64 read_array(qint64 nAddress,char *pData,qint64 nSize);
-    qint64 write_array(qint64 nAddress,char *pData,qint64 nSize);
-    QByteArray read_array(qint64 nAddress,qint32 nSize);
-    QString read_ansiString(qint64 nAddress,qint64 nMaxSize=256);
-    QString read_unicodeString(qint64 nAddress, qint64 nMaxSize=256);
+    quint8 read_uint8(quint64 nAddress);
+    quint16 read_uint16(quint64 nAddress);
+    quint32 read_uint32(quint64 nAddress);
+    quint64 read_uint64(quint64 nAddress);
+    void write_uint8(quint64 nAddress,quint8 nValue);
+    void write_uint16(quint64 nAddress,quint16 nValue);
+    void write_uint32(quint64 nAddress,quint32 nValue);
+    void write_uint64(quint64 nAddress,quint64 nValue);
+    qint64 read_array(quint64 nAddress,char *pData,quint64 nSize);
+    qint64 write_array(quint64 nAddress,char *pData,quint64 nSize);
+    QByteArray read_array(quint64 nAddress,quint64 nSize);
+    QString read_ansiString(quint64 nAddress,quint64 nMaxSize=256);
+    QString read_unicodeString(quint64 nAddress,quint64 nMaxSize=256);
 
     static bool suspendThread(XProcess::HANDLEID handleID);
     static bool resumeThread(XProcess::HANDLEID handleID);
     bool suspendOtherThreads(XProcess::HANDLEID handleID);
     bool resumeOtherThreads(XProcess::HANDLEID handleID);
 
-    bool setCurrentAddress(XProcess::HANDLEID handleID,qint64 nAddress);
+    bool setCurrentAddress(XProcess::HANDLEID handleID,quint64 nAddress);
     qint64 getCurrentAddress(XProcess::HANDLEID handleID);
     virtual bool _setStep(XProcess::HANDLEID handleID);
     bool setSingleStep(XProcess::HANDLEID handleID,QString sInfo="");
@@ -284,10 +284,10 @@ public:
     qint64 getRetAddress(XProcess::HANDLEID handleID);
     qint64 getStackPointer(XProcess::HANDLEID handleID);
 
-    XCapstone::DISASM_STRUCT disasm(qint64 nAddress);
+    XCapstone::DISASM_STRUCT disasm(quint64 nAddress);
 
-    bool isUserCode(qint64 nAddress);
-    bool bIsSystemCode(qint64 nAddress);
+    bool isUserCode(quint64 nAddress);
+    bool bIsSystemCode(quint64 nAddress);
 
     bool dumpToFile(QString sFileName);
 

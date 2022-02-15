@@ -137,7 +137,7 @@ void XAbstractDebugger::_removeBreakpoint(XAbstractDebugger::BREAKPOINT *pBreakp
     }
 }
 
-bool XAbstractDebugger::setBP(qint64 nAddress,XAbstractDebugger::BPT bpType,XAbstractDebugger::BPI bpInfo,qint32 nCount,QString sInfo,QString sGUID)
+bool XAbstractDebugger::setBP(quint64 nAddress, XAbstractDebugger::BPT bpType, XAbstractDebugger::BPI bpInfo, qint32 nCount, QString sInfo, QString sGUID)
 {
     bool bResult=true;
 
@@ -175,7 +175,7 @@ bool XAbstractDebugger::setBP(qint64 nAddress,XAbstractDebugger::BPT bpType,XAbs
     return bResult;
 }
 
-bool XAbstractDebugger::removeBP(qint64 nAddress, BPT bpType)
+bool XAbstractDebugger::removeBP(quint64 nAddress, BPT bpType)
 {
     bool bResult=true;
 
@@ -201,17 +201,17 @@ bool XAbstractDebugger::removeBP(qint64 nAddress, BPT bpType)
     return bResult;
 }
 
-bool XAbstractDebugger::setSoftwareBreakpoint(qint64 nAddress,qint32 nCount,QString sInfo)
+bool XAbstractDebugger::setSoftwareBreakpoint(quint64 nAddress, qint32 nCount, QString sInfo)
 {
     return setBP(nAddress,BPT_CODE_SOFTWARE,BPI_USER,nCount,sInfo);
 }
 
-bool XAbstractDebugger::removeSoftwareBreakpoint(qint64 nAddress)
+bool XAbstractDebugger::removeSoftwareBreakpoint(quint64 nAddress)
 {
     return removeBP(nAddress,BPT_CODE_SOFTWARE);
 }
 
-bool XAbstractDebugger::isSoftwareBreakpointPresent(qint64 nAddress)
+bool XAbstractDebugger::isSoftwareBreakpointPresent(quint64 nAddress)
 {
     return g_mapSoftwareBreakpoints.contains(nAddress);
 }
@@ -296,7 +296,7 @@ qint64 XAbstractDebugger::getFunctionAddress(QString sFunctionName)
     return nResult;
 }
 
-QString XAbstractDebugger::getAddressSymbolString(qint64 nAddress)
+QString XAbstractDebugger::getAddressSymbolString(quint64 nAddress)
 {
     QString sResult;
 
@@ -405,7 +405,7 @@ XAbstractDebugger::SHAREDOBJECT_INFO XAbstractDebugger::findSharedInfoByName(QSt
     return result;
 }
 
-XAbstractDebugger::SHAREDOBJECT_INFO XAbstractDebugger::findSharedInfoByAddress(qint64 nAddress)
+XAbstractDebugger::SHAREDOBJECT_INFO XAbstractDebugger::findSharedInfoByAddress(quint64 nAddress)
 {
     SHAREDOBJECT_INFO result={};
 
@@ -426,67 +426,67 @@ XAbstractDebugger::SHAREDOBJECT_INFO XAbstractDebugger::findSharedInfoByAddress(
     return result;
 }
 
-quint8 XAbstractDebugger::read_uint8(qint64 nAddress)
+quint8 XAbstractDebugger::read_uint8(quint64 nAddress)
 {
     return XProcess::read_uint8(g_processInfo.hProcessMemoryIO,nAddress);
 }
 
-quint16 XAbstractDebugger::read_uint16(qint64 nAddress)
+quint16 XAbstractDebugger::read_uint16(quint64 nAddress)
 {
     return XProcess::read_uint16(g_processInfo.hProcessMemoryIO,nAddress);
 }
 
-quint32 XAbstractDebugger::read_uint32(qint64 nAddress)
+quint32 XAbstractDebugger::read_uint32(quint64 nAddress)
 {
     return XProcess::read_uint32(g_processInfo.hProcessMemoryIO,nAddress);
 }
 
-quint64 XAbstractDebugger::read_uint64(qint64 nAddress)
+quint64 XAbstractDebugger::read_uint64(quint64 nAddress)
 {
     return XProcess::read_uint64(g_processInfo.hProcessMemoryIO,nAddress);
 }
 
-void XAbstractDebugger::write_uint8(qint64 nAddress,quint8 nValue)
+void XAbstractDebugger::write_uint8(quint64 nAddress,quint8 nValue)
 {
     XProcess::write_uint8(g_processInfo.hProcessMemoryIO,nAddress,nValue);
 }
 
-void XAbstractDebugger::write_uint16(qint64 nAddress, quint16 nValue)
+void XAbstractDebugger::write_uint16(quint64 nAddress, quint16 nValue)
 {
     XProcess::write_uint16(g_processInfo.hProcessMemoryIO,nAddress,nValue);
 }
 
-void XAbstractDebugger::write_uint32(qint64 nAddress, quint32 nValue)
+void XAbstractDebugger::write_uint32(quint64 nAddress, quint32 nValue)
 {
     XProcess::write_uint32(g_processInfo.hProcessMemoryIO,nAddress,nValue);
 }
 
-void XAbstractDebugger::write_uint64(qint64 nAddress, quint64 nValue)
+void XAbstractDebugger::write_uint64(quint64 nAddress, quint64 nValue)
 {
     XProcess::write_uint64(g_processInfo.hProcessMemoryIO,nAddress,nValue);
 }
 
-qint64 XAbstractDebugger::read_array(qint64 nAddress, char *pData, qint64 nSize)
+qint64 XAbstractDebugger::read_array(quint64 nAddress, char *pData, quint64 nSize)
 {
     return XProcess::read_array(g_processInfo.hProcessMemoryIO,nAddress,pData,nSize);
 }
 
-qint64 XAbstractDebugger::write_array(qint64 nAddress, char *pData, qint64 nSize)
+qint64 XAbstractDebugger::write_array(quint64 nAddress, char *pData, quint64 nSize)
 {
     return XProcess::write_array(g_processInfo.hProcessMemoryIO,nAddress,pData,nSize);
 }
 
-QByteArray XAbstractDebugger::read_array(qint64 nAddress, qint32 nSize)
+QByteArray XAbstractDebugger::read_array(quint64 nAddress, quint64 nSize)
 {
     return XProcess::read_array(g_processInfo.hProcessMemoryIO,nAddress,nSize);
 }
 
-QString XAbstractDebugger::read_ansiString(qint64 nAddress, qint64 nMaxSize)
+QString XAbstractDebugger::read_ansiString(quint64 nAddress, quint64 nMaxSize)
 {
     return XProcess::read_ansiString(g_processInfo.hProcessMemoryIO,nAddress,nMaxSize);
 }
 
-QString XAbstractDebugger::read_unicodeString(qint64 nAddress, qint64 nMaxSize)
+QString XAbstractDebugger::read_unicodeString(quint64 nAddress, quint64 nMaxSize)
 {
     return XProcess::read_unicodeString(g_processInfo.hProcessMemoryIO,nAddress,nMaxSize);
 }
@@ -562,7 +562,7 @@ bool XAbstractDebugger::resumeOtherThreads(XProcess::HANDLEID handleID)
 }
 
 
-bool XAbstractDebugger::setCurrentAddress(XProcess::HANDLEID handleID, qint64 nAddress)
+bool XAbstractDebugger::setCurrentAddress(XProcess::HANDLEID handleID, quint64 nAddress)
 {
     bool bResult=false;
 #ifdef Q_OS_WIN
@@ -587,7 +587,7 @@ bool XAbstractDebugger::setCurrentAddress(XProcess::HANDLEID handleID, qint64 nA
 
 qint64 XAbstractDebugger::getCurrentAddress(XProcess::HANDLEID handleID)
 {
-    qint64 nAddress=0;
+    quint64 nAddress=0;
 #ifdef Q_OS_WIN
     CONTEXT context={0};
     context.ContextFlags=CONTEXT_CONTROL; // EIP
@@ -751,14 +751,14 @@ qint64 XAbstractDebugger::getStackPointer(XProcess::HANDLEID handleID)
     return nResult;
 }
 
-XCapstone::DISASM_STRUCT XAbstractDebugger::disasm(qint64 nAddress)
+XCapstone::DISASM_STRUCT XAbstractDebugger::disasm(quint64 nAddress)
 {
     QByteArray baData=read_array(nAddress,15);
 
     return XCapstone::disasm(g_handle,nAddress,baData.data(),baData.size());
 }
 
-bool XAbstractDebugger::isUserCode(qint64 nAddress)
+bool XAbstractDebugger::isUserCode(quint64 nAddress)
 {
     bool bResult=false;
 
@@ -770,7 +770,7 @@ bool XAbstractDebugger::isUserCode(qint64 nAddress)
     return bResult;
 }
 
-bool XAbstractDebugger::bIsSystemCode(qint64 nAddress)
+bool XAbstractDebugger::bIsSystemCode(quint64 nAddress)
 {
     return findSharedInfoByAddress(nAddress).nImageBase;
 }
@@ -833,7 +833,7 @@ bool XAbstractDebugger::stepOver(XProcess::HANDLEID handleID)
 {
     bool bResult=false;
 
-    qint64 nAddress=getCurrentAddress(handleID);
+    quint64 nAddress=getCurrentAddress(handleID);
     QByteArray baData=read_array(nAddress,15);
 
     XCapstone::OPCODE_ID opcodeID=XCapstone::getOpcodeID(g_handle,nAddress,baData.data(),baData.size());

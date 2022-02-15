@@ -705,6 +705,7 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
     processInfo.nProcessID=pDebugEvent->dwProcessId;
     processInfo.nThreadID=pDebugEvent->dwThreadId;
     processInfo.hProcessMemoryIO=pDebugEvent->u.CreateProcessInfo.hProcess;
+    processInfo.hProcessMemoryQuery=pDebugEvent->u.CreateProcessInfo.hProcess;
     processInfo.hMainThread=pDebugEvent->u.CreateProcessInfo.hThread;
     processInfo.nImageBase=(qint64)(pDebugEvent->u.CreateProcessInfo.lpBaseOfImage);
     processInfo.nImageSize=XProcess::getRegionAllocationSize(processInfo.hProcessMemoryIO,processInfo.nImageBase);
@@ -783,7 +784,7 @@ quint32 XWindowsDebugger::on_LOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
     SHAREDOBJECT_INFO sharedObjectInfo={};
     sharedObjectInfo.nImageBase=(qint64)(pDebugEvent->u.LoadDll.lpBaseOfDll);
-    sharedObjectInfo.nImageSize=XProcess::getRegionAllocationSize(getProcessInfo()->hProcessMemoryIO,sharedObjectInfo.nImageBase);
+    sharedObjectInfo.nImageSize=XProcess::getRegionAllocationSize(getProcessInfo()->hProcessMemoryQuery,sharedObjectInfo.nImageBase);
     sharedObjectInfo.sFileName=XProcess::getFileNameByHandle(pDebugEvent->u.LoadDll.hFile);
     sharedObjectInfo.sName=QFileInfo(sharedObjectInfo.sFileName).fileName().toUpper();
 
