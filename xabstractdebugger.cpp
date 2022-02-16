@@ -137,7 +137,7 @@ void XAbstractDebugger::_removeBreakpoint(XAbstractDebugger::BREAKPOINT *pBreakp
     }
 }
 
-bool XAbstractDebugger::setBP(quint64 nAddress, XAbstractDebugger::BPT bpType, XAbstractDebugger::BPI bpInfo, qint32 nCount, QString sInfo, QString sGUID)
+bool XAbstractDebugger::setBP(quint64 nAddress,XAbstractDebugger::BPT bpType,XAbstractDebugger::BPI bpInfo,qint32 nCount,QString sInfo,QString sGUID)
 {
     bool bResult=true;
 
