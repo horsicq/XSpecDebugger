@@ -451,7 +451,7 @@ void XAbstractDebugger::write_uint8(quint64 nAddress,quint8 nValue)
     XProcess::write_uint8(g_processInfo.hProcessMemoryIO,nAddress,nValue);
 }
 
-void XAbstractDebugger::write_uint16(quint64 nAddress, quint16 nValue)
+void XAbstractDebugger::write_uint16(quint64 nAddress,quint16 nValue)
 {
     XProcess::write_uint16(g_processInfo.hProcessMemoryIO,nAddress,nValue);
 }
