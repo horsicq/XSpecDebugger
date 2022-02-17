@@ -180,9 +180,9 @@ bool XLinuxDebugger::load()
                             breakPointInfo.bpInfo=_currentBP.bpInfo;
                             breakPointInfo.sInfo=_currentBP.sInfo;
 //                            breakPointInfo.handleIDThread=handleIDThread;
-                            breakPointInfo.handleProcessMemoryIO=handleMemoryIO;
-                            breakPointInfo.handleProcessMemoryQuery=handleMemoryQuery;
-                            breakPointInfo.handleThread=handleThreadID;
+                            breakPointInfo.pHProcessMemoryIO=handleMemoryIO.hHandle;
+                            breakPointInfo.pHProcessMemoryQuery=handleMemoryQuery.hHandle;
+                            breakPointInfo.nThreadID=handleThreadID.nID;
 
                             emit eventBreakPoint(&breakPointInfo);
                             // TODO
