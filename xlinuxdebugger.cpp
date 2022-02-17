@@ -190,6 +190,12 @@ bool XLinuxDebugger::load()
 
                             emit eventBreakPoint(&breakPointInfo);
                             // TODO
+                            qDebug("BREAKPOINT START");
+                            qDebug("Current Address1: %llX",getCurrentAddress(handleThreadID));
+
+                            sleep(10);
+
+                            qDebug("BREAKPOINT END");
                         }
                         else
                         {

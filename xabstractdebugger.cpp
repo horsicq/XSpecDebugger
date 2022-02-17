@@ -381,7 +381,7 @@ QMap<qint64, XAbstractDebugger::BREAKPOINT> *XAbstractDebugger::getHardwareBreak
     return &g_mapHardwareBreakpoints;
 }
 
-QMap<QString, XAbstractDebugger::FUNCTIONHOOK_INFO> *XAbstractDebugger::getFunctionHookInfos()
+QMap<QString,XAbstractDebugger::FUNCTIONHOOK_INFO> *XAbstractDebugger::getFunctionHookInfos()
 {
     return &g_mapFunctionHookInfos;
 }

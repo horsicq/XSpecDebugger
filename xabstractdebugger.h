@@ -273,7 +273,7 @@ public:
     bool resumeOtherThreads(XProcess::HANDLEID handleID);
 
     bool setCurrentAddress(XProcess::HANDLEID handleID,quint64 nAddress);
-    qint64 getCurrentAddress(XProcess::HANDLEID handleID);
+    static qint64 getCurrentAddress(XProcess::HANDLEID handleID);
     virtual bool _setStep(XProcess::HANDLEID handleID);
     bool setSingleStep(XProcess::HANDLEID handleID,QString sInfo="");
     qint64 findAddressByException(qint64 nExeptionAddress);
