@@ -52,7 +52,7 @@ public:
     virtual bool stop();
     virtual void cleanUp();
 
-    EXECUTEPROCESS executeProcess(QString sFileName); // TODO args, TODO sDirectory
+    EXECUTEPROCESS executeProcess(QString sFileName,QString sDirectory); // TODO args, TODO sDirectory
     void setPtraceOptions(qint64 nThreadID);
     STATE waitForSignal(qint64 nProcessID);
     void continueThread(qint64 nThreadID); // TODO rename to resumrThread

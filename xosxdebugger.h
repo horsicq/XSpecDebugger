@@ -21,17 +21,9 @@
 #ifndef XOSXDEBUGGER_H
 #define XOSXDEBUGGER_H
 
-#include "xabstractdebugger.h"
-#include <stdio.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include "xunixdebugger.h"
 
-#ifdef Q_OS_OSX
-#include <sys/types.h>
-#include <sys/ptrace.h>
-#endif
-
-class XOSXDebugger : public XAbstractDebugger
+class XOSXDebugger : public XUnixDebugger
 {
     Q_OBJECT
 

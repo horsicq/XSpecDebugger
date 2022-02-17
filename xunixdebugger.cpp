@@ -56,44 +56,51 @@ void XUnixDebugger::cleanUp()
     }
 }
 
-XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName)
+XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName,QString sDirectory)
 {
     EXECUTEPROCESS result={};
 
-    char **ppArgv=new char *[2];
-
-    ppArgv[0]=allocateAnsiStringMemory(sFileName);
-
-#ifdef QT_DEBUG
-    qDebug("FileName %s",ppArgv[0]);
-#endif
-
-    qint32 nRet=execv(ppArgv[0],ppArgv); // TODO Unicode
-
-    if(nRet==-1)
+    if(chdir(qPrintable(sDirectory))==0)
     {
-        result.sStatus=QString("execv() failed: %1").arg(strerror(errno));
+        char **ppArgv=new char *[2];
+
+        ppArgv[0]=allocateAnsiStringMemory(sFileName);
 
     #ifdef QT_DEBUG
-        qDebug("Status %s",result.sStatus.toLatin1().data());
+        qDebug("FileName %s",ppArgv[0]);
     #endif
-    }
 
-    for(qint32 i=0;i<2;i++)
-    {
-        delete [] ppArgv[i];
-    }
+        qint32 nRet=execv(ppArgv[0],ppArgv); // TODO Unicode
 
-    delete [] ppArgv;
+        if(nRet==-1)
+        {
+            result.sStatus=QString("execv() failed: %1").arg(strerror(errno));
+
+        #ifdef QT_DEBUG
+            qDebug("Status %s",result.sStatus.toLatin1().data());
+        #endif
+        }
+
+        for(qint32 i=0;i<2;i++)
+        {
+            delete [] ppArgv[i];
+        }
+
+        delete [] ppArgv;
+    }
 
     return result;
 }
 
 void XUnixDebugger::setPtraceOptions(qint64 nThreadID)
 {
+    // TODO getOptions !!!
     // TODO result bool
 //    long options=PTRACE_O_TRACECLONE;
-    long options=PTRACE_O_EXITKILL|PTRACE_O_TRACESYSGOOD|PTRACE_O_TRACEFORK;
+//    long options=PTRACE_O_EXITKILL|PTRACE_O_TRACESYSGOOD|PTRACE_O_TRACEFORK;
+#if defined(Q_OS_LINUX)
+    long options=PTRACE_O_EXITKILL|PTRACE_O_TRACECLONE;
+    // PTRACE_O_TRACECLONE create thread
 
     if(ptrace(PTRACE_SETOPTIONS,nThreadID,0,options)==-1)
     {
@@ -101,7 +108,7 @@ void XUnixDebugger::setPtraceOptions(qint64 nThreadID)
         qDebug("Cannot PTRACE_SETOPTIONS");
     #endif
     }
-
+#endif
     // mb TODO
 }
 
@@ -115,7 +122,12 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID)
     // TODO a function
     do
     {
+    #if defined(Q_OS_LINUX)
         ret=waitpid(nProcessID,&nResult,__WALL);
+    #endif
+    #if defined(Q_OS_OSX)
+        ret=waitpid(nProcessID,&nResult,P_ALL);
+    #endif
     }
     while((ret==-1)&&(errno==EINTR));
 
@@ -159,7 +171,12 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID)
 void XUnixDebugger::continueThread(qint64 nThreadID)
 {
     // TODO
+#if defined(Q_OS_LINUX)
     ptrace(PTRACE_CONT,nThreadID,0,0);
+#endif
+#if defined(Q_OS_OSX)
+    ptrace(PT_CONTINUE,nThreadID,0,0);
+#endif
 
 //    int wait_status;
 //    waitpid(nThreadID,&wait_status,0);
@@ -169,20 +186,20 @@ void XUnixDebugger::continueThread(qint64 nThreadID)
 bool XUnixDebugger::resumeThread(XProcess::HANDLEID handleID)
 {
     bool bResult=false;
-
+#if defined(Q_OS_LINUX)
     if(ptrace(PTRACE_CONT,handleID.nID,0,0))
     {
         int wait_status;
         waitpid(handleID.nID,&wait_status,0);
     }
-
+#endif
     return bResult;
 }
 
 QMap<QString, XBinary::XVARIANT> XUnixDebugger::getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions)
 {
     QMap<QString, XBinary::XVARIANT> mapResult;
-
+#if defined(Q_OS_LINUX)
     user_regs_struct regs={};
 //    user_regs_struct regs;
     errno=0;
@@ -296,7 +313,7 @@ QMap<QString, XBinary::XVARIANT> XUnixDebugger::getRegisters(XProcess::HANDLEID 
 //    __extension__ unsigned long long int orig_rax;
 //    __extension__ unsigned long long int fs_base;
 //    __extension__ unsigned long long int gs_base;
-
+#endif
     return mapResult;
 }
 
@@ -304,9 +321,12 @@ bool XUnixDebugger::_setStep(XProcess::HANDLEID handleID)
 {
     // TODO handle return
     bool bResult=true;
-
+#if defined(Q_OS_LINUX)
     ptrace(PTRACE_SINGLESTEP,handleID.nID,0,0);
-
+#endif
+#if defined(Q_OS_OSX)
+    ptrace(PT_STEP,handleID.nID,0,0);
+#endif
 //    int wait_status;
 //    waitpid(handleID.nID,&wait_status,0);
 //    // TODO result

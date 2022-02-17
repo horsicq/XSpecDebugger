@@ -30,6 +30,7 @@ bool XLinuxDebugger::load()
     bool bResult=false;
 
     QString sFileName=getOptions()->sFileName;
+    QString sDirectory=getOptions()->sDirectory;
 
     quint32 nMapSize=0x1000;
     char *pMapMemory=(char *)mmap(nullptr,nMapSize,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
@@ -46,7 +47,7 @@ bool XLinuxDebugger::load()
             ptrace(PTRACE_TRACEME,0,nullptr,nullptr);
             // TODO redirect I/O
 
-            EXECUTEPROCESS ep=executeProcess(sFileName);
+            EXECUTEPROCESS ep=executeProcess(sFileName,sDirectory);
 
             XBinary::_copyMemory(pMapMemory,ep.sStatus.toLatin1().data(),ep.sStatus.toLatin1().size());
 
@@ -70,9 +71,6 @@ bool XLinuxDebugger::load()
                 qDebug("Status %s",sStatusString.toLatin1().data());
             }
         #endif
-
-            // TODO wait
-
             waitForSignal(nProcessID); // TODO result
 
             setPtraceOptions(nProcessID); // Set options
@@ -97,15 +95,6 @@ bool XLinuxDebugger::load()
             setProcessInfo(&processInfo);
             // TODO more
             // TODO show regs
-
-            REG_OPTIONS regOptions={};
-            regOptions.bGeneral=true;
-            regOptions.bFlags=true;
-            regOptions.bFloat=true;
-            regOptions.bIP=true;
-            regOptions.bSegments=true;
-            regOptions.bXMM=true;
-
             emit eventCreateProcess(&processInfo);
 
             qDebug("Address: %llX",getCurrentAddress(handleThreadID));
@@ -122,6 +111,13 @@ bool XLinuxDebugger::load()
 //            // TODO here set Breakpoints
 
 ////            continueThread(processInfo.nProcessID);
+            REG_OPTIONS regOptions={};
+            regOptions.bGeneral=true;
+            regOptions.bFlags=true;
+            regOptions.bFloat=true;
+            regOptions.bIP=true;
+            regOptions.bSegments=true;
+            regOptions.bXMM=true;
 
 //            QMap<QString,XBinary::XVARIANT> mapRegisters;
 

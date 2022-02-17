@@ -20,7 +20,7 @@
  */
 #include "xosxdebugger.h"
 
-XOSXDebugger::XOSXDebugger(QObject *pParent) : XAbstractDebugger(pParent)
+XOSXDebugger::XOSXDebugger(QObject *pParent) : XUnixDebugger(pParent)
 {
 
 }
@@ -31,6 +31,11 @@ bool XOSXDebugger::load()
 
     QString sFileName=getOptions()->sFileName;
     QString sDirectory=getOptions()->sDirectory;
+
+    quint32 nMapSize=0x1000;
+    char *pMapMemory=(char *)mmap(nullptr,nMapSize,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
+
+    XBinary::_zeroMemory(pMapMemory,nMapSize);
 
     if(XBinary::isFileExists(sFileName))
     {
@@ -44,14 +49,31 @@ bool XOSXDebugger::load()
 
             // TODO redirect console
 
-            // TODO Execute
-            // TODO Execute function for OSX/Linux
+            EXECUTEPROCESS ep=executeProcess(sFileName,sDirectory);
+
+            XBinary::_copyMemory(pMapMemory,ep.sStatus.toLatin1().data(),ep.sStatus.toLatin1().size());
 
             // Never reach
+            abort();
         }
         else if(nProcessID>0)
         {
             // Parent
+        #ifdef QT_DEBUG
+            qDebug("Forked");
+        #endif
+
+            QString sStatusString=pMapMemory;
+            munmap(pMapMemory,nMapSize);
+
+        #ifdef QT_DEBUG
+            if(sStatusString!="")
+            {
+                qDebug("Status %s",sStatusString.toLatin1().data());
+            }
+        #endif
+
+            waitForSignal(nProcessID); // TODO result
         }
         else if(nProcessID==-1)
         {

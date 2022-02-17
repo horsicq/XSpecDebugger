@@ -201,7 +201,7 @@ bool XAbstractDebugger::removeBP(quint64 nAddress, BPT bpType)
     return bResult;
 }
 
-bool XAbstractDebugger::setSoftwareBreakpoint(quint64 nAddress, qint32 nCount, QString sInfo)
+bool XAbstractDebugger::setSoftwareBreakpoint(quint64 nAddress,qint32 nCount,QString sInfo)
 {
     return setBP(nAddress,BPT_CODE_SOFTWARE,BPI_USER,nCount,sInfo);
 }

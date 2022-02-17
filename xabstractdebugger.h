@@ -152,9 +152,11 @@ public:
         BPT bpType;
         BPI bpInfo;
         QString sInfo;
-        XProcess::HANDLEID handleProcessMemoryIO;
-        XProcess::HANDLEID handleProcessMemoryQuery;
-        XProcess::HANDLEID handleThread;
+        qint64 nProcessID;
+        void *pHProcessMemoryIO;
+        void *pHProcessMemoryQuery;
+        qint64 nThreadID;
+        void *pHThread;
     };
 
     struct PROCESSENTRY_INFO

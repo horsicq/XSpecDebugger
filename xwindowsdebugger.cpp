@@ -573,9 +573,11 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                 breakPointInfo.bpType=_currentBP.bpType;
                 breakPointInfo.bpInfo=_currentBP.bpInfo;
                 breakPointInfo.sInfo=_currentBP.sInfo;
-                breakPointInfo.handleThread=handleIDThread;
-                breakPointInfo.handleProcessMemoryIO=handleIDProcess;
-                breakPointInfo.handleProcessMemoryQuery=handleIDProcess;
+                breakPointInfo.nProcessID=handleIDProcess.nID;
+                breakPointInfo.nThreadID=handleIDThread.nID;
+                breakPointInfo.pHThread=handleIDThread.hHandle;
+                breakPointInfo.pHProcessMemoryIO=handleIDProcess.hHandle;
+                breakPointInfo.pHProcessMemoryQuery=handleIDProcess.hHandle;
 
                 if(!g_mapThreadSteps.contains(pDebugEvent->dwThreadId)) // If not step. For step there is an another callback
                 {
@@ -643,8 +645,11 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             breakPointInfo.nAddress=nExceptionAddress;
             breakPointInfo.bpType=stepBP.bpType;
             breakPointInfo.bpInfo=stepBP.bpInfo;
-            breakPointInfo.handleThread=handleIDThread;
-            breakPointInfo.handleProcessMemoryIO=handleIDProcess;
+            breakPointInfo.nProcessID=handleIDProcess.nID;
+            breakPointInfo.nThreadID=handleIDThread.nID;
+            breakPointInfo.pHThread=handleIDThread.hHandle;
+            breakPointInfo.pHProcessMemoryIO=handleIDProcess.hHandle;
+            breakPointInfo.pHProcessMemoryQuery=handleIDProcess.hHandle;
             breakPointInfo.sInfo=stepBP.sInfo;
 
             if(breakPointInfo.bpInfo==BPI_STEP)
