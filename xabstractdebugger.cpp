@@ -175,7 +175,7 @@ bool XAbstractDebugger::setBP(quint64 nAddress,XAbstractDebugger::BPT bpType,XAb
     return bResult;
 }
 
-bool XAbstractDebugger::removeBP(quint64 nAddress, BPT bpType)
+bool XAbstractDebugger::removeBP(quint64 nAddress,BPT bpType)
 {
     bool bResult=true;
 
