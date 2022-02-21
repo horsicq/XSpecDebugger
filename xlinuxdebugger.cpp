@@ -189,7 +189,7 @@ bool XLinuxDebugger::load()
                             qDebug("BREAKPOINT START");
                             qDebug("Current Address1: %llX",getCurrentAddress(handleThreadID));
 
-                            sleep(10);
+//                            sleep(10);
 
                             qDebug("BREAKPOINT END");
                         }

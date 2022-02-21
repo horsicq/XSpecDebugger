@@ -196,9 +196,9 @@ bool XUnixDebugger::resumeThread(XProcess::HANDLEID handleID)
     return bResult;
 }
 
-QMap<QString, XBinary::XVARIANT> XUnixDebugger::getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions)
+XAbstractDebugger::REGISTERS XUnixDebugger::getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions)
 {
-    QMap<QString, XBinary::XVARIANT> mapResult;
+    XAbstractDebugger::REGISTERS result={};
 #if defined(Q_OS_LINUX)
     user_regs_struct regs={};
 //    user_regs_struct regs;

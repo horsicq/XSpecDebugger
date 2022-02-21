@@ -497,6 +497,16 @@ bool XAbstractDebugger::suspendThread(XProcess::HANDLEID handleID)
 #ifdef Q_OS_WIN
     bResult=(SuspendThread(handleID.hHandle)!=((DWORD)-1));
 #endif
+//#ifdef Q_OS_LINUX
+//    if(syscall(SYS_tgkill,g_processInfo.nProcessID,handleID.nID,SIGSTOP)!=-1)
+//    {
+//        bResult=true;
+//    }
+//    else
+//    {
+//        qDebug("Cannot stop thread");
+//    }
+//#endif
     return bResult;
 }
 
@@ -659,14 +669,14 @@ qint64 XAbstractDebugger::findAddressByException(qint64 nExeptionAddress)
     return nResult;
 }
 
-QMap<QString, XBinary::XVARIANT> XAbstractDebugger::getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions)
+XAbstractDebugger::REGISTERS XAbstractDebugger::getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions)
 {
     Q_UNUSED(handleID)
     Q_UNUSED(regOptions)
 
-    QMap<QString, XBinary::XVARIANT> mapResult;
+    XAbstractDebugger::REGISTERS result={};
 
-    return mapResult;
+    return result;
 }
 
 XAbstractDebugger::FUNCTION_INFO XAbstractDebugger::getFunctionInfo(XProcess::HANDLEID handleID,QString sName)

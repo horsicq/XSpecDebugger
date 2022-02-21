@@ -185,9 +185,9 @@ QList<XBinary::SYMBOL_RECORD> XWindowsDebugger::loadSymbols(QString sFileName, q
     return listResult;
 }
 
-QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions)
+XAbstractDebugger::REGISTERS XWindowsDebugger::getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions)
 {
-    QMap<QString, XBinary::XVARIANT> mapResult;
+    XAbstractDebugger::REGISTERS result={};
 
     if(handleID.hHandle)
     {
@@ -196,250 +196,167 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
 
         if(GetThreadContext(handleID.hHandle,&context))
         {
-            XBinary::XVARIANT xVariant={};
-            xVariant.bIsBigEndian=false;
-
             if(regOptions.bGeneral)
             {
-                xVariant={};
-            #ifndef Q_OS_WIN64
-                xVariant.mode=XBinary::MODE_32;
-                xVariant.var.v_uint32=(quint32)(context.Eax);
-                mapResult.insert("EAX",xVariant);
-                xVariant.var.v_uint32=(quint32)(context.Ebx);
-                mapResult.insert("EBX",xVariant);
-                xVariant.var.v_uint32=(quint32)(context.Ecx);
-                mapResult.insert("ECX",xVariant);
-                xVariant.var.v_uint32=(quint32)(context.Edx);
-                mapResult.insert("EDX",xVariant);
-                xVariant.var.v_uint32=(quint32)(context.Ebp);
-                mapResult.insert("EBP",xVariant);
-                xVariant.var.v_uint32=(quint32)(context.Esp);
-                mapResult.insert("ESP",xVariant);
-                xVariant.var.v_uint32=(quint32)(context.Esi);
-                mapResult.insert("ESI",xVariant);
-                xVariant.var.v_uint32=(quint32)(context.Edi);
-                mapResult.insert("EDI",xVariant);
-            #else
-                xVariant.mode=XBinary::MODE_64;
-                xVariant.var.v_uint64=(quint64)(context.Rax);
-                mapResult.insert("RAX",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.Rbx);
-                mapResult.insert("RBX",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.Rcx);
-                mapResult.insert("RCX",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.Rdx);
-                mapResult.insert("RDX",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.Rbp);
-                mapResult.insert("RBP",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.Rsp);
-                mapResult.insert("RSP",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.Rsi);
-                mapResult.insert("RSI",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.Rdi);
-                mapResult.insert("RDI",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.R8);
-                mapResult.insert("R8",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.R9);
-                mapResult.insert("R9",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.R10);
-                mapResult.insert("R10",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.R11);
-                mapResult.insert("R11",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.R12);
-                mapResult.insert("R12",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.R13);
-                mapResult.insert("R13",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.R14);
-                mapResult.insert("R14",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.R15);
-                mapResult.insert("R15",xVariant);
+            #ifdef Q_PROCESSOR_X86_32
+                result.EAX=(quint32)(context.Eax);
+                result.EBX=(quint32)(context.Ebx);
+                result.ECX=(quint32)(context.Ecx);
+                result.EDX=(quint32)(context.Edx);
+                result.EBP=(quint32)(context.Ebp);
+                result.ESP=(quint32)(context.Esp);
+                result.ESI=(quint32)(context.Esi);
+                result.EDI=(quint32)(context.Edi);
+            #endif
+            #ifdef Q_PROCESSOR_X86_64
+                result.RAX=(quint64)(context.Rax);
+                result.RBX=(quint64)(context.Rbx);
+                result.RCX=(quint64)(context.Rcx);
+                result.RDX=(quint64)(context.Rdx);
+                result.RBP=(quint64)(context.Rbp);
+                result.RSP=(quint64)(context.Rsp);
+                result.RSI=(quint64)(context.Rsi);
+                result.RDI=(quint64)(context.Rdi);
+                result.R8=(quint64)(context.R8);
+                result.R9=(quint64)(context.R9);
+                result.R10=(quint64)(context.R10);
+                result.R11=(quint64)(context.R11);
+                result.R12=(quint64)(context.R12);
+                result.R13=(quint64)(context.R13);
+                result.R14=(quint64)(context.R14);
+                result.R15=(quint64)(context.R15);
             #endif
             }
 
             if(regOptions.bIP)
             {
-                xVariant={};
-            #ifndef Q_OS_WIN64
-                xVariant.mode=XBinary::MODE_32;
-                xVariant.var.v_uint32=(quint32)(context.Eip);
-                mapResult.insert("EIP",xVariant);
-            #else
-                xVariant.mode=XBinary::MODE_64;
-                xVariant.var.v_uint64=(quint64)(context.Rip);
-                mapResult.insert("RIP",xVariant);
+            #ifdef Q_PROCESSOR_X86_32
+                result.EIP=(quint32)(context.Eip);
+            #endif
+            #ifdef Q_PROCESSOR_X86_64
+                result.RIP=(quint64)(context.Rip);
             #endif
             }
 
             if(regOptions.bFlags)
             {
-                xVariant={};
-
-                xVariant.mode=XBinary::MODE_32;
-                xVariant.var.v_uint32=(quint32)(context.EFlags);
-                mapResult.insert("EFLAGS",xVariant);
-
-                xVariant={};
-                xVariant.mode=XBinary::MODE_BIT;
-                xVariant.var.v_bool=(bool)((context.EFlags)&0x0001);
-                mapResult.insert("CF",xVariant);
-                xVariant.var.v_bool=(bool)((context.EFlags)&0x0004);
-                mapResult.insert("PF",xVariant);
-                xVariant.var.v_bool=(bool)((context.EFlags)&0x0010);
-                mapResult.insert("AF",xVariant);
-                xVariant.var.v_bool=(bool)((context.EFlags)&0x0040);
-                mapResult.insert("ZF",xVariant);
-                xVariant.var.v_bool=(bool)((context.EFlags)&0x0080);
-                mapResult.insert("SF",xVariant);
-                xVariant.var.v_bool=(bool)((context.EFlags)&0x0100);
-                mapResult.insert("TF",xVariant);
-                xVariant.var.v_bool=(bool)((context.EFlags)&0x0200);
-                mapResult.insert("IF",xVariant);
-                xVariant.var.v_bool=(bool)((context.EFlags)&0x0400);
-                mapResult.insert("DF",xVariant);
-                xVariant.var.v_bool=(bool)((context.EFlags)&0x0800);
-                mapResult.insert("OF",xVariant);
+                result.EFLAGS=(quint32)(context.EFlags);
             }
 
             if(regOptions.bSegments)
             {
-                xVariant={};
-
-                xVariant.mode=XBinary::MODE_16;
-                xVariant.var.v_uint16=(quint16)(context.SegGs);
-                mapResult.insert("GS",xVariant);
-                xVariant.var.v_uint16=(quint16)(context.SegFs);
-                mapResult.insert("FS",xVariant);
-                xVariant.var.v_uint16=(quint16)(context.SegEs);
-                mapResult.insert("ES",xVariant);
-                xVariant.var.v_uint16=(quint16)(context.SegDs);
-                mapResult.insert("DS",xVariant);
-                xVariant.var.v_uint16=(quint16)(context.SegCs);
-                mapResult.insert("CS",xVariant);
-                xVariant.var.v_uint16=(quint16)(context.SegSs);
-                mapResult.insert("SS",xVariant);
+                result.GS=(quint16)(context.SegGs);
+                result.FS=(quint16)(context.SegFs);
+                result.ES=(quint16)(context.SegEs);
+                result.DS=(quint16)(context.SegDs);
+                result.CS=(quint16)(context.SegCs);
+                result.SS=(quint16)(context.SegSs);
             }
 
             if(regOptions.bDebug)
             {
-                xVariant={};
-            #ifndef Q_OS_WIN64
-                xVariant.mode=XBinary::MODE_32;
-                xVariant.var.v_uint32=(quint32)(context.Dr0);
-                mapResult.insert("DR0",xVariant);
-                xVariant.var.v_uint32=(quint32)(context.Dr1);
-                mapResult.insert("DR1",xVariant);
-                xVariant.var.v_uint32=(quint32)(context.Dr2);
-                mapResult.insert("DR2",xVariant);
-                xVariant.var.v_uint32=(quint32)(context.Dr3);
-                mapResult.insert("DR3",xVariant);
-                xVariant.var.v_uint32=(quint32)(context.Dr6);
-                mapResult.insert("DR6",xVariant);
-                xVariant.var.v_uint32=(quint32)(context.Dr7);
-                mapResult.insert("DR7",xVariant);
-            #else
-                xVariant.mode=XBinary::MODE_64;
-                xVariant.var.v_uint64=(quint64)(context.Dr0);
-                mapResult.insert("DR0",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.Dr0);
-                mapResult.insert("DR1",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.Dr0);
-                mapResult.insert("DR2",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.Dr0);
-                mapResult.insert("DR3",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.Dr0);
-                mapResult.insert("DR6",xVariant);
-                xVariant.var.v_uint64=(quint64)(context.Dr0);
-                mapResult.insert("DR7",xVariant);
+            #ifdef Q_PROCESSOR_X86_32
+                result.DR[0]=(quint32)(context.Dr0);
+                result.DR[1]=(quint32)(context.Dr1);
+                result.DR[2]=(quint32)(context.Dr2);
+                result.DR[3]=(quint32)(context.Dr3);
+                result.DR[6]=(quint32)(context.Dr6);
+                result.DR[7]=(quint32)(context.Dr7);
+            #endif
+            #ifdef Q_PROCESSOR_X86_64
+                result.DR[0]=(quint64)(context.Dr0);
+                result.DR[1]=(quint64)(context.Dr1);
+                result.DR[2]=(quint64)(context.Dr2);
+                result.DR[3]=(quint64)(context.Dr3);
+                result.DR[6]=(quint64)(context.Dr6);
+                result.DR[7]=(quint64)(context.Dr7);
             #endif
             }
 
             if(regOptions.bFloat)
             {
-                xVariant={};
-                xVariant.mode=XBinary::MODE_128;
             #if defined(Q_PROCESSOR_X86_64)
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[0].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[0].High);
-                mapResult.insert("ST0",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[1].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[1].High);
-                mapResult.insert("ST1",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[2].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[2].High);
-                mapResult.insert("ST2",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[3].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[3].High);
-                mapResult.insert("ST3",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[4].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[4].High);
-                mapResult.insert("ST4",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[5].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[5].High);
-                mapResult.insert("ST5",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[6].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[6].High);
-                mapResult.insert("ST6",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[7].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[7].High);
-                mapResult.insert("ST7",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[0].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[0].High);
+//                mapResult.insert("ST0",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[1].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[1].High);
+//                mapResult.insert("ST1",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[2].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[2].High);
+//                mapResult.insert("ST2",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[3].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[3].High);
+//                mapResult.insert("ST3",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[4].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[4].High);
+//                mapResult.insert("ST4",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[5].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[5].High);
+//                mapResult.insert("ST5",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[6].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[6].High);
+//                mapResult.insert("ST6",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.FloatRegisters[7].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.FloatRegisters[7].High);
+//                mapResult.insert("ST7",xVariant);
             #endif
             }
 
             if(regOptions.bXMM)
             {
-                xVariant={};
-                xVariant.mode=XBinary::MODE_128;
-            #if defined(Q_PROCESSOR_X86_64)
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[0].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[0].High);
-                mapResult.insert("XMM0",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[1].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[1].High);
-                mapResult.insert("XMM1",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[2].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[2].High);
-                mapResult.insert("XMM2",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[3].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[3].High);
-                mapResult.insert("XMM3",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[4].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[4].High);
-                mapResult.insert("XMM4",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[5].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[5].High);
-                mapResult.insert("XMM5",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[6].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[6].High);
-                mapResult.insert("XMM6",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[7].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[7].High);
-                mapResult.insert("XMM7",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[8].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[8].High);
-                mapResult.insert("XMM8",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[9].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[9].High);
-                mapResult.insert("XMM9",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[10].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[10].High);
-                mapResult.insert("XMM10",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[11].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[11].High);
-                mapResult.insert("XMM11",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[12].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[12].High);
-                mapResult.insert("XMM12",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[13].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[13].High);
-                mapResult.insert("XMM13",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[14].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[14].High);
-                mapResult.insert("XMM14",xVariant);
-                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[15].Low);
-                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[15].High);
-                mapResult.insert("XMM15",xVariant);
-            #endif
+//                xVariant={};
+//                xVariant.mode=XBinary::MODE_128;
+//            #if defined(Q_PROCESSOR_X86_64)
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[0].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[0].High);
+//                mapResult.insert("XMM0",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[1].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[1].High);
+//                mapResult.insert("XMM1",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[2].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[2].High);
+//                mapResult.insert("XMM2",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[3].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[3].High);
+//                mapResult.insert("XMM3",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[4].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[4].High);
+//                mapResult.insert("XMM4",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[5].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[5].High);
+//                mapResult.insert("XMM5",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[6].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[6].High);
+//                mapResult.insert("XMM6",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[7].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[7].High);
+//                mapResult.insert("XMM7",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[8].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[8].High);
+//                mapResult.insert("XMM8",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[9].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[9].High);
+//                mapResult.insert("XMM9",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[10].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[10].High);
+//                mapResult.insert("XMM10",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[11].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[11].High);
+//                mapResult.insert("XMM11",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[12].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[12].High);
+//                mapResult.insert("XMM12",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[13].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[13].High);
+//                mapResult.insert("XMM13",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[14].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[14].High);
+//                mapResult.insert("XMM14",xVariant);
+//                xVariant.var.v_uint128.low=(quint64)(context.FltSave.XmmRegisters[15].Low);
+//                xVariant.var.v_uint128.high=(quint64)(context.FltSave.XmmRegisters[15].High);
+//                mapResult.insert("XMM15",xVariant);
+//            #endif
     //            mapResult.insert("MxCsr",(quint32)(context.MxCsr));
             }
 
@@ -468,13 +385,13 @@ QMap<QString, XBinary::XVARIANT> XWindowsDebugger::getRegisters(XProcess::HANDLE
 
         if(handleID.hHandle)
         {
-            mapResult=getRegisters(handleID,regOptions);
+            result=getRegisters(handleID,regOptions);
 
             XProcess::closeThread(handleID.hHandle);
         }
     }
 
-    return mapResult;
+    return result;
 }
 
 bool XWindowsDebugger::_setStep(XProcess::HANDLEID handleID)
