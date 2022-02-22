@@ -60,6 +60,7 @@ bool XLinuxDebugger::load()
             // TODO init
         #ifdef QT_DEBUG
             qDebug("Forked");
+            qDebug("nProcessID: %d",nProcessID);
         #endif
 
             QString sStatusString=pMapMemory;
@@ -100,6 +101,9 @@ bool XLinuxDebugger::load()
             qDebug("Address: %llX",getCurrentAddress(handleThreadID));
 
             qint64 nCurrentAddress=getCurrentAddress(handleThreadID);
+
+//            nCurrentAddress=0x10a0;
+//            nCurrentAddress=0x7efe2684d100;
 
             setBP(nCurrentAddress,BPT_CODE_SOFTWARE,BPI_PROCESSENTRYPOINT);
 //            _setStep(handleProcessID);
@@ -197,6 +201,10 @@ bool XLinuxDebugger::load()
                         {
                             continueThread(handleThreadID.nID);
                         }
+                    }
+                    else if(state.nCode==6)
+                    {
+//                        continueThread(processInfo.nProcessID);
                     }
                 }
 
