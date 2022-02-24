@@ -361,7 +361,7 @@ QList<XBinary::MEMORY_REPLACE> XAbstractDebugger::getMemoryReplaces()
     return listResult;
 }
 
-QMap<qint64, XAbstractDebugger::SHAREDOBJECT_INFO> *XAbstractDebugger::getSharedObjectInfos()
+QMap<qint64,XAbstractDebugger::SHAREDOBJECT_INFO> *XAbstractDebugger::getSharedObjectInfos()
 {
     return &g_mapSharedObjectInfos;
 }
