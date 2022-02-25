@@ -44,7 +44,7 @@ bool XOSXDebugger::load()
         if(nProcessID==0)
         {
             // Child process
-            //ptrace(PTRACE_TRACEME, 0, nullptr, nullptr);
+            //ptrace(PTRACE_TRACEME,0,nullptr,nullptr);
             ptrace(PT_TRACE_ME,0,0,0);
 
             // TODO redirect console
