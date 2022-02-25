@@ -572,7 +572,7 @@ bool XAbstractDebugger::resumeOtherThreads(XProcess::HANDLEID handleID)
 }
 
 
-bool XAbstractDebugger::setCurrentAddress(XProcess::HANDLEID handleID, quint64 nAddress)
+bool XAbstractDebugger::setCurrentAddress(XProcess::HANDLEID handleID,quint64 nAddress)
 {
     bool bResult=false;
 #ifdef Q_OS_WIN
