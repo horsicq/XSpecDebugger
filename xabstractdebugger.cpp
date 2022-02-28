@@ -366,7 +366,7 @@ QMap<qint64,XAbstractDebugger::SHAREDOBJECT_INFO> *XAbstractDebugger::getSharedO
     return &g_mapSharedObjectInfos;
 }
 
-QMap<qint64, XAbstractDebugger::THREAD_INFO> *XAbstractDebugger::getThreadInfos()
+QMap<qint64,XAbstractDebugger::THREAD_INFO> *XAbstractDebugger::getThreadInfos()
 {
     return &g_mapThreadInfos;
 }
