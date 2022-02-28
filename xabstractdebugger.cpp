@@ -471,7 +471,7 @@ qint64 XAbstractDebugger::read_array(quint64 nAddress,char *pData,quint64 nSize)
     return XProcess::read_array(g_processInfo.hProcessMemoryIO,nAddress,pData,nSize);
 }
 
-qint64 XAbstractDebugger::write_array(quint64 nAddress, char *pData, quint64 nSize)
+qint64 XAbstractDebugger::write_array(quint64 nAddress,char *pData,quint64 nSize)
 {
     return XProcess::write_array(g_processInfo.hProcessMemoryIO,nAddress,pData,nSize);
 }
