@@ -376,7 +376,7 @@ QMap<qint64, XAbstractDebugger::BREAKPOINT> *XAbstractDebugger::getSoftwareBreak
     return &g_mapSoftwareBreakpoints;
 }
 
-QMap<qint64, XAbstractDebugger::BREAKPOINT> *XAbstractDebugger::getHardwareBreakpoints()
+QMap<qint64,XAbstractDebugger::BREAKPOINT> *XAbstractDebugger::getHardwareBreakpoints()
 {
     return &g_mapHardwareBreakpoints;
 }
