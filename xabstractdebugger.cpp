@@ -371,7 +371,7 @@ QMap<qint64,XAbstractDebugger::THREAD_INFO> *XAbstractDebugger::getThreadInfos()
     return &g_mapThreadInfos;
 }
 
-QMap<qint64, XAbstractDebugger::BREAKPOINT> *XAbstractDebugger::getSoftwareBreakpoints()
+QMap<qint64,XAbstractDebugger::BREAKPOINT> *XAbstractDebugger::getSoftwareBreakpoints()
 {
     return &g_mapSoftwareBreakpoints;
 }
