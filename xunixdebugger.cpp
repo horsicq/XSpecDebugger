@@ -196,7 +196,7 @@ bool XUnixDebugger::resumeThread(XProcess::HANDLEID handleID)
     return bResult;
 }
 
-XAbstractDebugger::REGISTERS XUnixDebugger::getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions)
+XAbstractDebugger::REGISTERS XUnixDebugger::getRegisters(XProcess::HANDLEID handleID,REG_OPTIONS regOptions)
 {
     XAbstractDebugger::REGISTERS result={};
 #if defined(Q_OS_LINUX)
