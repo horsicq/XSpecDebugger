@@ -636,7 +636,7 @@ bool XAbstractDebugger::_setStep(XProcess::HANDLEID handleID)
     return bResult;
 }
 
-bool XAbstractDebugger::setSingleStep(XProcess::HANDLEID handleID, QString sInfo)
+bool XAbstractDebugger::setSingleStep(XProcess::HANDLEID handleID,QString sInfo)
 {
     BREAKPOINT breakPoint={};
     breakPoint.bpType=BPT_CODE_HARDWARE;
