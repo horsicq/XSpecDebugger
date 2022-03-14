@@ -185,7 +185,7 @@ QList<XBinary::SYMBOL_RECORD> XWindowsDebugger::loadSymbols(QString sFileName,qi
     return listResult;
 }
 
-XAbstractDebugger::REGISTERS XWindowsDebugger::getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions)
+XAbstractDebugger::REGISTERS XWindowsDebugger::getRegisters(XProcess::HANDLEID handleID,REG_OPTIONS regOptions)
 {
     XAbstractDebugger::REGISTERS result={};
 
