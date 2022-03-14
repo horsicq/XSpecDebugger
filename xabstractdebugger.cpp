@@ -669,7 +669,7 @@ qint64 XAbstractDebugger::findAddressByException(qint64 nExeptionAddress)
     return nResult;
 }
 
-XAbstractDebugger::REGISTERS XAbstractDebugger::getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions)
+XAbstractDebugger::REGISTERS XAbstractDebugger::getRegisters(XProcess::HANDLEID handleID,REG_OPTIONS regOptions)
 {
     Q_UNUSED(handleID)
     Q_UNUSED(regOptions)
