@@ -486,7 +486,7 @@ QString XAbstractDebugger::read_ansiString(quint64 nAddress,quint64 nMaxSize)
     return XProcess::read_ansiString(g_processInfo.hProcessMemoryIO,nAddress,nMaxSize);
 }
 
-QString XAbstractDebugger::read_unicodeString(quint64 nAddress, quint64 nMaxSize)
+QString XAbstractDebugger::read_unicodeString(quint64 nAddress,quint64 nMaxSize)
 {
     return XProcess::read_unicodeString(g_processInfo.hProcessMemoryIO,nAddress,nMaxSize);
 }
