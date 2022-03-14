@@ -481,7 +481,7 @@ QByteArray XAbstractDebugger::read_array(quint64 nAddress,quint64 nSize)
     return XProcess::read_array(g_processInfo.hProcessMemoryIO,nAddress,nSize);
 }
 
-QString XAbstractDebugger::read_ansiString(quint64 nAddress, quint64 nMaxSize)
+QString XAbstractDebugger::read_ansiString(quint64 nAddress,quint64 nMaxSize)
 {
     return XProcess::read_ansiString(g_processInfo.hProcessMemoryIO,nAddress,nMaxSize);
 }
