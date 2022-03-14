@@ -162,7 +162,7 @@ XBinary::MODE XWindowsDebugger::getMode()
     return result;
 }
 
-QList<XBinary::SYMBOL_RECORD> XWindowsDebugger::loadSymbols(QString sFileName, qint64 nModuleAddress)
+QList<XBinary::SYMBOL_RECORD> XWindowsDebugger::loadSymbols(QString sFileName,qint64 nModuleAddress)
 {
     QList<XBinary::SYMBOL_RECORD> listResult;
 
