@@ -57,7 +57,7 @@ public:
     STATE waitForSignal(qint64 nProcessID);
     void continueThread(qint64 nThreadID); // TODO rename to resumrThread
     static bool resumeThread(XProcess::HANDLEID handleID);
-    virtual REGISTERS getRegisters(XProcess::HANDLEID handleID, REG_OPTIONS regOptions);
+    virtual REGISTERS getRegisters(XProcess::HANDLEID handleID,REG_OPTIONS regOptions);
     virtual bool _setStep(XProcess::HANDLEID handleID);
 };
 
