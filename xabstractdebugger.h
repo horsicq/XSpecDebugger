@@ -101,7 +101,7 @@ public:
     {
         qint64 nThreadID;
         qint64 nThreadLocalBase;
-        qint64 nStartAddress;
+        quint64 nStartAddress;
         void *hThread;
     };
 
@@ -116,10 +116,10 @@ public:
         qint64 nProcessID;
         qint64 nThreadID;
         QString sFileName;
-        qint64 nImageBase;
-        qint64 nImageSize;
-        qint64 nStartAddress;
-        qint64 nThreadLocalBase;
+        quint64 nImageBase;
+        quint64 nImageSize;
+        quint64 nStartAddress;
+        quint64 nThreadLocalBase;
         void *hProcessMemoryIO;
         void *hProcessMemoryQuery;
         void *hMainThread;
@@ -136,8 +136,8 @@ public:
     {
         QString sName;
         QString sFileName;
-        qint64 nImageBase;
-        qint64 nImageSize;
+        quint64 nImageBase;
+        quint64 nImageSize;
     };
 
     struct DEBUGSTRING_INFO
