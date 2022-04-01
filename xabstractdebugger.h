@@ -66,7 +66,7 @@ public:
     enum BPT
     {
         BPT_UNKNOWN=0,
-        BPT_CODE_SOFTWARE,    // for X86 0xCC
+        BPT_CODE_SOFTWARE,    // for X86 0xCC Check for ARM
         BPT_CODE_HARDWARE
     };
 
