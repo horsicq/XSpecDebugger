@@ -669,16 +669,6 @@ qint64 XAbstractDebugger::findAddressByException(qint64 nExeptionAddress)
     return nResult;
 }
 
-XAbstractDebugger::REGISTERS XAbstractDebugger::getRegisters(XProcess::HANDLEID handleID,REG_OPTIONS regOptions)
-{
-    Q_UNUSED(handleID)
-    Q_UNUSED(regOptions)
-
-    XAbstractDebugger::REGISTERS result={};
-
-    return result;
-}
-
 XAbstractDebugger::FUNCTION_INFO XAbstractDebugger::getFunctionInfo(XProcess::HANDLEID handleID,QString sName)
 {
     FUNCTION_INFO result={};
@@ -789,7 +779,7 @@ bool XAbstractDebugger::dumpToFile(QString sFileName)
 {
     bool bResult=false;
 
-    XProcessDevice processDevice(this);
+    XProcessDevice processDevice(this); // TODO -> XProcess
 
     if(processDevice.openHandle(g_processInfo.hProcessMemoryIO,g_processInfo.nImageBase,g_processInfo.nImageSize,QIODevice::ReadOnly))
     {

@@ -37,7 +37,6 @@ public:
     virtual XBinary::MODE getMode();
 
     virtual QList<XBinary::SYMBOL_RECORD> loadSymbols(QString sFileName,qint64 nModuleAddress);
-    virtual REGISTERS getRegisters(XProcess::HANDLEID handleID,REG_OPTIONS regOptions);
     virtual bool _setStep(XProcess::HANDLEID handleID);
 
 private:

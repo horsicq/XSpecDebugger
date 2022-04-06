@@ -44,17 +44,6 @@ public:
         bool bBreakPointOnTLSFunction;      // For Windows TLS
     };
 
-    struct REG_OPTIONS
-    {
-        bool bGeneral;
-        bool bIP;
-        bool bFlags;
-        bool bSegments;
-        bool bDebug;
-        bool bFloat;
-        bool bXMM;
-    };
-
     enum MT
     {
         MT_UNKNOWN=0,
@@ -200,55 +189,6 @@ public:
         QVariant var[4];
     };
 
-    struct REGISTERS
-    {
-    #ifdef Q_PROCESSOR_X86_32
-        quint32 EAX;
-        quint32 ECX;
-        quint32 EDX;
-        quint32 EBX;
-        quint32 ESP;
-        quint32 EBP;
-        quint32 ESI;
-        quint32 EDI;
-        quint32 EIP;
-    #endif
-    #ifdef Q_PROCESSOR_X86_64
-        quint64 RAX;
-        quint64 RCX;
-        quint64 RDX;
-        quint64 RBX;
-        quint64 RSP;
-        quint64 RBP;
-        quint64 RSI;
-        quint64 RDI;
-        quint64 R8;
-        quint64 R9;
-        quint64 R10;
-        quint64 R11;
-        quint64 R12;
-        quint64 R13;
-        quint64 R14;
-        quint64 R15;
-        quint64 RIP;
-    #endif
-    #ifdef Q_PROCESSOR_X86
-        quint32 EFLAGS;
-        quint16 CS;
-        quint16 DS;
-        quint16 ES;
-        quint16 FS;
-        quint16 GS;
-        quint16 SS;
-    #endif
-    #ifdef Q_PROCESSOR_X86_32
-        quint32 DR[8];
-    #endif
-    #ifdef Q_PROCESSOR_X86_64
-        quint64 DR[8];
-    #endif
-    };
-
     explicit XAbstractDebugger(QObject *pParent=nullptr);
     virtual bool load()=0;
     virtual bool stop();
@@ -328,8 +268,6 @@ public:
     virtual bool _setStep(XProcess::HANDLEID handleID);
     bool setSingleStep(XProcess::HANDLEID handleID,QString sInfo="");
     qint64 findAddressByException(qint64 nExeptionAddress);
-
-    virtual REGISTERS getRegisters(XProcess::HANDLEID handleID,REG_OPTIONS regOptions);
 
     FUNCTION_INFO getFunctionInfo(XProcess::HANDLEID handleID,QString sName);
     qint64 getRetAddress(XProcess::HANDLEID handleID);
