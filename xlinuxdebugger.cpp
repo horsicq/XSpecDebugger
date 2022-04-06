@@ -115,7 +115,7 @@ bool XLinuxDebugger::load()
 //            // TODO here set Breakpoints
 
 ////            continueThread(processInfo.nProcessID);
-            REG_OPTIONS regOptions={};
+            XBinary::REG_OPTIONS regOptions={};
             regOptions.bGeneral=true;
             regOptions.bFlags=true;
             regOptions.bFloat=true;
