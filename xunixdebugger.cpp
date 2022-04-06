@@ -196,9 +196,9 @@ bool XUnixDebugger::resumeThread(XProcess::HANDLEID handleID)
     return bResult;
 }
 
-XAbstractDebugger::REGISTERS XUnixDebugger::getRegisters(XProcess::HANDLEID handleID,REG_OPTIONS regOptions)
+XBinary::REGISTERS XUnixDebugger::getRegisters(XProcess::HANDLEID handleID,XBinary::REG_OPTIONS regOptions)
 {
-    XAbstractDebugger::REGISTERS result={};
+    XBinary::REGISTERS result={};
 #if defined(Q_OS_LINUX)
     user_regs_struct regs={};
 //    user_regs_struct regs;
@@ -206,6 +206,8 @@ XAbstractDebugger::REGISTERS XUnixDebugger::getRegisters(XProcess::HANDLEID hand
 
     if(ptrace(PTRACE_GETREGS,handleID.nID,nullptr,&regs)!=-1)
     {
+        result.bIsValid=true;
+
         if(regOptions.bGeneral)
         {
             result.RAX=regs.rax;
