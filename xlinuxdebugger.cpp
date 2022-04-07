@@ -115,13 +115,13 @@ bool XLinuxDebugger::load()
 //            // TODO here set Breakpoints
 
 ////            continueThread(processInfo.nProcessID);
-            XBinary::REG_OPTIONS regOptions={};
-            regOptions.bGeneral=true;
-            regOptions.bFlags=true;
-            regOptions.bFloat=true;
-            regOptions.bIP=true;
-            regOptions.bSegments=true;
-            regOptions.bXMM=true;
+//            XBinary::REG_OPTIONS regOptions={};
+//            regOptions.bGeneral=true;
+//            regOptions.bFlags=true;
+//            regOptions.bFloat=true;
+//            regOptions.bIP=true;
+//            regOptions.bSegments=true;
+//            regOptions.bXMM=true;
 
 //            QMap<QString,XBinary::XVARIANT> mapRegisters;
 
