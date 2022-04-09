@@ -20,7 +20,7 @@
  */
 #include "xlinuxdebugger.h"
 
-XLinuxDebugger::XLinuxDebugger(QObject *pParent) : XUnixDebugger(pParent)
+XLinuxDebugger::XLinuxDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XUnixDebugger(pParent,pXInfoDB)
 {
 
 }
@@ -87,13 +87,13 @@ bool XLinuxDebugger::load()
             handleMemoryQuery.nID=nProcessID;
             handleMemoryQuery.hHandle=XProcess::openMemoryQuery(nProcessID);
 
-            XAbstractDebugger::PROCESS_INFO processInfo={};
+            XInfoDB::PROCESS_INFO processInfo={};
             processInfo.nProcessID=nProcessID;
             processInfo.hProcessMemoryIO=handleMemoryIO.hHandle;
             processInfo.hProcessMemoryQuery=handleMemoryQuery.hHandle;
             // TODO more handles
 
-            setProcessInfo(&processInfo);
+            getXInfoDB()->setProcessInfo(processInfo);
             // TODO more
             // TODO show regs
             emit eventCreateProcess(&processInfo);
@@ -105,7 +105,7 @@ bool XLinuxDebugger::load()
 //            nCurrentAddress=0x10a0;
 //            nCurrentAddress=0x7efe2684d100;
 
-            setBP(nCurrentAddress,BPT_CODE_SOFTWARE,BPI_PROCESSENTRYPOINT);
+            getXInfoDB()->addBreakPoint(nCurrentAddress,XInfoDB::BPT_CODE_SOFTWARE,XInfoDB::BPI_PROCESSENTRYPOINT);
 //            _setStep(handleProcessID);
 
 //            XProcess::closeMemoryIO(processInfo.hProcessIO);
@@ -173,11 +173,11 @@ bool XLinuxDebugger::load()
 
                         if(nExceptionAddress!=-1)
                         {
-                            BREAKPOINT _currentBP=getSoftwareBreakpoints()->value(nExceptionAddress);
-                            removeBP(nExceptionAddress,_currentBP.bpType);
+                            XInfoDB::BREAKPOINT _currentBP=getXInfoDB()->getSoftwareBreakpoints()->value(nExceptionAddress);
+                            getXInfoDB()->removeBreakPoint(nExceptionAddress,_currentBP.bpType);
                             // TODO set currentAddress
 
-                            XAbstractDebugger::BREAKPOINT_INFO breakPointInfo={};
+                            XInfoDB::BREAKPOINT_INFO breakPointInfo={};
 
                             breakPointInfo.nAddress=nExceptionAddress;
                             breakPointInfo.bpType=_currentBP.bpType;

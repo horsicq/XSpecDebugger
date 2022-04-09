@@ -20,7 +20,7 @@
  */
 #include "xunixdebugger.h"
 
-XUnixDebugger::XUnixDebugger(QObject *pParent) : XAbstractDebugger(pParent)
+XUnixDebugger::XUnixDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent,pXInfoDB)
 {
 
 }
@@ -29,7 +29,7 @@ bool XUnixDebugger::stop()
 {
     bool bResult=false;
 
-    if(kill(getProcessInfo()->nProcessID,SIGKILL)!=-1)
+    if(kill(getXInfoDB()->getProcessInfo()->nProcessID,SIGKILL)!=-1)
     {
         bResult=true;
     }
@@ -43,16 +43,16 @@ void XUnixDebugger::cleanUp()
 {
     XUnixDebugger::stop();
 
-    if(getProcessInfo()->hProcessMemoryIO)
+    if(getXInfoDB()->getProcessInfo()->hProcessMemoryIO)
     {
-        XProcess::closeMemoryIO(getProcessInfo()->hProcessMemoryIO);
-        getProcessInfo()->hProcessMemoryIO=0;
+        XProcess::closeMemoryIO(getXInfoDB()->getProcessInfo()->hProcessMemoryIO);
+        getXInfoDB()->getProcessInfo()->hProcessMemoryIO=0;
     }
 
-    if(getProcessInfo()->hProcessMemoryQuery)
+    if(getXInfoDB()->getProcessInfo()->hProcessMemoryQuery)
     {
-        XProcess::closeMemoryQuery(getProcessInfo()->hProcessMemoryQuery);
-        getProcessInfo()->hProcessMemoryQuery=0;
+        XProcess::closeMemoryQuery(getXInfoDB()->getProcessInfo()->hProcessMemoryQuery);
+        getXInfoDB()->getProcessInfo()->hProcessMemoryQuery=0;
     }
 }
 

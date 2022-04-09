@@ -47,7 +47,7 @@ public:
         DEBUGGER_STATUS debuggerStatus;
     };
 
-    explicit XUnixDebugger(QObject *pParent=nullptr);
+    explicit XUnixDebugger(QObject *pParent,XInfoDB *pXInfoDB);
 
     virtual bool stop();
     virtual void cleanUp();

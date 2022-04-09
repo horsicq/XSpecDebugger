@@ -28,7 +28,7 @@ class XLinuxDebugger : public XUnixDebugger
     Q_OBJECT
 
 public:
-    explicit XLinuxDebugger(QObject *pParent=nullptr);
+    explicit XLinuxDebugger(QObject *pParent,XInfoDB *pXInfoDB);
     virtual bool load();
     virtual void cleanUp();
     virtual QString getArch();
