@@ -20,7 +20,7 @@
  */
 #include "xabstractdebugger.h"
 
-XAbstractDebugger::XAbstractDebugger(QObject *pParent, XInfoDB *pXInfoDB) : QObject(pParent)
+XAbstractDebugger::XAbstractDebugger(QObject *pParent,XInfoDB *pXInfoDB) : QObject(pParent)
 {
     g_handle=0;
     g_bIsDebugActive=false;
