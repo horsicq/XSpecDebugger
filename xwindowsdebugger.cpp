@@ -20,7 +20,7 @@
  */
 #include "xwindowsdebugger.h"
 
-XWindowsDebugger::XWindowsDebugger(QObject *pParent) : XAbstractDebugger(pParent)
+XWindowsDebugger::XWindowsDebugger(QObject *pParent,XInfoDB *pXInfoDB) : XAbstractDebugger(pParent,pXInfoDB)
 {
     XWindowsDebugger::cleanUp();
 }
@@ -126,7 +126,7 @@ bool XWindowsDebugger::load()
 
 bool XWindowsDebugger::stop()
 {
-    return (bool)TerminateProcess(getProcessInfo()->hProcessMemoryIO,0);
+    return (bool)TerminateProcess(getXInfoDB()->getProcessInfo()->hProcessMemoryIO,0);
 }
 
 void XWindowsDebugger::cleanUp()
@@ -136,7 +136,6 @@ void XWindowsDebugger::cleanUp()
     XAbstractDebugger::cleanUp();
     setDebugActive(false);
     g_mapThreadBPToRestore.clear();
-    g_mapThreadSteps.clear();
 }
 
 QString XWindowsDebugger::getArch()
@@ -234,39 +233,39 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     handleIDThread.nID=pDebugEvent->dwThreadId;
 
     XProcess::HANDLEID handleIDProcess={};
-    handleIDProcess.hHandle=getProcessInfo()->hProcessMemoryIO;
-    handleIDProcess.nID=getProcessInfo()->nProcessID;
+    handleIDProcess.hHandle=getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
+    handleIDProcess.nID=getXInfoDB()->getProcessInfo()->nProcessID;
 
     if((nExceptionCode==EXCEPTION_BREAKPOINT)||(nExceptionCode==0x4000001f)) // 4000001f WOW64 breakpoint
     {
-        if(getSoftwareBreakpoints()->contains(nExceptionAddress))
+        if(getXInfoDB()->getSoftwareBreakpoints()->contains(nExceptionAddress))
         {
             bool bThreadsSuspended=suspendOtherThreads(handleIDThread);
 
-            BREAKPOINT _currentBP=getSoftwareBreakpoints()->value(nExceptionAddress);
+            XInfoDB::BREAKPOINT _currentBP=getXInfoDB()->getSoftwareBreakpoints()->value(nExceptionAddress);
 
             setCurrentAddress(handleIDThread,nExceptionAddress); // go to prev instruction address
 
-            removeBP(nExceptionAddress,_currentBP.bpType);
+            getXInfoDB()->removeBreakPoint(nExceptionAddress,_currentBP.bpType);
 
             if(getFunctionHookInfos()->contains(_currentBP.sInfo))
             {
                 // TODO handle_Kernel32_GetProcAddress
 
-                if(_currentBP.bpInfo==BPI_FUNCTIONENTER)
+                if(_currentBP.bpInfo==XInfoDB::BPI_FUNCTIONENTER)
                 {
                     QString sUUID=XBinary::generateUUID();
-                    FUNCTION_INFO functionInfo=getFunctionInfo(handleIDThread,_currentBP.sInfo);
+                    XInfoDB::FUNCTION_INFO functionInfo=getFunctionInfo(handleIDThread,_currentBP.sInfo);
 
                     g_mapFunctionInfos.insert(sUUID,functionInfo);
 
                     emit eventFunctionEnter(&functionInfo);
 
-                    setBP(functionInfo.nRetAddress,BPT_CODE_SOFTWARE,BPI_FUNCTIONLEAVE,1,_currentBP.sInfo,sUUID);
+                    getXInfoDB()->addBreakPoint(functionInfo.nRetAddress,XInfoDB::BPT_CODE_SOFTWARE,XInfoDB::BPI_FUNCTIONLEAVE,1,_currentBP.sInfo,sUUID);
                 }
-                else if(_currentBP.bpInfo==BPI_FUNCTIONLEAVE)
+                else if(_currentBP.bpInfo==XInfoDB::BPI_FUNCTIONLEAVE)
                 {
-                    FUNCTION_INFO functionInfo=g_mapFunctionInfos.value(_currentBP.sGUID);
+                    XInfoDB::FUNCTION_INFO functionInfo=g_mapFunctionInfos.value(_currentBP.sGUID);
 
                     emit eventFunctionLeave(&functionInfo);
 
@@ -275,7 +274,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             }
             else
             {
-                XAbstractDebugger::BREAKPOINT_INFO breakPointInfo={};
+                XInfoDB::BREAKPOINT_INFO breakPointInfo={};
 
                 breakPointInfo.nAddress=nExceptionAddress;
                 breakPointInfo.bpType=_currentBP.bpType;
@@ -287,18 +286,18 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                 breakPointInfo.pHProcessMemoryIO=handleIDProcess.hHandle;
                 breakPointInfo.pHProcessMemoryQuery=handleIDProcess.hHandle;
 
-                if(!g_mapThreadSteps.contains(pDebugEvent->dwThreadId)) // If not step. For step there is an another callback
+                if(!(getXInfoDB()->getThreadBreakpoints()->contains(pDebugEvent->dwThreadId))) // If not step. For step there is an another callback
                 {
-                    if(breakPointInfo.bpInfo==BPI_PROGRAMENTRYPOINT)
+                    if(breakPointInfo.bpInfo==XInfoDB::BPI_PROGRAMENTRYPOINT)
                     {
                         emit eventProgramEntryPoint(&breakPointInfo); // TODO for DLL
                     }
-                    else if(breakPointInfo.bpInfo==BPI_TLSFUNCTION)
+                    else if(breakPointInfo.bpInfo==XInfoDB::BPI_TLSFUNCTION)
                     {
                         emit eventTLSFunction(&breakPointInfo); // TODO
                         // TODO set BP on next TLS function
                     }
-                    else if(breakPointInfo.bpInfo==BPI_STEPOVER)
+                    else if(breakPointInfo.bpInfo==XInfoDB::BPI_STEPOVER)
                     {
                         emit eventStepOver(&breakPointInfo);
                     }
@@ -333,22 +332,22 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
         // Single step
         if(g_mapThreadBPToRestore.contains(pDebugEvent->dwThreadId))
         {
-            BREAKPOINT _currentBP=g_mapThreadBPToRestore.value(pDebugEvent->dwThreadId);
-            setBP(_currentBP.nAddress,_currentBP.bpType,_currentBP.bpInfo,_currentBP.nCount,_currentBP.sInfo);
+            XInfoDB::BREAKPOINT _currentBP=g_mapThreadBPToRestore.value(pDebugEvent->dwThreadId);
+            getXInfoDB()->addBreakPoint(_currentBP.nAddress,_currentBP.bpType,_currentBP.bpInfo,_currentBP.nCount,_currentBP.sInfo);
             g_mapThreadBPToRestore.remove(pDebugEvent->dwThreadId);
 
             nResult=DBG_CONTINUE;
         }
 
-        if(g_mapThreadSteps.contains(pDebugEvent->dwThreadId))
+        if(getXInfoDB()->getThreadBreakpoints()->contains(pDebugEvent->dwThreadId))
         {
-            BREAKPOINT stepBP=g_mapThreadSteps.value(pDebugEvent->dwThreadId);
+            XInfoDB::BREAKPOINT stepBP=getXInfoDB()->getThreadBreakpoints()->value(pDebugEvent->dwThreadId);
 
-            g_mapThreadSteps.remove(pDebugEvent->dwThreadId);
+            getXInfoDB()->getThreadBreakpoints()->remove(pDebugEvent->dwThreadId);
 
             bool bThreadsSuspended=suspendOtherThreads(handleIDThread);
 
-            XAbstractDebugger::BREAKPOINT_INFO breakPointInfo={};
+            XInfoDB::BREAKPOINT_INFO breakPointInfo={};
 
             breakPointInfo.nAddress=nExceptionAddress;
             breakPointInfo.bpType=stepBP.bpType;
@@ -360,15 +359,15 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             breakPointInfo.pHProcessMemoryQuery=handleIDProcess.hHandle;
             breakPointInfo.sInfo=stepBP.sInfo;
 
-            if(breakPointInfo.bpInfo==BPI_STEP)
+            if(breakPointInfo.bpInfo==XInfoDB::BPI_STEP)
             {
                 emit eventStep(&breakPointInfo);
             }
-            else if(breakPointInfo.bpInfo==BPI_STEPINTO)
+            else if(breakPointInfo.bpInfo==XInfoDB::BPI_STEPINTO)
             {
                 emit eventStepInto(&breakPointInfo);
             }
-            else if(breakPointInfo.bpInfo==BPI_STEPOVER)
+            else if(breakPointInfo.bpInfo==XInfoDB::BPI_STEPOVER)
             {
                 emit eventStepOver(&breakPointInfo);
             }
@@ -400,7 +399,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
 quint32 XWindowsDebugger::on_CREATE_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
-    THREAD_INFO threadInfo={};
+    XInfoDB::THREAD_INFO threadInfo={};
     threadInfo.nThreadID=pDebugEvent->dwThreadId;
     threadInfo.hThread=pDebugEvent->u.CreateThread.hThread;
     threadInfo.nStartAddress=(qint64)pDebugEvent->u.CreateThread.lpStartAddress;
@@ -414,7 +413,7 @@ quint32 XWindowsDebugger::on_CREATE_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
 quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
-    PROCESS_INFO processInfo={};
+    XInfoDB::PROCESS_INFO processInfo={};
     processInfo.nProcessID=pDebugEvent->dwProcessId;
     processInfo.nThreadID=pDebugEvent->dwThreadId;
     processInfo.hProcessMemoryIO=pDebugEvent->u.CreateProcessInfo.hProcess;
@@ -442,9 +441,9 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
 //        file.close();
 //    }
 
-    setProcessInfo(&processInfo);
+    getXInfoDB()->setProcessInfo(processInfo);
 
-    THREAD_INFO threadInfo={};
+    XInfoDB::THREAD_INFO threadInfo={};
     threadInfo.nThreadID=pDebugEvent->dwThreadId;
     threadInfo.hThread=pDebugEvent->u.CreateProcessInfo.hThread;
     threadInfo.nStartAddress=(qint64)(pDebugEvent->u.CreateProcessInfo.lpStartAddress);
@@ -453,7 +452,7 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
 
     if(getOptions()->bBreakpointOnProgramEntryPoint)
     {
-        setBP((qint64)(pDebugEvent->u.CreateProcessInfo.lpStartAddress),BPT_CODE_SOFTWARE,BPI_PROGRAMENTRYPOINT,1);
+        getXInfoDB()->addBreakPoint((qint64)(pDebugEvent->u.CreateProcessInfo.lpStartAddress),XInfoDB::BPT_CODE_SOFTWARE,XInfoDB::BPI_PROGRAMENTRYPOINT,1);
     }
     // TODO DLLMain
 
@@ -464,10 +463,10 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
 
 quint32 XWindowsDebugger::on_EXIT_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
-    THREAD_INFO threadInfo=getThreadInfos()->value((qint64)(pDebugEvent->dwThreadId));
+    XInfoDB::THREAD_INFO threadInfo=getThreadInfos()->value((qint64)(pDebugEvent->dwThreadId));
     removeThreadInfo(&threadInfo);
 
-    EXITTHREAD_INFO exitThreadInfo={};
+    XInfoDB::EXITTHREAD_INFO exitThreadInfo={};
     exitThreadInfo.nThreadID=pDebugEvent->dwThreadId;
     exitThreadInfo.nExitCode=pDebugEvent->u.ExitThread.dwExitCode;
 
@@ -480,12 +479,12 @@ quint32 XWindowsDebugger::on_EXIT_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
     setDebugActive(false);
 
-    EXITPROCESS_INFO exitProcessInfo={};
+    XInfoDB::EXITPROCESS_INFO exitProcessInfo={};
     exitProcessInfo.nProcessID=pDebugEvent->dwProcessId;
     exitProcessInfo.nThreadID=pDebugEvent->dwThreadId;
     exitProcessInfo.nExitCode=pDebugEvent->u.ExitProcess.dwExitCode;
 
-    THREAD_INFO threadInfo=getThreadInfos()->value((qint64)(pDebugEvent->dwThreadId));
+    XInfoDB::THREAD_INFO threadInfo=getThreadInfos()->value((qint64)(pDebugEvent->dwThreadId));
     removeThreadInfo(&threadInfo);
 
     emit eventExitProcess(&exitProcessInfo);
@@ -495,9 +494,9 @@ quint32 XWindowsDebugger::on_EXIT_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
 quint32 XWindowsDebugger::on_LOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
-    SHAREDOBJECT_INFO sharedObjectInfo={};
+    XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo={};
     sharedObjectInfo.nImageBase=(qint64)(pDebugEvent->u.LoadDll.lpBaseOfDll);
-    sharedObjectInfo.nImageSize=XProcess::getRegionAllocationSize(getProcessInfo()->hProcessMemoryQuery,sharedObjectInfo.nImageBase);
+    sharedObjectInfo.nImageSize=XProcess::getRegionAllocationSize(getXInfoDB()->getProcessInfo()->hProcessMemoryQuery,sharedObjectInfo.nImageBase);
     sharedObjectInfo.sFileName=XProcess::getFileNameByHandle(pDebugEvent->u.LoadDll.hFile);
     sharedObjectInfo.sName=QFileInfo(sharedObjectInfo.sFileName).fileName().toUpper();
 
@@ -512,7 +511,7 @@ quint32 XWindowsDebugger::on_LOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
 quint32 XWindowsDebugger::on_UNLOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
-    SHAREDOBJECT_INFO sharedObjectInfo=getSharedObjectInfos()->value((qint64)(pDebugEvent->u.UnloadDll.lpBaseOfDll));
+    XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo=getSharedObjectInfos()->value((qint64)(pDebugEvent->u.UnloadDll.lpBaseOfDll));
     removeSharedObjectInfo(&sharedObjectInfo);
 
 //    XBinary::removeFunctionAddressesByModule(&g_mapFunctionAddresses,sharedObjectInfo.nImageBase);
@@ -526,16 +525,16 @@ quint32 XWindowsDebugger::on_UNLOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
 quint32 XWindowsDebugger::on_OUTPUT_DEBUG_STRING_EVENT(DEBUG_EVENT *pDebugEvent)
 {
-    DEBUGSTRING_INFO debugStringInfo={};
+    XInfoDB::DEBUGSTRING_INFO debugStringInfo={};
     debugStringInfo.nThreadID=pDebugEvent->dwThreadId;
 
     if(pDebugEvent->u.DebugString.fUnicode)
     {
-        debugStringInfo.sDebugString=read_unicodeString((qint64)(pDebugEvent->u.DebugString.lpDebugStringData),pDebugEvent->u.DebugString.nDebugStringLength);
+        debugStringInfo.sDebugString=getXInfoDB()->read_unicodeString((qint64)(pDebugEvent->u.DebugString.lpDebugStringData),pDebugEvent->u.DebugString.nDebugStringLength);
     }
     else
     {
-        debugStringInfo.sDebugString=read_ansiString((qint64)(pDebugEvent->u.DebugString.lpDebugStringData),pDebugEvent->u.DebugString.nDebugStringLength);
+        debugStringInfo.sDebugString=getXInfoDB()->read_ansiString((qint64)(pDebugEvent->u.DebugString.lpDebugStringData),pDebugEvent->u.DebugString.nDebugStringLength);
     }
 #ifdef QT_DEBUG
     qDebug(debugStringInfo.sDebugString.toLatin1().data());

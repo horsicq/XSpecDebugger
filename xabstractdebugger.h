@@ -25,6 +25,7 @@
 #include "xcapstone.h"
 #include "xprocess.h"
 #include "xprocessdevice.h"
+#include "xinfodb.h"
 
 // TODO Attach
 // TODO Detach
@@ -52,144 +53,9 @@ public:
         MT_ERROR
     };
 
-    enum BPT
-    {
-        BPT_UNKNOWN=0,
-        BPT_CODE_SOFTWARE,    // for X86 0xCC Check for ARM
-        BPT_CODE_HARDWARE
-    };
-
-    enum BPI
-    {
-        BPI_UNKNOWN=0,
-        BPI_USER,
-        BPI_PROCESSENTRYPOINT,
-        BPI_PROGRAMENTRYPOINT,
-        BPI_TLSFUNCTION, // TODO
-        BPI_FUNCTIONENTER,
-        BPI_FUNCTIONLEAVE,
-        BPI_STEP,
-        BPI_STEPINTO,
-        BPI_STEPOVER
-    };
-
-    struct BREAKPOINT
-    {
-        quint64 nAddress;
-        qint64 nSize;
-        qint32 nCount;
-        BPT bpType;
-        BPI bpInfo;
-        QString sInfo;
-        qint32 nOrigDataSize;
-        char origData[4]; // TODO consts check
-        QString sGUID;
-    };
-
-    struct THREAD_INFO
-    {
-        qint64 nThreadID;
-        qint64 nThreadLocalBase;
-        quint64 nStartAddress;
-        void *hThread;
-    };
-
-    struct EXITTHREAD_INFO
-    {
-        qint64 nThreadID;
-        qint64 nExitCode;
-    };
-
-    struct PROCESS_INFO
-    {
-        qint64 nProcessID;
-        qint64 nThreadID;
-        QString sFileName;
-        quint64 nImageBase;
-        quint64 nImageSize;
-        quint64 nStartAddress;
-        quint64 nThreadLocalBase;
-        void *hProcessMemoryIO;
-        void *hProcessMemoryQuery;
-        void *hMainThread;
-    };
-
-    struct EXITPROCESS_INFO
-    {
-        qint64 nProcessID;
-        qint64 nThreadID;
-        qint64 nExitCode;
-    };
-
-    struct SHAREDOBJECT_INFO // DLL on Windows
-    {
-        QString sName;
-        QString sFileName;
-        quint64 nImageBase;
-        quint64 nImageSize;
-    };
-
-    struct DEBUGSTRING_INFO
-    {
-        qint64 nThreadID;
-        QString sDebugString;
-    };
-
-    struct BREAKPOINT_INFO
-    {
-        quint64 nAddress;
-        BPT bpType;
-        BPI bpInfo;
-        QString sInfo;
-        qint64 nProcessID;
-        void *pHProcessMemoryIO;
-        void *pHProcessMemoryQuery;
-        qint64 nThreadID;
-        void *pHThread;
-    };
-
-    struct PROCESSENTRY_INFO
-    {
-        quint64 nAddress;
-    };
-
-    struct FUNCTIONHOOK_INFO
-    {
-        QString sName;
-        quint64 nAddress;
-    };
-
-    struct FUNCTION_INFO
-    {
-        QString sName;
-        quint64 nAddress;
-        qint64 nRetAddress;
-        quint64 nParameter0;
-        quint64 nParameter1;
-        quint64 nParameter2;
-        quint64 nParameter3;
-        quint64 nParameter4;
-        quint64 nParameter5;
-        quint64 nParameter6;
-        quint64 nParameter7;
-        quint64 nParameter8;
-        quint64 nParameter9;
-    };
-
-    enum DBT
-    {
-        DBT_UNKNOWN=0,
-        DBT_SETSOFTWAREBREAKPOINT,
-        DBT_REMOVESOFTWAREBREAKPOINT
-    };
-
-    struct DEBUG_ACTION
-    {
-        DBT type;
-        QVariant var[4];
-    };
-
-    explicit XAbstractDebugger(QObject *pParent=nullptr);
+    explicit XAbstractDebugger(QObject *pParent,XInfoDB *pXInfoDB);
+    void setXInfoDB(XInfoDB *pXInfoDB);
+    XInfoDB *getXInfoDB();
     virtual bool load()=0;
     virtual bool stop();
     virtual void cleanUp();
@@ -204,26 +70,13 @@ public:
     void setOptions(OPTIONS options);
     OPTIONS *getOptions();
 
-    void setProcessInfo(PROCESS_INFO *pProcessInfo);
-    PROCESS_INFO *getProcessInfo();
-
     void _messageString(MT messageType,QString sText);
 
-    void addSharedObjectInfo(SHAREDOBJECT_INFO *pSharedObjectInfo);
-    void removeSharedObjectInfo(SHAREDOBJECT_INFO *pSharedObjectInfo);
+    void addSharedObjectInfo(XInfoDB::SHAREDOBJECT_INFO *pSharedObjectInfo);
+    void removeSharedObjectInfo(XInfoDB::SHAREDOBJECT_INFO *pSharedObjectInfo);
 
-    void addThreadInfo(THREAD_INFO *pThreadInfo);
-    void removeThreadInfo(THREAD_INFO *pThreadInfo);
-
-    void _addBreakpoint(BREAKPOINT *pBreakpoint);
-    void _removeBreakpoint(BREAKPOINT *pBreakpoint);
-
-    bool setBP(quint64 nAddress,BPT bpType=BPT_CODE_SOFTWARE,BPI bpInfo=BPI_UNKNOWN,qint32 nCount=-1,QString sInfo=QString(),QString sGUID=QString());
-    bool removeBP(quint64 nAddress,BPT bpType);
-
-    bool setSoftwareBreakpoint(quint64 nAddress,qint32 nCount=-1,QString sInfo=QString());
-    bool removeSoftwareBreakpoint(quint64 nAddress);
-    bool isSoftwareBreakpointPresent(quint64 nAddress);
+    void addThreadInfo(XInfoDB::THREAD_INFO *pThreadInfo);
+    void removeThreadInfo(XInfoDB::THREAD_INFO *pThreadInfo);
 
     bool setFunctionHook(QString sFunctionName);
     bool removeFunctionHook(QString sFunctionName);
@@ -233,30 +86,14 @@ public:
 
     virtual QList<XBinary::SYMBOL_RECORD> loadSymbols(QString sFileName,qint64 nModuleAddress);
 
-    QList<XBinary::MEMORY_REPLACE> getMemoryReplaces();
+    QList<XBinary::MEMORY_REPLACE> getMemoryReplaces(); // TODO remove
 
-    QMap<qint64,SHAREDOBJECT_INFO> *getSharedObjectInfos();
-    QMap<qint64,THREAD_INFO> *getThreadInfos();
-    QMap<qint64,BREAKPOINT> *getSoftwareBreakpoints();
-    QMap<qint64,BREAKPOINT> *getHardwareBreakpoints();
-    QMap<QString,FUNCTIONHOOK_INFO> *getFunctionHookInfos();
+    QMap<qint64,XInfoDB::SHAREDOBJECT_INFO> *getSharedObjectInfos();
+    QMap<qint64,XInfoDB::THREAD_INFO> *getThreadInfos();
+    QMap<QString,XInfoDB::FUNCTIONHOOK_INFO> *getFunctionHookInfos();
 
-    SHAREDOBJECT_INFO findSharedInfoByName(QString sName);
-    SHAREDOBJECT_INFO findSharedInfoByAddress(quint64 nAddress);
-
-    quint8 read_uint8(quint64 nAddress);
-    quint16 read_uint16(quint64 nAddress);
-    quint32 read_uint32(quint64 nAddress);
-    quint64 read_uint64(quint64 nAddress);
-    void write_uint8(quint64 nAddress,quint8 nValue);
-    void write_uint16(quint64 nAddress,quint16 nValue);
-    void write_uint32(quint64 nAddress,quint32 nValue);
-    void write_uint64(quint64 nAddress,quint64 nValue);
-    qint64 read_array(quint64 nAddress,char *pData,quint64 nSize);
-    qint64 write_array(quint64 nAddress,char *pData,quint64 nSize);
-    QByteArray read_array(quint64 nAddress,quint64 nSize);
-    QString read_ansiString(quint64 nAddress,quint64 nMaxSize=256);
-    QString read_unicodeString(quint64 nAddress,quint64 nMaxSize=256);
+    XInfoDB::SHAREDOBJECT_INFO findSharedInfoByName(QString sName);
+    XInfoDB::SHAREDOBJECT_INFO findSharedInfoByAddress(quint64 nAddress);
 
     bool suspendThread(XProcess::HANDLEID handleID);
     bool resumeThread(XProcess::HANDLEID handleID);
@@ -265,23 +102,20 @@ public:
 
     bool setCurrentAddress(XProcess::HANDLEID handleID,quint64 nAddress);
     static qint64 getCurrentAddress(XProcess::HANDLEID handleID);
-    virtual bool _setStep(XProcess::HANDLEID handleID);
-    bool setSingleStep(XProcess::HANDLEID handleID,QString sInfo="");
-    qint64 findAddressByException(qint64 nExeptionAddress);
+    virtual bool _setStep(XProcess::HANDLEID handleID); // TODO move to XInfoDB
+    bool setSingleStep(XProcess::HANDLEID handleID,QString sInfo=""); // TODO move to XInfoDB
+    qint64 findAddressByException(qint64 nExeptionAddress); // TODO move to XInfoDB
 
-    FUNCTION_INFO getFunctionInfo(XProcess::HANDLEID handleID,QString sName);
+    XInfoDB::FUNCTION_INFO getFunctionInfo(XProcess::HANDLEID handleID,QString sName);
     qint64 getRetAddress(XProcess::HANDLEID handleID);
     qint64 getStackPointer(XProcess::HANDLEID handleID);
 
     XCapstone::DISASM_STRUCT disasm(quint64 nAddress);
 
-    bool isUserCode(quint64 nAddress);
-    bool bIsSystemCode(quint64 nAddress);
+    bool isUserCode(quint64 nAddress); // TODO move to XInfoDB
+    bool bIsSystemCode(quint64 nAddress); // TODO move to XInfoDB
 
     bool dumpToFile(QString sFileName);
-
-    static QString debugActionToString(DEBUG_ACTION debugAction);
-    static DEBUG_ACTION stringToDebugAction(QString sString);
 
     bool stepInto(XProcess::HANDLEID handleID);
     bool stepOver(XProcess::HANDLEID handleID);
@@ -297,34 +131,29 @@ public slots:
 signals:
     void messageString(XAbstractDebugger::MT messageType,QString sText);
 
-    void eventCreateProcess(XAbstractDebugger::PROCESS_INFO *pProcessInfo);
-    void eventExitProcess(XAbstractDebugger::EXITPROCESS_INFO *pExitProcessInfo);
-    void eventCreateThread(XAbstractDebugger::THREAD_INFO *pThreadInfo);
-    void eventExitThread(XAbstractDebugger::EXITTHREAD_INFO *pExitThreadInfo);
-    void eventLoadSharedObject(XAbstractDebugger::SHAREDOBJECT_INFO *pSharedObjectInfo);
-    void eventUnloadSharedObject(XAbstractDebugger::SHAREDOBJECT_INFO *pSharedObjectInfo);
-    void eventDebugString(XAbstractDebugger::DEBUGSTRING_INFO *pDebugString);
-    void eventBreakPoint(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);
-    void eventProcessEntryPoint(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo); // Check windows set on startAddress
-    void eventProgramEntryPoint(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo); // If options.bBreakpointOnTargetEntryPoint
-    void eventTLSFunction(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo); // TODO
-    void eventStep(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);
-    void eventStepInto(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);
-    void eventStepOver(XAbstractDebugger::BREAKPOINT_INFO *pBreakPointInfo);
-    void eventFunctionEnter(XAbstractDebugger::FUNCTION_INFO *pFunctionInfo);
-    void eventFunctionLeave(XAbstractDebugger::FUNCTION_INFO *pFunctionInfo);
-
-protected:
-    QMap<qint64,BREAKPOINT> g_mapThreadSteps; // mb TODO move to private set/get functions
+    void eventCreateProcess(XInfoDB::PROCESS_INFO *pProcessInfo);
+    void eventExitProcess(XInfoDB::EXITPROCESS_INFO *pExitProcessInfo);
+    void eventCreateThread(XInfoDB::THREAD_INFO *pThreadInfo);
+    void eventExitThread(XInfoDB::EXITTHREAD_INFO *pExitThreadInfo);
+    void eventLoadSharedObject(XInfoDB::SHAREDOBJECT_INFO *pSharedObjectInfo);
+    void eventUnloadSharedObject(XInfoDB::SHAREDOBJECT_INFO *pSharedObjectInfo);
+    void eventDebugString(XInfoDB::DEBUGSTRING_INFO *pDebugString);
+    void eventBreakPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo);
+    void eventProcessEntryPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo); // Check windows set on startAddress
+    void eventProgramEntryPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo); // If options.bBreakpointOnTargetEntryPoint
+    void eventTLSFunction(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo); // TODO
+    void eventStep(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo);
+    void eventStepInto(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo);
+    void eventStepOver(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo);
+    void eventFunctionEnter(XInfoDB::FUNCTION_INFO *pFunctionInfo);
+    void eventFunctionLeave(XInfoDB::FUNCTION_INFO *pFunctionInfo);
 
 private:
+    XInfoDB *g_pXInfoDB;
     OPTIONS g_options;
-    PROCESS_INFO g_processInfo;
-    QMap<qint64,SHAREDOBJECT_INFO> g_mapSharedObjectInfos;
-    QMap<qint64,THREAD_INFO> g_mapThreadInfos;
-    QMap<qint64,BREAKPOINT> g_mapSoftwareBreakpoints;
-    QMap<qint64,BREAKPOINT> g_mapHardwareBreakpoints;
-    QMap<QString,FUNCTIONHOOK_INFO> g_mapFunctionHookInfos;
+    QMap<qint64,XInfoDB::SHAREDOBJECT_INFO> g_mapSharedObjectInfos;
+    QMap<qint64,XInfoDB::THREAD_INFO> g_mapThreadInfos;
+    QMap<QString,XInfoDB::FUNCTIONHOOK_INFO> g_mapFunctionHookInfos;
     csh g_handle;
     QString g_sTraceFileName;
     bool g_bIsDebugActive;

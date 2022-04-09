@@ -29,7 +29,7 @@ class XWindowsDebugger : public XAbstractDebugger
     Q_OBJECT
     
 public:
-    explicit XWindowsDebugger(QObject *pParent=nullptr);
+    explicit XWindowsDebugger(QObject *pParent,XInfoDB *pXInfoDB);
     virtual bool load();
     virtual bool stop();
     virtual void cleanUp();
@@ -51,8 +51,8 @@ private:
     quint32 on_RIP_EVENT(DEBUG_EVENT *pDebugEvent);
 
 private:
-    QMap<qint64,BREAKPOINT> g_mapThreadBPToRestore;
-    QMap<QString,FUNCTION_INFO> g_mapFunctionInfos;
+    QMap<qint64,XInfoDB::BREAKPOINT> g_mapThreadBPToRestore;
+    QMap<QString,XInfoDB::FUNCTION_INFO> g_mapFunctionInfos;
 //    QMap<qint64,XBinary::FUNCTION_ADDRESS> g_mapFunctionAddresses; // mb TODO move to Abstarct
 };
 
