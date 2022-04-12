@@ -20,7 +20,7 @@
  */
 #include "xosxdebugger.h"
 
-XOSXDebugger::XOSXDebugger(QObject *pParent) : XUnixDebugger(pParent)
+XOSXDebugger::XOSXDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XUnixDebugger(pParent,pXInfoDB)
 {
 
 }

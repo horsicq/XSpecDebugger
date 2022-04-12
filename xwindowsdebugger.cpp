@@ -229,7 +229,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     quint64 nExceptionAddress=(qint64)(pDebugEvent->u.Exception.ExceptionRecord.ExceptionAddress);
 
     XProcess::HANDLEID handleIDThread={};
-    handleIDThread.hHandle=getThreadInfos()->value(pDebugEvent->dwThreadId).hThread;
+    handleIDThread.hHandle=getXInfoDB()->getThreadInfos()->value(pDebugEvent->dwThreadId).hThread;
     handleIDThread.nID=pDebugEvent->dwThreadId;
 
     XProcess::HANDLEID handleIDProcess={};
@@ -248,7 +248,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
             getXInfoDB()->removeBreakPoint(nExceptionAddress,_currentBP.bpType);
 
-            if(getFunctionHookInfos()->contains(_currentBP.sInfo))
+            if(getXInfoDB()->getFunctionHookInfos()->contains(_currentBP.sInfo))
             {
                 // TODO handle_Kernel32_GetProcAddress
 
@@ -404,7 +404,7 @@ quint32 XWindowsDebugger::on_CREATE_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     threadInfo.hThread=pDebugEvent->u.CreateThread.hThread;
     threadInfo.nStartAddress=(qint64)pDebugEvent->u.CreateThread.lpStartAddress;
     threadInfo.nThreadLocalBase=(qint64)pDebugEvent->u.CreateThread.lpThreadLocalBase;
-    addThreadInfo(&threadInfo);
+    getXInfoDB()->addThreadInfo(&threadInfo);
 
     emit eventCreateThread(&threadInfo);
 
@@ -448,7 +448,7 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
     threadInfo.hThread=pDebugEvent->u.CreateProcessInfo.hThread;
     threadInfo.nStartAddress=(qint64)(pDebugEvent->u.CreateProcessInfo.lpStartAddress);
     threadInfo.nThreadLocalBase=(qint64)(pDebugEvent->u.CreateProcessInfo.lpThreadLocalBase);
-    addThreadInfo(&threadInfo);
+    getXInfoDB()->addThreadInfo(&threadInfo);
 
     if(getOptions()->bBreakpointOnProgramEntryPoint)
     {
@@ -463,8 +463,8 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
 
 quint32 XWindowsDebugger::on_EXIT_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
-    XInfoDB::THREAD_INFO threadInfo=getThreadInfos()->value((qint64)(pDebugEvent->dwThreadId));
-    removeThreadInfo(&threadInfo);
+    XInfoDB::THREAD_INFO threadInfo=getXInfoDB()->getThreadInfos()->value((qint64)(pDebugEvent->dwThreadId));
+    getXInfoDB()->removeThreadInfo(&threadInfo);
 
     XInfoDB::EXITTHREAD_INFO exitThreadInfo={};
     exitThreadInfo.nThreadID=pDebugEvent->dwThreadId;
@@ -484,8 +484,8 @@ quint32 XWindowsDebugger::on_EXIT_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     exitProcessInfo.nThreadID=pDebugEvent->dwThreadId;
     exitProcessInfo.nExitCode=pDebugEvent->u.ExitProcess.dwExitCode;
 
-    XInfoDB::THREAD_INFO threadInfo=getThreadInfos()->value((qint64)(pDebugEvent->dwThreadId));
-    removeThreadInfo(&threadInfo);
+    XInfoDB::THREAD_INFO threadInfo=getXInfoDB()->getThreadInfos()->value((qint64)(pDebugEvent->dwThreadId));
+    getXInfoDB()->removeThreadInfo(&threadInfo);
 
     emit eventExitProcess(&exitProcessInfo);
 
@@ -500,7 +500,7 @@ quint32 XWindowsDebugger::on_LOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     sharedObjectInfo.sFileName=XProcess::getFileNameByHandle(pDebugEvent->u.LoadDll.hFile);
     sharedObjectInfo.sName=QFileInfo(sharedObjectInfo.sFileName).fileName().toUpper();
 
-    addSharedObjectInfo(&sharedObjectInfo);
+    getXInfoDB()->addSharedObjectInfo(&sharedObjectInfo);
 
     // mb TODO add api breakpoints If set
 
@@ -511,8 +511,8 @@ quint32 XWindowsDebugger::on_LOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
 quint32 XWindowsDebugger::on_UNLOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
-    XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo=getSharedObjectInfos()->value((qint64)(pDebugEvent->u.UnloadDll.lpBaseOfDll));
-    removeSharedObjectInfo(&sharedObjectInfo);
+    XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo=getXInfoDB()->getSharedObjectInfos()->value((qint64)(pDebugEvent->u.UnloadDll.lpBaseOfDll));
+    getXInfoDB()->removeSharedObjectInfo(&sharedObjectInfo);
 
 //    XBinary::removeFunctionAddressesByModule(&g_mapFunctionAddresses,sharedObjectInfo.nImageBase);
 

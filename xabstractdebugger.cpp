@@ -44,7 +44,6 @@ bool XAbstractDebugger::stop()
 
 void XAbstractDebugger::cleanUp()
 {
-    g_mapSharedObjectInfos.clear();
     XCapstone::closeHandle(&g_handle);
 }
 
@@ -92,72 +91,6 @@ void XAbstractDebugger::_messageString(XAbstractDebugger::MT messageType,QString
     emit messageString(messageType,sText);
 }
 
-void XAbstractDebugger::addSharedObjectInfo(XInfoDB::SHAREDOBJECT_INFO *pSharedObjectInfo)
-{
-    g_mapSharedObjectInfos.insert(pSharedObjectInfo->nImageBase,*pSharedObjectInfo);
-}
-
-void XAbstractDebugger::removeSharedObjectInfo(XInfoDB::SHAREDOBJECT_INFO *pSharedObjectInfo)
-{
-    g_mapSharedObjectInfos.remove(pSharedObjectInfo->nImageBase);
-}
-
-void XAbstractDebugger::addThreadInfo(XInfoDB::THREAD_INFO *pThreadInfo)
-{
-    g_mapThreadInfos.insert(pThreadInfo->nThreadID,*pThreadInfo);
-}
-
-void XAbstractDebugger::removeThreadInfo(XInfoDB::THREAD_INFO *pThreadInfo)
-{
-    g_mapThreadInfos.remove(pThreadInfo->nThreadID);
-}
-
-bool XAbstractDebugger::setFunctionHook(QString sFunctionName)
-{
-    bool bResult=false;
-
-    qint64 nFunctionAddress=getFunctionAddress(sFunctionName);
-
-    if(nFunctionAddress!=-1)
-    {
-        bResult=getXInfoDB()->addBreakPoint(nFunctionAddress,XInfoDB::BPT_CODE_SOFTWARE,XInfoDB::BPI_FUNCTIONENTER,-1,sFunctionName);
-
-        XInfoDB::FUNCTIONHOOK_INFO functionhook_info={};
-        functionhook_info.sName=sFunctionName;
-        functionhook_info.nAddress=nFunctionAddress;
-
-        g_mapFunctionHookInfos.insert(sFunctionName,functionhook_info);
-    }
-
-    return bResult;
-}
-
-bool XAbstractDebugger::removeFunctionHook(QString sFunctionName)
-{
-    bool bResult=false;
-    // TODO Check !!!
-    for(QMap<qint64,XInfoDB::BREAKPOINT>::iterator it=getXInfoDB()->getSoftwareBreakpoints()->begin();it!=getXInfoDB()->getSoftwareBreakpoints()->end();)
-    {
-        if(it.value().sInfo==sFunctionName)
-        {
-            it=getXInfoDB()->getSoftwareBreakpoints()->erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-    }
-
-    if(g_mapFunctionHookInfos.contains(sFunctionName))
-    {
-        g_mapFunctionHookInfos.remove(sFunctionName);
-
-        bResult=true;
-    }
-
-    return bResult;
-}
-
 qint64 XAbstractDebugger::getFunctionAddress(QString sFunctionName)
 {
     qint64 nResult=-1;
@@ -166,7 +99,7 @@ qint64 XAbstractDebugger::getFunctionAddress(QString sFunctionName)
     QString sFunction=sFunctionName.section("#",1,1);
     qint32 nOrdinal=sFunction.toULongLong();
 
-    XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo=findSharedInfoByName(sLibrary);
+    XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo=getXInfoDB()->findSharedInfoByName(sLibrary);
 
     if(sharedObjectInfo.sName!="")
     {
@@ -196,7 +129,7 @@ QString XAbstractDebugger::getAddressSymbolString(quint64 nAddress)
 {
     QString sResult;
 
-    XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo=findSharedInfoByAddress(nAddress);
+    XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo=getXInfoDB()->findSharedInfoByAddress(nAddress);
 
     if(sharedObjectInfo.sName!="")
     {
@@ -233,85 +166,6 @@ QList<XBinary::SYMBOL_RECORD> XAbstractDebugger::loadSymbols(QString sFileName,q
     return listReturn;
 }
 
-QList<XBinary::MEMORY_REPLACE> XAbstractDebugger::getMemoryReplaces()
-{
-    QList<XBinary::MEMORY_REPLACE> listResult;
-
-    QMapIterator<qint64,XInfoDB::BREAKPOINT> i(*(getXInfoDB()->getSoftwareBreakpoints()));
-    while (i.hasNext())
-    {
-        i.next();
-        XInfoDB::BREAKPOINT breakPoint=i.value();
-
-        if(breakPoint.nOrigDataSize)
-        {
-            XBinary::MEMORY_REPLACE record={};
-            record.nAddress=breakPoint.nAddress;
-            record.baOriginal=QByteArray(breakPoint.origData,breakPoint.nOrigDataSize);
-            record.nSize=record.baOriginal.size();
-
-            listResult.append(record);
-        }
-    }
-
-    return listResult;
-}
-
-QMap<qint64,XInfoDB::SHAREDOBJECT_INFO> *XAbstractDebugger::getSharedObjectInfos()
-{
-    return &g_mapSharedObjectInfos;
-}
-
-QMap<qint64,XInfoDB::THREAD_INFO> *XAbstractDebugger::getThreadInfos()
-{
-    return &g_mapThreadInfos;
-}
-
-QMap<QString,XInfoDB::FUNCTIONHOOK_INFO> *XAbstractDebugger::getFunctionHookInfos()
-{
-    return &g_mapFunctionHookInfos;
-}
-
-XInfoDB::SHAREDOBJECT_INFO XAbstractDebugger::findSharedInfoByName(QString sName)
-{
-    XInfoDB::SHAREDOBJECT_INFO result={};
-
-    for(QMap<qint64,XInfoDB::SHAREDOBJECT_INFO>::iterator it=g_mapSharedObjectInfos.begin();it!=g_mapSharedObjectInfos.end();)
-    {
-        if(it.value().sName==sName)
-        {
-            result=it.value();
-
-            break;
-        }
-
-        ++it;
-    }
-
-    return result;
-}
-
-XInfoDB::SHAREDOBJECT_INFO XAbstractDebugger::findSharedInfoByAddress(quint64 nAddress)
-{
-    XInfoDB::SHAREDOBJECT_INFO result={};
-
-    for(QMap<qint64,XInfoDB::SHAREDOBJECT_INFO>::iterator it=g_mapSharedObjectInfos.begin();it!=g_mapSharedObjectInfos.end();)
-    {
-        XInfoDB::SHAREDOBJECT_INFO record=it.value();
-
-        if((record.nImageBase<=nAddress)&&(record.nImageBase+record.nImageSize>nAddress))
-        {
-            result=record;
-
-            break;
-        }
-
-        ++it;
-    }
-
-    return result;
-}
-
 bool XAbstractDebugger::suspendThread(XProcess::HANDLEID handleID)
 {
     bool bResult=false;
@@ -344,7 +198,7 @@ bool XAbstractDebugger::suspendOtherThreads(XProcess::HANDLEID handleID)
 {
     bool bResult=false;
 
-    QList<XInfoDB::THREAD_INFO> listThreads=g_mapThreadInfos.values();
+    QList<XInfoDB::THREAD_INFO> listThreads=getXInfoDB()->getThreadInfos()->values();
 
     qint32 nCount=listThreads.count();
 
@@ -370,7 +224,7 @@ bool XAbstractDebugger::resumeOtherThreads(XProcess::HANDLEID handleID)
 {
     bool bResult=false;
 
-    QList<XInfoDB::THREAD_INFO> listThreads=g_mapThreadInfos.values();
+    QList<XInfoDB::THREAD_INFO> listThreads=getXInfoDB()->getThreadInfos()->values();
 
     qint32 nCount=listThreads.count();
 
@@ -593,7 +447,7 @@ bool XAbstractDebugger::isUserCode(quint64 nAddress)
 
 bool XAbstractDebugger::bIsSystemCode(quint64 nAddress)
 {
-    return findSharedInfoByAddress(nAddress).nImageBase;
+    return getXInfoDB()->findSharedInfoByAddress(nAddress).nImageBase;
 }
 
 bool XAbstractDebugger::dumpToFile(QString sFileName)

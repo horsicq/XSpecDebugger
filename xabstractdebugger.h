@@ -72,28 +72,10 @@ public:
 
     void _messageString(MT messageType,QString sText);
 
-    void addSharedObjectInfo(XInfoDB::SHAREDOBJECT_INFO *pSharedObjectInfo);
-    void removeSharedObjectInfo(XInfoDB::SHAREDOBJECT_INFO *pSharedObjectInfo);
-
-    void addThreadInfo(XInfoDB::THREAD_INFO *pThreadInfo);
-    void removeThreadInfo(XInfoDB::THREAD_INFO *pThreadInfo);
-
-    bool setFunctionHook(QString sFunctionName);
-    bool removeFunctionHook(QString sFunctionName);
-
     qint64 getFunctionAddress(QString sFunctionName);
     QString getAddressSymbolString(quint64 nAddress);
 
     virtual QList<XBinary::SYMBOL_RECORD> loadSymbols(QString sFileName,qint64 nModuleAddress);
-
-    QList<XBinary::MEMORY_REPLACE> getMemoryReplaces(); // TODO remove
-
-    QMap<qint64,XInfoDB::SHAREDOBJECT_INFO> *getSharedObjectInfos();
-    QMap<qint64,XInfoDB::THREAD_INFO> *getThreadInfos();
-    QMap<QString,XInfoDB::FUNCTIONHOOK_INFO> *getFunctionHookInfos();
-
-    XInfoDB::SHAREDOBJECT_INFO findSharedInfoByName(QString sName);
-    XInfoDB::SHAREDOBJECT_INFO findSharedInfoByAddress(quint64 nAddress);
 
     bool suspendThread(XProcess::HANDLEID handleID);
     bool resumeThread(XProcess::HANDLEID handleID);
@@ -151,9 +133,6 @@ signals:
 private:
     XInfoDB *g_pXInfoDB;
     OPTIONS g_options;
-    QMap<qint64,XInfoDB::SHAREDOBJECT_INFO> g_mapSharedObjectInfos;
-    QMap<qint64,XInfoDB::THREAD_INFO> g_mapThreadInfos;
-    QMap<QString,XInfoDB::FUNCTIONHOOK_INFO> g_mapFunctionHookInfos;
     csh g_handle;
     QString g_sTraceFileName;
     bool g_bIsDebugActive;

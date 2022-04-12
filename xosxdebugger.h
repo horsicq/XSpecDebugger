@@ -28,7 +28,7 @@ class XOSXDebugger : public XUnixDebugger
     Q_OBJECT
 
 public:
-    explicit XOSXDebugger(QObject *pParent=nullptr);
+    explicit XOSXDebugger(QObject *pParent,XInfoDB *pXInfoDB);
     virtual bool load();
     virtual void cleanUp();
     virtual QString getArch();
