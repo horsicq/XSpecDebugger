@@ -327,7 +327,7 @@ qint64 XAbstractDebugger::findAddressByException(qint64 nExeptionAddress)
 {
     qint64 nResult=-1;
 
-    QMapIterator<qint64,XInfoDB::BREAKPOINT> i(*(getXInfoDB()->getSoftwareBreakpoints()));
+    QMapIterator<quint64,XInfoDB::BREAKPOINT> i(*(getXInfoDB()->getSoftwareBreakpoints()));
     while (i.hasNext())
     {
         i.next();

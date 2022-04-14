@@ -169,11 +169,11 @@ bool XLinuxDebugger::load()
                         qDebug("BREAKPOINT");
                         // TODO Breakpoint
 
-                        qint64 nExceptionAddress=findAddressByException(getCurrentAddress(handleThreadID));
+                        qint64 nExceptionAddress=findAddressByException(getCurrentAddress(handleThreadID)); // TODO rename
 
                         if(nExceptionAddress!=-1)
                         {
-                            XInfoDB::BREAKPOINT _currentBP=getXInfoDB()->getSoftwareBreakpoints()->value(nExceptionAddress);
+                            XInfoDB::BREAKPOINT _currentBP=getXInfoDB()->findBreakPointByAddress(nExceptionAddress);
                             getXInfoDB()->removeBreakPoint(nExceptionAddress,_currentBP.bpType);
                             // TODO set currentAddress
 

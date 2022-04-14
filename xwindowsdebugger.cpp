@@ -238,11 +238,11 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
     if((nExceptionCode==EXCEPTION_BREAKPOINT)||(nExceptionCode==0x4000001f)) // 4000001f WOW64 breakpoint
     {
-        if(getXInfoDB()->getSoftwareBreakpoints()->contains(nExceptionAddress))
+        if(getXInfoDB()->isBreakPointPresent(nExceptionAddress,XInfoDB::BPT_CODE_SOFTWARE))
         {
             bool bThreadsSuspended=suspendOtherThreads(handleIDThread);
 
-            XInfoDB::BREAKPOINT _currentBP=getXInfoDB()->getSoftwareBreakpoints()->value(nExceptionAddress);
+            XInfoDB::BREAKPOINT _currentBP=getXInfoDB()->findBreakPointByAddress(nExceptionAddress);
 
             setCurrentAddress(handleIDThread,nExceptionAddress); // go to prev instruction address
 
