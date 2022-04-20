@@ -423,6 +423,7 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
     processInfo.nImageSize=XProcess::getRegionAllocationSize(processInfo.hProcessMemoryIO,processInfo.nImageBase);
     processInfo.nStartAddress=(qint64)(pDebugEvent->u.CreateProcessInfo.lpStartAddress); // TODO Check value
     processInfo.sFileName=XProcess::getFileNameByHandle(pDebugEvent->u.CreateProcessInfo.hFile);
+    processInfo.sBaseFileName=XBinary::getBaseFileName(processInfo.sFileName);
     processInfo.nThreadLocalBase=(qint64)(pDebugEvent->u.CreateProcessInfo.lpThreadLocalBase);
 
 //    QFile file;
