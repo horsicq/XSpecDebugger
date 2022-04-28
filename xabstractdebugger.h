@@ -40,6 +40,7 @@ public:
         QString sDirectory;
         QString sArguments;
         bool bShowConsole;
+        bool bBreakpointOnSystem;
         bool bBreakpointOnProgramEntryPoint;
         bool bBreakPointOnDLLMain;
         bool bBreakPointOnTLSFunction;      // For Windows TLS
@@ -75,7 +76,7 @@ public:
     qint64 getFunctionAddress(QString sFunctionName);
     QString getAddressSymbolString(quint64 nAddress);
 
-    virtual QList<XBinary::SYMBOL_RECORD> loadSymbols(QString sFileName,qint64 nModuleAddress);
+    virtual QList<XBinary::SYMBOL_RECORD> loadSymbols(QString sFileName,qint64 nModuleAddress); // TODO remove, use XInfoDB
 
     bool suspendThread(XProcess::HANDLEID handleID);
     bool resumeThread(XProcess::HANDLEID handleID);
@@ -121,12 +122,6 @@ signals:
     void eventUnloadSharedObject(XInfoDB::SHAREDOBJECT_INFO *pSharedObjectInfo);
     void eventDebugString(XInfoDB::DEBUGSTRING_INFO *pDebugString);
     void eventBreakPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo);
-    void eventProcessEntryPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo); // Check windows set on startAddress
-    void eventProgramEntryPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo); // If options.bBreakpointOnTargetEntryPoint
-    void eventTLSFunction(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo); // TODO
-    void eventStep(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo);
-    void eventStepInto(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo);
-    void eventStepOver(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo);
     void eventFunctionEnter(XInfoDB::FUNCTION_INFO *pFunctionInfo);
     void eventFunctionLeave(XInfoDB::FUNCTION_INFO *pFunctionInfo);
 

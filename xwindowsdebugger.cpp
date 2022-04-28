@@ -236,6 +236,15 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     handleIDProcess.hHandle=getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
     handleIDProcess.nID=getXInfoDB()->getProcessInfo()->nProcessID;
 
+    XInfoDB::BREAKPOINT_INFO breakPointInfo={};
+
+    breakPointInfo.nAddress=nExceptionAddress;
+    breakPointInfo.nProcessID=handleIDProcess.nID;
+    breakPointInfo.nThreadID=handleIDThread.nID;
+    breakPointInfo.pHThread=handleIDThread.hHandle;
+    breakPointInfo.pHProcessMemoryIO=handleIDProcess.hHandle;
+    breakPointInfo.pHProcessMemoryQuery=handleIDProcess.hHandle;
+
     if((nExceptionCode==EXCEPTION_BREAKPOINT)||(nExceptionCode==0x4000001f)) // 4000001f WOW64 breakpoint
     {
         if(getXInfoDB()->isBreakPointPresent(nExceptionAddress,XInfoDB::BPT_CODE_SOFTWARE))
@@ -274,37 +283,13 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             }
             else
             {
-                XInfoDB::BREAKPOINT_INFO breakPointInfo={};
-
-                breakPointInfo.nAddress=nExceptionAddress;
                 breakPointInfo.bpType=_currentBP.bpType;
                 breakPointInfo.bpInfo=_currentBP.bpInfo;
                 breakPointInfo.sInfo=_currentBP.sInfo;
-                breakPointInfo.nProcessID=handleIDProcess.nID;
-                breakPointInfo.nThreadID=handleIDThread.nID;
-                breakPointInfo.pHThread=handleIDThread.hHandle;
-                breakPointInfo.pHProcessMemoryIO=handleIDProcess.hHandle;
-                breakPointInfo.pHProcessMemoryQuery=handleIDProcess.hHandle;
 
                 if(!(getXInfoDB()->getThreadBreakpoints()->contains(pDebugEvent->dwThreadId))) // If not step. For step there is an another callback
                 {
-                    if(breakPointInfo.bpInfo==XInfoDB::BPI_PROGRAMENTRYPOINT)
-                    {
-                        emit eventProgramEntryPoint(&breakPointInfo); // TODO for DLL
-                    }
-                    else if(breakPointInfo.bpInfo==XInfoDB::BPI_TLSFUNCTION)
-                    {
-                        emit eventTLSFunction(&breakPointInfo); // TODO
-                        // TODO set BP on next TLS function
-                    }
-                    else if(breakPointInfo.bpInfo==XInfoDB::BPI_STEPOVER)
-                    {
-                        emit eventStepOver(&breakPointInfo);
-                    }
-                    else
-                    {
-                        emit eventBreakPoint(&breakPointInfo);
-                    }
+                    emit eventBreakPoint(&breakPointInfo);
                 }
             }
 
@@ -325,6 +310,17 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             }
 
             nResult=DBG_CONTINUE;
+        }
+        else
+        {
+            if(getOptions()->bBreakpointOnSystem)
+            {
+                qDebug("SYSTEM BP SOFTWARE");
+                breakPointInfo.bpType=XInfoDB::BPT_CODE_SOFTWARE;
+                breakPointInfo.bpInfo=XInfoDB::BPI_SYSTEM;
+
+                emit eventBreakPoint(&breakPointInfo);
+            }
         }
     }
     else if((nExceptionCode==EXCEPTION_SINGLE_STEP)||(nExceptionCode==0x4000001e)) // 4000001e WOW64 single step exception
@@ -347,30 +343,11 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
             bool bThreadsSuspended=suspendOtherThreads(handleIDThread);
 
-            XInfoDB::BREAKPOINT_INFO breakPointInfo={};
-
-            breakPointInfo.nAddress=nExceptionAddress;
             breakPointInfo.bpType=stepBP.bpType;
             breakPointInfo.bpInfo=stepBP.bpInfo;
-            breakPointInfo.nProcessID=handleIDProcess.nID;
-            breakPointInfo.nThreadID=handleIDThread.nID;
-            breakPointInfo.pHThread=handleIDThread.hHandle;
-            breakPointInfo.pHProcessMemoryIO=handleIDProcess.hHandle;
-            breakPointInfo.pHProcessMemoryQuery=handleIDProcess.hHandle;
             breakPointInfo.sInfo=stepBP.sInfo;
 
-            if(breakPointInfo.bpInfo==XInfoDB::BPI_STEP)
-            {
-                emit eventStep(&breakPointInfo);
-            }
-            else if(breakPointInfo.bpInfo==XInfoDB::BPI_STEPINTO)
-            {
-                emit eventStepInto(&breakPointInfo);
-            }
-            else if(breakPointInfo.bpInfo==XInfoDB::BPI_STEPOVER)
-            {
-                emit eventStepOver(&breakPointInfo);
-            }
+            emit eventBreakPoint(&breakPointInfo);
 
             if(bThreadsSuspended)
             {
@@ -378,6 +355,15 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             }
 
             nResult=DBG_CONTINUE;
+        }
+
+        if(getOptions()->bBreakpointOnSystem)
+        {
+            qDebug("SYSTEM BP HARDWARE");
+            breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
+            breakPointInfo.bpInfo=XInfoDB::BPI_SYSTEM;
+
+            emit eventBreakPoint(&breakPointInfo);
         }
     }
 

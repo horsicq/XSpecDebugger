@@ -36,7 +36,7 @@ public:
     virtual QString getArch();
     virtual XBinary::MODE getMode();
 
-    virtual QList<XBinary::SYMBOL_RECORD> loadSymbols(QString sFileName,qint64 nModuleAddress);
+    virtual QList<XBinary::SYMBOL_RECORD> loadSymbols(QString sFileName,qint64 nModuleAddress); // TODO remove, use XInfoDB
     virtual bool _setStep(XProcess::HANDLEID handleID);
 
 private:
