@@ -72,157 +72,215 @@ bool XLinuxDebugger::load()
                 qDebug("Status %s",sStatusString.toLatin1().data());
             }
         #endif
-            waitForSignal(nProcessID); // TODO result
 
-            setPtraceOptions(nProcessID); // Set options
-
-            XProcess::HANDLEID handleThreadID={};
-            handleThreadID.nID=nProcessID;
-
-            XProcess::HANDLEID handleMemoryIO={};
-            handleMemoryIO.nID=nProcessID;
-            handleMemoryIO.hHandle=XProcess::openMemoryIO(nProcessID);
-
-            XProcess::HANDLEID handleMemoryQuery={};
-            handleMemoryQuery.nID=nProcessID;
-            handleMemoryQuery.hHandle=XProcess::openMemoryQuery(nProcessID);
-
-            XInfoDB::PROCESS_INFO processInfo={};
-            processInfo.nProcessID=nProcessID;
-            processInfo.hProcessMemoryIO=handleMemoryIO.hHandle;
-            processInfo.hProcessMemoryQuery=handleMemoryQuery.hHandle;
-            // TODO more handles
-
-            getXInfoDB()->setProcessInfo(processInfo);
-            // TODO more
-            // TODO show regs
-            emit eventCreateProcess(&processInfo);
-
-            qDebug("Address: %llX",getCurrentAddress(handleThreadID));
-
-            qint64 nCurrentAddress=getCurrentAddress(handleThreadID);
-
-//            nCurrentAddress=0x10a0;
-//            nCurrentAddress=0x7efe2684d100;
-
-            getXInfoDB()->addBreakPoint(nCurrentAddress,XInfoDB::BPT_CODE_SOFTWARE,XInfoDB::BPI_PROCESSENTRYPOINT);
-//            _setStep(handleProcessID);
-
-//            XProcess::closeMemoryIO(processInfo.hProcessIO);
-
-//            // TODO eventCreateProcess
-//            // TODO set on entryPoint
-//            // TODO here set Breakpoints
-
-////            continueThread(processInfo.nProcessID);
-//            XBinary::REG_OPTIONS regOptions={};
-//            regOptions.bGeneral=true;
-//            regOptions.bFlags=true;
-//            regOptions.bFloat=true;
-//            regOptions.bIP=true;
-//            regOptions.bSegments=true;
-//            regOptions.bXMM=true;
-
-//            QMap<QString,XBinary::XVARIANT> mapRegisters;
-
-//            mapRegisters=getRegisters(handleID,regOptions);
-
-//            qDebug("RIP: %s",XBinary::valueToHex(mapRegisters.value("RIP").var.v_uint64).toLatin1().data());
-
-//            _setStep(handleID);
-
-//            mapRegisters=getRegisters(handleID,regOptions);
-
-//            qDebug("RIP: %s",XBinary::valueToHex(mapRegisters.value("RIP").var.v_uint64).toLatin1().data());
-
-            // TODO debug loop
+            bool _bIsInit=false;
 
             setDebugActive(true);
 
-            continueThread(processInfo.nProcessID);
-
-//            int nTest=1;
-
             while(isDebugActive())
             {
-                qDebug("WAIT_0");
-                STATE state=waitForSignal(nProcessID);
-                qDebug("AddressXXX: %llX",getCurrentAddress(handleThreadID));
+                bool bContinue=false;
+                STATE _state=waitForSignal(nProcessID); // TODO result
 
-                if(state.debuggerStatus==DEBUGGER_STATUS_SIGNAL)
+                if(_state.debuggerStatus==DEBUGGER_STATUS_STOP)
                 {
-                    // TODO emit signal
-                    qDebug("process killed by signal %x",state.nCode);
-                    break;
-                }
-                else if(state.debuggerStatus==DEBUGGER_STATUS_EXIT)
-                {
-                    qDebug("process exited with code %x",state.nCode);
-                    break;
-                }
-                else if(state.debuggerStatus==DEBUGGER_STATUS_STOP)
-                {
-                    qDebug("process stoped: %x",state.nCode);
+                    qDebug("process stoped: %x",_state.nCode);
 
-                    if(state.nCode==5)
+                    bool bProcessEntryPoint=false;
+
+                    if(!_bIsInit)
+                    {
+                        _bIsInit=true;
+                        bProcessEntryPoint=true;
+
+                        setPtraceOptions(nProcessID); // Set options
+
+                        XInfoDB::PROCESS_INFO processInfo={};
+
+                        processInfo.nProcessID=nProcessID;
+                        processInfo.nThreadID=nProcessID;
+//                        processInfo.sFileName;
+//                        processInfo.sBaseFileName;
+//                        processInfo.nImageBase;
+//                        processInfo.nImageSize;
+//                        processInfo.nStartAddress;
+//                        processInfo.nThreadLocalBase;
+                        processInfo.hProcessMemoryIO=XProcess::openMemoryIO(nProcessID);
+                        processInfo.hProcessMemoryQuery=XProcess::openMemoryQuery(nProcessID);
+//                        processInfo.hMainThread;
+
+                        getXInfoDB()->setProcessInfo(processInfo);
+                        // TODO more
+                        // TODO show regs
+                        emit eventCreateProcess(&processInfo);
+                    }
+
+                    if(_state.nCode==5)
                     {
                         qDebug("BREAKPOINT");
-                        // TODO Breakpoint
 
-                        qint64 nExceptionAddress=findAddressByException(getCurrentAddress(handleThreadID)); // TODO rename
+                        XInfoDB::BREAKPOINT_INFO breakPointInfo={};
 
-                        if(nExceptionAddress!=-1)
+                        breakPointInfo.nAddress=getCurrentAddress(0,nProcessID);
+
+                        if(bProcessEntryPoint)
                         {
-                            XInfoDB::BREAKPOINT _currentBP=getXInfoDB()->findBreakPointByAddress(nExceptionAddress);
-                            getXInfoDB()->removeBreakPoint(nExceptionAddress,_currentBP.bpType);
-                            // TODO set currentAddress
-
-                            XInfoDB::BREAKPOINT_INFO breakPointInfo={};
-
-                            breakPointInfo.nAddress=nExceptionAddress;
-                            breakPointInfo.bpType=_currentBP.bpType;
-                            breakPointInfo.bpInfo=_currentBP.bpInfo;
-                            breakPointInfo.sInfo=_currentBP.sInfo;
-//                            breakPointInfo.handleIDThread=handleIDThread;
-                            breakPointInfo.pHProcessMemoryIO=handleMemoryIO.hHandle;
-                            breakPointInfo.pHProcessMemoryQuery=handleMemoryQuery.hHandle;
-                            breakPointInfo.nThreadID=handleThreadID.nID;
-
-                            emit eventBreakPoint(&breakPointInfo);
-                            // TODO
-                            qDebug("BREAKPOINT START");
-                            qDebug("Current Address1: %llX",getCurrentAddress(handleThreadID));
-
-//                            sleep(10);
-
-                            qDebug("BREAKPOINT END");
+                            breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
+                            breakPointInfo.bpInfo=XInfoDB::BPI_PROCESSENTRYPOINT;
                         }
-                        else
+
+                        breakPointInfo.pHProcessMemoryIO=getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
+                        breakPointInfo.pHProcessMemoryQuery=getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
+                        breakPointInfo.nProcessID=getXInfoDB()->getProcessInfo()->nProcessID;
+                        breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nThreadID;
+
+                        emit eventBreakPoint(&breakPointInfo);
+
+                        if(bProcessEntryPoint)
                         {
-                            continueThread(handleThreadID.nID);
+                            bContinue=true;
                         }
-                    }
-                    else if(state.nCode==6)
-                    {
-//                        continueThread(processInfo.nProcessID);
                     }
                 }
+                else if(_state.debuggerStatus==DEBUGGER_STATUS_EXIT)
+                {
+                    qDebug("process exited with code %x",_state.nCode);
+                    break;
+                }
 
-//                int wait_status;
-//                waitpid(processInfo.nProcessID,&wait_status,0);
+                if(bContinue)
+                {
+//                    continueThread(nProcessID);
+                }
 
-                qDebug("WAIT");
-
-//                if(nTest>0)
-//                {
-//                    continueThread(processInfo.nProcessID);
-//                    nTest--;
-//                }
-//                continueThread(processInfo.nProcessID);
-//                break;
+//                continueThread(nProcessID);
             }
 
-            setDebugActive(false);
+//            qDebug("Address: %llX",getCurrentAddress(handleThreadID));
+
+//            qint64 nCurrentAddress=getCurrentAddress(handleThreadID);
+
+////            nCurrentAddress=0x10a0;
+////            nCurrentAddress=0x7efe2684d100;
+
+//            getXInfoDB()->addBreakPoint(nCurrentAddress,XInfoDB::BPT_CODE_SOFTWARE,XInfoDB::BPI_PROCESSENTRYPOINT);
+////            _setStep(handleProcessID);
+
+////            XProcess::closeMemoryIO(processInfo.hProcessIO);
+
+////            // TODO eventCreateProcess
+////            // TODO set on entryPoint
+////            // TODO here set Breakpoints
+
+//////            continueThread(processInfo.nProcessID);
+////            XBinary::REG_OPTIONS regOptions={};
+////            regOptions.bGeneral=true;
+////            regOptions.bFlags=true;
+////            regOptions.bFloat=true;
+////            regOptions.bIP=true;
+////            regOptions.bSegments=true;
+////            regOptions.bXMM=true;
+
+////            QMap<QString,XBinary::XVARIANT> mapRegisters;
+
+////            mapRegisters=getRegisters(handleID,regOptions);
+
+////            qDebug("RIP: %s",XBinary::valueToHex(mapRegisters.value("RIP").var.v_uint64).toLatin1().data());
+
+////            _setStep(handleID);
+
+////            mapRegisters=getRegisters(handleID,regOptions);
+
+////            qDebug("RIP: %s",XBinary::valueToHex(mapRegisters.value("RIP").var.v_uint64).toLatin1().data());
+
+//            // TODO debug loop
+
+//            setDebugActive(true);
+
+//            continueThread(processInfo.nProcessID);
+
+////            int nTest=1;
+
+//            while(isDebugActive())
+//            {
+//                qDebug("WAIT_0");
+//                STATE state=waitForSignal(nProcessID);
+//                qDebug("AddressXXX: %llX",getCurrentAddress(handleThreadID));
+
+//                if(state.debuggerStatus==DEBUGGER_STATUS_SIGNAL)
+//                {
+//                    // TODO emit signal
+//                    qDebug("process killed by signal %x",state.nCode);
+//                    break;
+//                }
+//                else if(state.debuggerStatus==DEBUGGER_STATUS_EXIT)
+//                {
+//                    qDebug("process exited with code %x",state.nCode);
+//                    break;
+//                }
+//                else if(state.debuggerStatus==DEBUGGER_STATUS_STOP)
+//                {
+//                    qDebug("process stoped: %x",state.nCode);
+
+//                    if(state.nCode==5)
+//                    {
+//                        qDebug("BREAKPOINT");
+//                        // TODO Breakpoint
+
+//                        qint64 nExceptionAddress=findAddressByException(getCurrentAddress(handleThreadID)); // TODO rename
+
+//                        if(nExceptionAddress!=-1)
+//                        {
+//                            XInfoDB::BREAKPOINT _currentBP=getXInfoDB()->findBreakPointByAddress(nExceptionAddress);
+//                            getXInfoDB()->removeBreakPoint(nExceptionAddress,_currentBP.bpType);
+//                            // TODO set currentAddress
+
+//                            XInfoDB::BREAKPOINT_INFO breakPointInfo={};
+
+//                            breakPointInfo.nAddress=nExceptionAddress;
+//                            breakPointInfo.bpType=_currentBP.bpType;
+//                            breakPointInfo.bpInfo=_currentBP.bpInfo;
+//                            breakPointInfo.sInfo=_currentBP.sInfo;
+////                            breakPointInfo.handleIDThread=handleIDThread;
+//                            breakPointInfo.pHProcessMemoryIO=handleMemoryIO.hHandle;
+//                            breakPointInfo.pHProcessMemoryQuery=handleMemoryQuery.hHandle;
+//                            breakPointInfo.nThreadID=handleThreadID.nID;
+
+//                            emit eventBreakPoint(&breakPointInfo);
+//                            // TODO
+//                            qDebug("BREAKPOINT START");
+//                            qDebug("Current Address1: %llX",getCurrentAddress(handleThreadID));
+
+////                            sleep(10);
+
+//                            qDebug("BREAKPOINT END");
+//                        }
+//                        else
+//                        {
+//                            continueThread(handleThreadID.nID);
+//                        }
+//                    }
+//                    else if(state.nCode==6)
+//                    {
+////                        continueThread(processInfo.nProcessID);
+//                    }
+//                }
+
+////                int wait_status;
+////                waitpid(processInfo.nProcessID,&wait_status,0);
+
+//                qDebug("WAIT");
+
+////                if(nTest>0)
+////                {
+////                    continueThread(processInfo.nProcessID);
+////                    nTest--;
+////                }
+////                continueThread(processInfo.nProcessID);
+////                break;
+//            }
+
+//            setDebugActive(false);
         }
         else if(nProcessID<0) // -1
         {

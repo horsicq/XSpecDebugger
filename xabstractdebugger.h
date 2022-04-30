@@ -83,8 +83,9 @@ public:
     bool suspendOtherThreads(XProcess::HANDLEID handleID);
     bool resumeOtherThreads(XProcess::HANDLEID handleID);
 
-    bool setCurrentAddress(XProcess::HANDLEID handleID,quint64 nAddress);
-    static qint64 getCurrentAddress(XProcess::HANDLEID handleID);
+    bool setCurrentAddress(XProcess::HANDLEID handleID,quint64 nAddress); // TODO move to XInfoDB
+    static qint64 getCurrentAddress(XProcess::HANDLEID handleID); // TODO move to XInfoDB
+    static qint64 getCurrentAddress(void *hHandle,qint64 nID);
     virtual bool _setStep(XProcess::HANDLEID handleID); // TODO move to XInfoDB
     bool setSingleStep(XProcess::HANDLEID handleID,QString sInfo=""); // TODO move to XInfoDB
     qint64 findAddressByException(qint64 nExeptionAddress); // TODO remove use XInfoDB

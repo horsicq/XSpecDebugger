@@ -304,6 +304,16 @@ qint64 XAbstractDebugger::getCurrentAddress(XProcess::HANDLEID handleID)
     return nAddress;
 }
 
+qint64 XAbstractDebugger::getCurrentAddress(void *hHandle, qint64 nID)
+{
+    XProcess::HANDLEID handleID={};
+
+    handleID.hHandle=hHandle;
+    handleID.nID=nID;
+
+    return getCurrentAddress(handleID);
+}
+
 bool XAbstractDebugger::_setStep(XProcess::HANDLEID handleID)
 {
     bool bResult=false;
