@@ -304,7 +304,7 @@ qint64 XAbstractDebugger::getCurrentAddress(XProcess::HANDLEID handleID)
     return nAddress;
 }
 
-qint64 XAbstractDebugger::getCurrentAddress(void *hHandle, qint64 nID)
+qint64 XAbstractDebugger::getCurrentAddress(void *hHandle,qint64 nID)
 {
     XProcess::HANDLEID handleID={};
 
