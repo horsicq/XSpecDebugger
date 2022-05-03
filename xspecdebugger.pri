@@ -62,6 +62,11 @@ osx {
     include($$PWD/../Formats/xbinary.pri)
 }
 
+!contains(XCONFIG, xinfodb) {
+    XCONFIG += xinfodb
+    include($$PWD/../XInfoDB/xinfodb.pri)
+}
+
 DISTFILES += \
     $$PWD/LICENSE \
     $$PWD/README.md
