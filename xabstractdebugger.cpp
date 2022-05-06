@@ -333,27 +333,6 @@ bool XAbstractDebugger::setSingleStep(XProcess::HANDLEID handleID,QString sInfo)
     return _setStep(handleID);
 }
 
-qint64 XAbstractDebugger::findAddressByException(qint64 nExeptionAddress)
-{
-    qint64 nResult=-1;
-
-    QMapIterator<quint64,XInfoDB::BREAKPOINT> i(*(getXInfoDB()->getSoftwareBreakpoints()));
-    while (i.hasNext())
-    {
-        i.next();
-        XInfoDB::BREAKPOINT breakPoint=i.value();
-
-        if(breakPoint.nAddress==(nExeptionAddress-breakPoint.nOrigDataSize))
-        {
-            nResult=breakPoint.nAddress;
-
-            break;
-        }
-    }
-
-    return nResult;
-}
-
 XInfoDB::FUNCTION_INFO XAbstractDebugger::getFunctionInfo(XProcess::HANDLEID handleID,QString sName)
 {
     XInfoDB::FUNCTION_INFO result={};

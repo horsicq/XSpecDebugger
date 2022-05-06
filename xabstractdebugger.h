@@ -88,7 +88,6 @@ public:
     static qint64 getCurrentAddress(void *hHandle,qint64 nID);
     virtual bool _setStep(XProcess::HANDLEID handleID); // TODO move to XInfoDB
     bool setSingleStep(XProcess::HANDLEID handleID,QString sInfo=""); // TODO move to XInfoDB
-    qint64 findAddressByException(qint64 nExeptionAddress); // TODO remove use XInfoDB
 
     XInfoDB::FUNCTION_INFO getFunctionInfo(XProcess::HANDLEID handleID,QString sName);
     qint64 getRetAddress(XProcess::HANDLEID handleID);
