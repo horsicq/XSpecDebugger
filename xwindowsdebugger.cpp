@@ -451,7 +451,7 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
 quint32 XWindowsDebugger::on_EXIT_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
     XInfoDB::THREAD_INFO threadInfo=getXInfoDB()->findThreadInfoByID((qint64)(pDebugEvent->dwThreadId));
-    getXInfoDB()->removeThreadInfo(&threadInfo);
+    getXInfoDB()->removeThreadInfo(threadInfo.nThreadID);
 
     XInfoDB::EXITTHREAD_INFO exitThreadInfo={};
     exitThreadInfo.nThreadID=pDebugEvent->dwThreadId;
@@ -472,7 +472,7 @@ quint32 XWindowsDebugger::on_EXIT_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     exitProcessInfo.nExitCode=pDebugEvent->u.ExitProcess.dwExitCode;
 
     XInfoDB::THREAD_INFO threadInfo=getXInfoDB()->findThreadInfoByID((qint64)(pDebugEvent->dwThreadId));
-    getXInfoDB()->removeThreadInfo(&threadInfo);
+    getXInfoDB()->removeThreadInfo(threadInfo.nThreadID);
 
     emit eventExitProcess(&exitProcessInfo);
 

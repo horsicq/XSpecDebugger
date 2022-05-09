@@ -198,18 +198,18 @@ bool XAbstractDebugger::suspendOtherThreads(XProcess::HANDLEID handleID)
 {
     bool bResult=false;
 
-    QList<XInfoDB::THREAD_INFO> listThreads=getXInfoDB()->getThreadInfos()->values();
+    QList<XInfoDB::THREAD_INFO> *pListThreads=getXInfoDB()->getThreadInfos();
 
-    qint32 nCount=listThreads.count();
+    qint32 nCount=pListThreads->count();
 
     // Suspend all other threads
     for(qint32 i=0;i<nCount;i++)
     {
-        if(handleID.hHandle!=listThreads.at(i).hThread)
+        if(handleID.hHandle!=pListThreads->at(i).hThread)
         {
             XProcess::HANDLEID _handleID={};
-            _handleID.hHandle=listThreads.at(i).hThread;
-            _handleID.nID=listThreads.at(i).nThreadID;
+            _handleID.hHandle=pListThreads->at(i).hThread;
+            _handleID.nID=pListThreads->at(i).nThreadID;
 
             suspendThread(_handleID);
 
@@ -224,18 +224,18 @@ bool XAbstractDebugger::resumeOtherThreads(XProcess::HANDLEID handleID)
 {
     bool bResult=false;
 
-    QList<XInfoDB::THREAD_INFO> listThreads=getXInfoDB()->getThreadInfos()->values();
+    QList<XInfoDB::THREAD_INFO> *pListThreads=getXInfoDB()->getThreadInfos();
 
-    qint32 nCount=listThreads.count();
+    qint32 nCount=pListThreads->count();
 
     // Resume all other threads
     for(qint32 i=0;i<nCount;i++)
     {
-        if(handleID.hHandle!=listThreads.at(i).hThread)
+        if(handleID.hHandle!=pListThreads->at(i).hThread)
         {
             XProcess::HANDLEID _handleID={};
-            _handleID.hHandle=listThreads.at(i).hThread;
-            _handleID.nID=listThreads.at(i).nThreadID;
+            _handleID.hHandle=pListThreads->at(i).hThread;
+            _handleID.nID=pListThreads->at(i).nThreadID;
 
             resumeThread(_handleID);
 
