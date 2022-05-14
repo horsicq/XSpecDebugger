@@ -20,7 +20,7 @@
  */
 #include "xunixdebugger.h"
 
-XUnixDebugger::XUnixDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent,pXInfoDB)
+XUnixDebugger::XUnixDebugger(QObject *pParent,XInfoDB *pXInfoDB) : XAbstractDebugger(pParent,pXInfoDB)
 {
 
 }
