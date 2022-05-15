@@ -99,7 +99,7 @@ bool XLinuxDebugger::load()
 
                         processInfo.nProcessID=nProcessID;
                         processInfo.nThreadID=nProcessID;
-//                        processInfo.sFileName;
+                        processInfo.sFileName=sFileName;
 //                        processInfo.sBaseFileName;
 //                        processInfo.nImageBase;
 //                        processInfo.nImageSize;
@@ -110,9 +110,10 @@ bool XLinuxDebugger::load()
 //                        processInfo.hMainThread;
 
                         getXInfoDB()->setProcessInfo(processInfo);
-                        // TODO more
-                        // TODO show regs
+
                         emit eventCreateProcess(&processInfo);
+
+                        // TODO Breakpoint to EntryPoint
                     }
 
                     if(_state.nCode==5)
