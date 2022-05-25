@@ -56,8 +56,8 @@ public:
     void setPtraceOptions(qint64 nThreadID);
     STATE waitForSignal(qint64 nProcessID);
     void continueThread(qint64 nThreadID); // TODO rename to resumrThread
-    static bool resumeThread(XProcess::HANDLEID handleID);
-    virtual bool _setStep(XProcess::HANDLEID handleID);
+    static bool resumeThread(XProcess::HANDLEID handleID); // TODO remove
+    virtual bool _setStep(XProcess::HANDLEID handleID); // TODO remove
 };
 
 #endif // XUNIXDEBUGGER_H

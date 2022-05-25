@@ -172,7 +172,11 @@ void XUnixDebugger::continueThread(qint64 nThreadID)
 {
     // TODO
 #if defined(Q_OS_LINUX)
-    ptrace(PTRACE_CONT,nThreadID,0,0);
+    if(ptrace(PTRACE_CONT,nThreadID,0,0))
+    {
+        int wait_status;
+        waitpid(nThreadID,&wait_status,0);
+    }
 #endif
 #if defined(Q_OS_OSX)
     ptrace(PT_CONTINUE,nThreadID,0,0);
