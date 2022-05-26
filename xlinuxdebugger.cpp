@@ -93,7 +93,7 @@ bool XLinuxDebugger::load()
                         _bIsInit=true;
                         bProcessEntryPoint=true;
 
-                        setPtraceOptions(nProcessID); // Set options
+//                        setPtraceOptions(nProcessID); // Set options
 
                         XInfoDB::PROCESS_INFO processInfo={};
 
