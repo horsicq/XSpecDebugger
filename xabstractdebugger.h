@@ -26,6 +26,7 @@
 #include "xprocess.h"
 #include "xprocessdevice.h"
 #include "xinfodb.h"
+#include <QThread>
 
 // TODO Attach
 // TODO Detach

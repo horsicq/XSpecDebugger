@@ -74,6 +74,7 @@ bool XLinuxDebugger::load()
         #endif
 
             bool _bIsInit=false;
+            bool _bIsTemp=false;
 
             setDebugActive(true);
 
@@ -137,10 +138,28 @@ bool XLinuxDebugger::load()
 
                         emit eventBreakPoint(&breakPointInfo);
 
+                        getXInfoDB()->_lockId(getXInfoDB()->getProcessInfo()->nThreadID);
+                        getXInfoDB()->_waitID(getXInfoDB()->getProcessInfo()->nThreadID);
+
+//                        while()
+//                        {
+//                            QThread::msleep(10);
+//                        }
+
                         if(bProcessEntryPoint)
                         {
                             bContinue=true;
                         }
+                    }
+
+                    if(!_bIsTemp)
+                    {
+//                        XProcess::HANDLEID handleThread={};
+//                        handleThread.nID=getXInfoDB()->getProcessInfo()->nProcessID;
+
+//                        getXInfoDB()->stepInto(handleThread);
+
+//                        _bIsTemp=true;
                     }
                 }
                 else if(_state.debuggerStatus==DEBUGGER_STATUS_EXIT)
