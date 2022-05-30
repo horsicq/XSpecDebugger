@@ -243,14 +243,14 @@ bool XAbstractDebugger::dumpToFile(QString sFileName)
 {
     bool bResult=false;
 
-    XProcessDevice processDevice(this); // TODO -> XProcess
+//    XProcessDevice processDevice(this); // TODO -> XProcess
 
-    if(processDevice.openHandle(getXInfoDB()->getProcessInfo()->hProcess,getXInfoDB()->getProcessInfo()->nImageBase,getXInfoDB()->getProcessInfo()->nImageSize,QIODevice::ReadOnly))
-    {
-        XBinary binary(&processDevice,true,getXInfoDB()->getProcessInfo()->nImageBase);
+//    if(processDevice.openHandle(getXInfoDB()->getProcessInfo()->hProcess,getXInfoDB()->getProcessInfo()->nImageBase,getXInfoDB()->getProcessInfo()->nImageSize,QIODevice::ReadOnly))
+//    {
+//        XBinary binary(&processDevice,true,getXInfoDB()->getProcessInfo()->nImageBase);
 
-        bResult=binary.dumpToFile(sFileName,(qint64)0,(qint64)-1);
-    }
+//        bResult=binary.dumpToFile(sFileName,(qint64)0,(qint64)-1);
+//    }
 
     return bResult;
 }

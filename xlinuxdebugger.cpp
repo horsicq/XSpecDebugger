@@ -114,7 +114,16 @@ bool XLinuxDebugger::load()
 
                         emit eventCreateProcess(&processInfo);
 
+                        XInfoDB::THREAD_INFO threadInfo={};
+
+                        threadInfo.nThreadID=nProcessID;
+
+                        getXInfoDB()->addThreadInfo(&threadInfo);
+
+                        emit eventCreateThread(&threadInfo);
+
                         // TODO Breakpoint to EntryPoint
+                        // TODO add thread
                     }
 
                     if(_state.nCode==5)
@@ -123,7 +132,7 @@ bool XLinuxDebugger::load()
 
                         XInfoDB::BREAKPOINT_INFO breakPointInfo={};
 
-                        breakPointInfo.nAddress=getCurrentAddress(0,nProcessID);
+                        breakPointInfo.nAddress=getXInfoDB()->getCurrentInstructionPointer(nProcessID);
 
                         if(bProcessEntryPoint)
                         {
@@ -138,8 +147,8 @@ bool XLinuxDebugger::load()
 
                         emit eventBreakPoint(&breakPointInfo);
 
-                        getXInfoDB()->_lockId(getXInfoDB()->getProcessInfo()->nMainThreadID);
-                        getXInfoDB()->_waitID(getXInfoDB()->getProcessInfo()->nMainThreadID);
+//                        getXInfoDB()->_lockId(getXInfoDB()->getProcessInfo()->nMainThreadID);
+//                        getXInfoDB()->_waitID(getXInfoDB()->getProcessInfo()->nMainThreadID);
 
 //                        while()
 //                        {
