@@ -77,20 +77,8 @@ public:
     qint64 getFunctionAddress(QString sFunctionName); // TODO move to XInfoDB
     QString getAddressSymbolString(quint64 nAddress); // TODO move to XInfoDB
 
-    virtual QList<XBinary::SYMBOL_RECORD> loadSymbols(QString sFileName,qint64 nModuleAddress); // TODO remove, use XInfoDB
-
-    bool suspendThread(XProcess::HANDLEID handleID); // TODO move to XInfoDB
-    bool resumeThread(XProcess::HANDLEID handleID); // TODO move to XInfoDB
-    bool suspendOtherThreads(XProcess::HANDLEID handleID); // TODO move to XInfoDB
-    bool resumeOtherThreads(XProcess::HANDLEID handleID); // TODO move to XInfoDB
-
-    bool setCurrentAddress(XProcess::HANDLEID handleID,quint64 nAddress); // TODO move to XInfoDB
-    static qint64 getCurrentAddress(XProcess::HANDLEID handleID); // TODO move to XInfoDB
-    static qint64 getCurrentAddress(void *hHandle,qint64 nID); // TODO move to XInfoDB
-    virtual bool _setStep(XProcess::HANDLEID handleID); // TODO move to XInfoDB
     bool setSingleStep(XProcess::HANDLEID handleID,QString sInfo=""); // TODO move to XInfoDB
 
-    XInfoDB::FUNCTION_INFO getFunctionInfo(XProcess::HANDLEID handleID,QString sName); // TODO move to XInfoDB
     qint64 getRetAddress(XProcess::HANDLEID handleID); // TODO move to XInfoDB
     qint64 getStackPointer(XProcess::HANDLEID handleID); // TODO move to XInfoDB
 

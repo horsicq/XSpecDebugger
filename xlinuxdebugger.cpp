@@ -99,7 +99,7 @@ bool XLinuxDebugger::load()
                         XInfoDB::PROCESS_INFO processInfo={};
 
                         processInfo.nProcessID=nProcessID;
-                        processInfo.nThreadID=nProcessID;
+                        processInfo.nMainThreadID=nProcessID;
                         processInfo.sFileName=sFileName;
 //                        processInfo.sBaseFileName;
 //                        processInfo.nImageBase;
@@ -134,12 +134,12 @@ bool XLinuxDebugger::load()
                         breakPointInfo.pHProcessMemoryIO=getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
                         breakPointInfo.pHProcessMemoryQuery=getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
                         breakPointInfo.nProcessID=getXInfoDB()->getProcessInfo()->nProcessID;
-                        breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nThreadID;
+                        breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nMainThreadID;
 
                         emit eventBreakPoint(&breakPointInfo);
 
-                        getXInfoDB()->_lockId(getXInfoDB()->getProcessInfo()->nThreadID);
-                        getXInfoDB()->_waitID(getXInfoDB()->getProcessInfo()->nThreadID);
+                        getXInfoDB()->_lockId(getXInfoDB()->getProcessInfo()->nMainThreadID);
+                        getXInfoDB()->_waitID(getXInfoDB()->getProcessInfo()->nMainThreadID);
 
 //                        while()
 //                        {
