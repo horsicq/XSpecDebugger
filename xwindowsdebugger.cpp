@@ -180,7 +180,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     {
         if(getXInfoDB()->isBreakPointPresent(nExceptionAddress,XInfoDB::BPT_CODE_SOFTWARE))
         {
-            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.hThread);
+            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
 
             XInfoDB::BREAKPOINT _currentBP=getXInfoDB()->findBreakPointByAddress(nExceptionAddress);
 
@@ -237,7 +237,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
             if(bThreadsSuspended)
             {
-                getXInfoDB()->resumeOtherThreads(breakPointInfo.hThread);
+                getXInfoDB()->resumeOtherThreads(breakPointInfo.nThreadID);
             }
 
             nResult=DBG_CONTINUE;
@@ -272,7 +272,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
             getXInfoDB()->getThreadBreakpoints()->remove(pDebugEvent->dwThreadId);
 
-            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.hThread);
+            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
 
             breakPointInfo.bpType=stepBP.bpType;
             breakPointInfo.bpInfo=stepBP.bpInfo;
@@ -282,19 +282,20 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
             if(bThreadsSuspended)
             {
-                getXInfoDB()->resumeOtherThreads(breakPointInfo.hThread);
+                getXInfoDB()->resumeOtherThreads(breakPointInfo.nThreadID);
             }
 
             nResult=DBG_CONTINUE;
         }
-
-        if(getOptions()->bBreakpointOnSystem)
+        else if(getOptions()->bBreakpointOnSystem)
         {
             qDebug("SYSTEM BP HARDWARE");
             breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
             breakPointInfo.bpInfo=XInfoDB::BPI_SYSTEM;
 
             emit eventBreakPoint(&breakPointInfo);
+
+            nResult=DBG_EXCEPTION_NOT_HANDLED;
         }
     }
 

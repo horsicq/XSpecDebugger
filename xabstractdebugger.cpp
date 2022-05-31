@@ -159,18 +159,6 @@ QString XAbstractDebugger::getAddressSymbolString(quint64 nAddress)
     return sResult;
 }
 
-bool XAbstractDebugger::setSingleStep(XProcess::HANDLEID handleID,QString sInfo)
-{
-    XInfoDB::BREAKPOINT breakPoint={};
-    breakPoint.bpType=XInfoDB::BPT_CODE_HARDWARE;
-    breakPoint.bpInfo=XInfoDB::BPI_STEP;
-    breakPoint.sInfo=sInfo;
-
-    getXInfoDB()->getThreadBreakpoints()->insert(handleID.nID,breakPoint);
-
-    return getXInfoDB()->_setStep(handleID.hHandle);
-}
-
 qint64 XAbstractDebugger::getRetAddress(XProcess::HANDLEID handleID)
 {
     qint64 nResult=0;
@@ -187,27 +175,6 @@ qint64 XAbstractDebugger::getRetAddress(XProcess::HANDLEID handleID)
     #else
         quint64 nSP=(quint64)(context.Rsp);
         nResult=getXInfoDB()->read_uint64((quint64)nSP);
-    #endif
-    }
-#endif
-
-    return nResult;
-}
-
-qint64 XAbstractDebugger::getStackPointer(XProcess::HANDLEID handleID)
-{
-    qint64 nResult=0;
-
-#ifdef Q_OS_WIN
-    CONTEXT context={0};
-    context.ContextFlags=CONTEXT_CONTROL;
-
-    if(GetThreadContext(handleID.hHandle,&context))
-    {
-    #ifndef Q_OS_WIN64
-        nResult=(quint32)(context.Esp);
-    #else
-        nResult=(quint64)(context.Rsp);
     #endif
     }
 #endif
@@ -253,17 +220,6 @@ bool XAbstractDebugger::dumpToFile(QString sFileName)
 //    }
 
     return bResult;
-}
-
-bool XAbstractDebugger::stepInto(XProcess::HANDLEID handleID)
-{
-    XInfoDB::BREAKPOINT breakPoint={};
-    breakPoint.bpType=XInfoDB::BPT_CODE_HARDWARE;
-    breakPoint.bpInfo=XInfoDB::BPI_STEPINTO;
-
-    getXInfoDB()->getThreadBreakpoints()->insert(handleID.nID,breakPoint);
-
-    return getXInfoDB()->_setStep(handleID.hHandle);
 }
 
 bool XAbstractDebugger::stepOver(XProcess::HANDLEID handleID)

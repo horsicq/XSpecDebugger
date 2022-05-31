@@ -77,10 +77,7 @@ public:
     qint64 getFunctionAddress(QString sFunctionName); // TODO move to XInfoDB
     QString getAddressSymbolString(quint64 nAddress); // TODO move to XInfoDB
 
-    bool setSingleStep(XProcess::HANDLEID handleID,QString sInfo=""); // TODO move to XInfoDB
-
     qint64 getRetAddress(XProcess::HANDLEID handleID); // TODO move to XInfoDB
-    qint64 getStackPointer(XProcess::HANDLEID handleID); // TODO move to XInfoDB
 
     XCapstone::DISASM_STRUCT disasm(quint64 nAddress); // TODO move to XInfoDB
 
@@ -89,7 +86,6 @@ public:
 
     bool dumpToFile(QString sFileName);
 
-    bool stepInto(XProcess::HANDLEID handleID); // TODO move to XInfoDB
     bool stepOver(XProcess::HANDLEID handleID); // TODO move to XInfoDB
 
     char *allocateAnsiStringMemory(QString sFileName); // TODO move to XInfoDB
