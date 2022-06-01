@@ -246,11 +246,20 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
         {
             if(getOptions()->bBreakpointOnSystem)
             {
+                bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
+
                 qDebug("SYSTEM BP SOFTWARE");
                 breakPointInfo.bpType=XInfoDB::BPT_CODE_SOFTWARE;
                 breakPointInfo.bpInfo=XInfoDB::BPI_SYSTEM;
 
                 emit eventBreakPoint(&breakPointInfo);
+
+                if(bThreadsSuspended)
+                {
+                    getXInfoDB()->resumeOtherThreads(breakPointInfo.nThreadID);
+                }
+
+                nResult=DBG_EXCEPTION_NOT_HANDLED;
             }
         }
     }
@@ -289,11 +298,18 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
         }
         else if(getOptions()->bBreakpointOnSystem)
         {
+            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
+
             qDebug("SYSTEM BP HARDWARE");
             breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
             breakPointInfo.bpInfo=XInfoDB::BPI_SYSTEM;
 
             emit eventBreakPoint(&breakPointInfo);
+
+            if(bThreadsSuspended)
+            {
+                getXInfoDB()->resumeOtherThreads(breakPointInfo.nThreadID);
+            }
 
             nResult=DBG_EXCEPTION_NOT_HANDLED;
         }
