@@ -180,7 +180,8 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     {
         if(getXInfoDB()->isBreakPointPresent(nExceptionAddress,XInfoDB::BPT_CODE_SOFTWARE))
         {
-            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
+//            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
+            getXInfoDB()->suspendAllThreads();
 
             XInfoDB::BREAKPOINT _currentBP=getXInfoDB()->findBreakPointByAddress(nExceptionAddress);
 
@@ -218,10 +219,11 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                 breakPointInfo.bpInfo=_currentBP.bpInfo;
                 breakPointInfo.sInfo=_currentBP.sInfo;
 
-                if(!(getXInfoDB()->getThreadBreakpoints()->contains(pDebugEvent->dwThreadId))) // If not step. For step there is an another callback
-                {
-                    emit eventBreakPoint(&breakPointInfo);
-                }
+//                if(!(getXInfoDB()->getThreadBreakpoints()->contains(pDebugEvent->dwThreadId))) // If not step. For step there is an another callback
+//                {
+//                    emit eventBreakPoint(&breakPointInfo);
+//                }
+                emit eventBreakPoint(&breakPointInfo);
             }
 
             if(_currentBP.nCount!=-1)
@@ -235,10 +237,10 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                 getXInfoDB()->_setStep(breakPointInfo.hThread);
             }
 
-            if(bThreadsSuspended)
-            {
-                getXInfoDB()->resumeOtherThreads(breakPointInfo.nThreadID);
-            }
+//            if(bThreadsSuspended)
+//            {
+//                getXInfoDB()->resumeOtherThreads(breakPointInfo.nThreadID);
+//            }
 
             nResult=DBG_CONTINUE;
         }
@@ -246,7 +248,8 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
         {
             if(getOptions()->bBreakpointOnSystem)
             {
-                bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
+//                bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
+                getXInfoDB()->suspendAllThreads();
 
                 qDebug("SYSTEM BP SOFTWARE");
                 breakPointInfo.bpType=XInfoDB::BPT_CODE_SOFTWARE;
@@ -254,12 +257,13 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
                 emit eventBreakPoint(&breakPointInfo);
 
-                if(bThreadsSuspended)
-                {
-                    getXInfoDB()->resumeOtherThreads(breakPointInfo.nThreadID);
-                }
+//                if(bThreadsSuspended)
+//                {
+//                    getXInfoDB()->resumeOtherThreads(breakPointInfo.nThreadID);
+//                }
 
-                nResult=DBG_EXCEPTION_NOT_HANDLED;
+//                nResult=DBG_EXCEPTION_NOT_HANDLED; // TODO change the Value
+                nResult=DBG_CONTINUE;
             }
         }
     }
@@ -281,7 +285,8 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
             getXInfoDB()->getThreadBreakpoints()->remove(pDebugEvent->dwThreadId);
 
-            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
+//            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
+            getXInfoDB()->suspendAllThreads();
 
             breakPointInfo.bpType=stepBP.bpType;
             breakPointInfo.bpInfo=stepBP.bpInfo;
@@ -289,16 +294,17 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
             emit eventBreakPoint(&breakPointInfo);
 
-            if(bThreadsSuspended)
-            {
-                getXInfoDB()->resumeOtherThreads(breakPointInfo.nThreadID);
-            }
+//            if(bThreadsSuspended)
+//            {
+//                getXInfoDB()->resumeOtherThreads(breakPointInfo.nThreadID);
+//            }
 
             nResult=DBG_CONTINUE;
         }
         else if(getOptions()->bBreakpointOnSystem)
         {
-            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
+//            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
+            getXInfoDB()->suspendAllThreads();
 
             qDebug("SYSTEM BP HARDWARE");
             breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
@@ -306,12 +312,13 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
             emit eventBreakPoint(&breakPointInfo);
 
-            if(bThreadsSuspended)
-            {
-                getXInfoDB()->resumeOtherThreads(breakPointInfo.nThreadID);
-            }
+//            if(bThreadsSuspended)
+//            {
+//                getXInfoDB()->resumeOtherThreads(breakPointInfo.nThreadID);
+//            }
 
-            nResult=DBG_EXCEPTION_NOT_HANDLED;
+//            nResult=DBG_EXCEPTION_NOT_HANDLED;
+            nResult=DBG_CONTINUE;
         }
     }
 
