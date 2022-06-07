@@ -169,10 +169,11 @@ qint64 XAbstractDebugger::getRetAddress(XProcess::HANDLEID handleID)
 
     if(GetThreadContext(handleID.hHandle,&context))
     {
-    #ifndef Q_OS_WIN64
+    #ifdef Q_PROCESSOR_X86_32
         quint64 nSP=(quint32)(context.Esp);
         nResult=getXInfoDB()->read_uint32((quint32)nSP);
-    #else
+    #endif
+    #ifdef Q_PROCESSOR_X86_64
         quint64 nSP=(quint64)(context.Rsp);
         nResult=getXInfoDB()->read_uint64((quint64)nSP);
     #endif

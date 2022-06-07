@@ -50,9 +50,10 @@ bool XWindowsDebugger::load()
     {
         cleanUp();
 
-    #ifndef Q_OS_WIN64
+    #ifdef Q_PROCESSOR_X86_32
         setDisasmMode(XBinary::DM_X86_32);
-    #else
+    #endif
+    #ifdef Q_PROCESSOR_X86_64
         setDisasmMode(XBinary::DM_X86_64);
     #endif
 
@@ -118,7 +119,7 @@ bool XWindowsDebugger::load()
     }
     else
     {
-        _messageString(MT_ERROR,QString("%1: %2").arg(tr("Cannot load file")).arg(getOptions()->sFileName));
+        _messageString(MT_ERROR,QString("%1: %2").arg(tr("Cannot load file"),getOptions()->sFileName));
     }
 
     return bResult;
@@ -142,9 +143,10 @@ QString XWindowsDebugger::getArch()
 {
     QString sResult;
     // TODO ARM!
-#ifndef Q_OS_WIN64
+#ifdef Q_PROCESSOR_X86_32
     sResult="386";
-#else
+#endif
+#ifdef Q_PROCESSOR_X86_64
     sResult="AMD64";
 #endif
     return sResult;
@@ -153,9 +155,10 @@ QString XWindowsDebugger::getArch()
 XBinary::MODE XWindowsDebugger::getMode()
 {
     XBinary::MODE result=XBinary::MODE_32;
-#ifndef Q_OS_WIN64
+#ifdef Q_PROCESSOR_X86_32
     result=XBinary::MODE_32;
-#else
+#endif
+#ifdef Q_PROCESSOR_X86_64
     result=XBinary::MODE_64;
 #endif
     return result;
