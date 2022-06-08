@@ -188,7 +188,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
             XInfoDB::BREAKPOINT _currentBP=getXInfoDB()->findBreakPointByAddress(nExceptionAddress);
 
-            getXInfoDB()->setCurrentIntructionPointer(breakPointInfo.hThread,nExceptionAddress); // go to prev instruction address
+            getXInfoDB()->setCurrentIntructionPointerByHandle(breakPointInfo.hThread,nExceptionAddress); // go to prev instruction address
 
             getXInfoDB()->removeBreakPoint(nExceptionAddress,_currentBP.bpType);
 

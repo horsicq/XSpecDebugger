@@ -227,7 +227,7 @@ bool XAbstractDebugger::stepOver(XProcess::HANDLEID handleID)
 {
     bool bResult=false;
 
-    quint64 nAddress=getXInfoDB()->getCurrentInstructionPointer(handleID.hHandle);
+    quint64 nAddress=getXInfoDB()->getCurrentInstructionPointerByHandle(handleID.hHandle);
     QByteArray baData=getXInfoDB()->read_array(nAddress,15);
 
     XCapstone::OPCODE_ID opcodeID=XCapstone::getOpcodeID(g_handle,nAddress,baData.data(),baData.size());
