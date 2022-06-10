@@ -132,7 +132,7 @@ bool XLinuxDebugger::load()
 
                         XInfoDB::BREAKPOINT_INFO breakPointInfo={};
 
-                        breakPointInfo.nAddress=getXInfoDB()->getCurrentInstructionPointer(nProcessID);
+                        breakPointInfo.nAddress=getXInfoDB()->getCurrentInstructionPointerById(nProcessID);
 
                         if(bProcessEntryPoint)
                         {
