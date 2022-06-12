@@ -97,7 +97,7 @@ qint64 XAbstractDebugger::getFunctionAddress(QString sFunctionName)
 
     QString sLibrary=sFunctionName.section("#",0,0);
     QString sFunction=sFunctionName.section("#",1,1);
-    qint32 nOrdinal=sFunction.toULongLong();
+//    qint32 nOrdinal=sFunction.toULongLong();
 
     XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo=getXInfoDB()->findSharedInfoByName(sLibrary);
 
@@ -259,7 +259,7 @@ bool XAbstractDebugger::stepOver(XProcess::HANDLEID handleID)
 
         getXInfoDB()->getThreadBreakpoints()->insert(handleID.nID,breakPoint);
 
-        return getXInfoDB()->_setStep(handleID.hHandle);
+        return getXInfoDB()->_setStepByHandle(handleID.hHandle);
     }
 
     return bResult;

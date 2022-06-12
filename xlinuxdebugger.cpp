@@ -145,6 +145,8 @@ bool XLinuxDebugger::load()
                         breakPointInfo.nProcessID=getXInfoDB()->getProcessInfo()->nProcessID;
                         breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nMainThreadID;
 
+                        getXInfoDB()->suspendAllThreads();
+
                         emit eventBreakPoint(&breakPointInfo);
 
 //                        getXInfoDB()->_lockId(getXInfoDB()->getProcessInfo()->nMainThreadID);

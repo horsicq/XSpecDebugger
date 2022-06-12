@@ -237,7 +237,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             if(_currentBP.nCount)
             {
                 g_mapThreadBPToRestore.insert(pDebugEvent->dwThreadId,_currentBP);
-                getXInfoDB()->_setStep(breakPointInfo.hThread);
+                getXInfoDB()->_setStepByHandle(breakPointInfo.hThread);
             }
 
 //            if(bThreadsSuspended)
