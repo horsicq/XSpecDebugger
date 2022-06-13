@@ -293,3 +293,8 @@ void XAbstractDebugger::process()
     load();
 }
 
+void XAbstractDebugger::testSlot()
+{
+    qDebug("Test");
+}
+

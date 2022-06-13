@@ -95,6 +95,7 @@ public:
 
 public slots:
     void process();
+    void testSlot();
 
 signals:
     void messageString(XAbstractDebugger::MT messageType,QString sText);
