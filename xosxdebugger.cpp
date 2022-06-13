@@ -73,7 +73,55 @@ bool XOSXDebugger::load()
             }
         #endif
 
-            waitForSignal(nProcessID); // TODO result
+            setDebugActive(true);
+
+            STATE _stateStart=waitForSignal(nProcessID); // TODO result
+
+            if(_stateStart.debuggerStatus==DEBUGGER_STATUS_STOP)
+            {
+//                        setPtraceOptions(nProcessID); // Set options
+
+                XInfoDB::PROCESS_INFO processInfo={};
+
+                processInfo.nProcessID=nProcessID;
+                processInfo.nMainThreadID=nProcessID;
+                processInfo.sFileName=sFileName;
+//                        processInfo.sBaseFileName;
+//                        processInfo.nImageBase;
+//                        processInfo.nImageSize;
+//                        processInfo.nStartAddress;
+//                        processInfo.nThreadLocalBase;
+                processInfo.hProcess=XProcess::openProcess(nProcessID);
+//                        processInfo.hMainThread;
+
+                getXInfoDB()->setProcessInfo(processInfo);
+
+                emit eventCreateProcess(&processInfo);
+
+                XInfoDB::THREAD_INFO threadInfo={};
+
+                threadInfo.nThreadID=nProcessID;
+
+                getXInfoDB()->addThreadInfo(&threadInfo);
+
+                emit eventCreateThread(&threadInfo);
+
+                // TODO if
+
+                XInfoDB::BREAKPOINT_INFO breakPointInfo={};
+
+                breakPointInfo.nAddress=getXInfoDB()->getCurrentInstructionPointerById(nProcessID);
+                breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
+                breakPointInfo.bpInfo=XInfoDB::BPI_PROCESSENTRYPOINT;
+
+                breakPointInfo.hProcess=getXInfoDB()->getProcessInfo()->hProcess;
+                breakPointInfo.nProcessID=getXInfoDB()->getProcessInfo()->nProcessID;
+                breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nMainThreadID;
+
+//                getXInfoDB()->suspendAllThreads();
+                getXInfoDB()->_lockId(nProcessID);
+                emit eventBreakPoint(&breakPointInfo);
+            }
         }
         else if(nProcessID==-1)
         {

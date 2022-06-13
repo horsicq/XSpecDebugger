@@ -73,58 +73,72 @@ bool XLinuxDebugger::load()
             }
         #endif
 
-            bool _bIsInit=false;
-            bool _bIsTemp=false;
-
             setDebugActive(true);
 
-            while(isDebugActive())
+            STATE _stateStart=waitForSignal(nProcessID); // TODO result
+
+            if(_stateStart.debuggerStatus==DEBUGGER_STATUS_STOP)
             {
-                bool bContinue=false;
-                STATE _state=waitForSignal(nProcessID); // TODO result
-
-                if(_state.debuggerStatus==DEBUGGER_STATUS_STOP)
-                {
-                    qDebug("process stoped: %x",_state.nCode);
-
-                    bool bProcessEntryPoint=false;
-
-                    if(!_bIsInit)
-                    {
-                        _bIsInit=true;
-                        bProcessEntryPoint=true;
-
 //                        setPtraceOptions(nProcessID); // Set options
 
-                        XInfoDB::PROCESS_INFO processInfo={};
+                XInfoDB::PROCESS_INFO processInfo={};
 
-                        processInfo.nProcessID=nProcessID;
-                        processInfo.nMainThreadID=nProcessID;
-                        processInfo.sFileName=sFileName;
+                processInfo.nProcessID=nProcessID;
+                processInfo.nMainThreadID=nProcessID;
+                processInfo.sFileName=sFileName;
 //                        processInfo.sBaseFileName;
 //                        processInfo.nImageBase;
 //                        processInfo.nImageSize;
 //                        processInfo.nStartAddress;
 //                        processInfo.nThreadLocalBase;
-                        processInfo.hProcessMemoryIO=XProcess::openMemoryIO(nProcessID);
-                        processInfo.hProcessMemoryQuery=XProcess::openMemoryQuery(nProcessID);
+                processInfo.hProcessMemoryIO=XProcess::openMemoryIO(nProcessID);
+                processInfo.hProcessMemoryQuery=XProcess::openMemoryQuery(nProcessID);
 //                        processInfo.hMainThread;
 
-                        getXInfoDB()->setProcessInfo(processInfo);
+                getXInfoDB()->setProcessInfo(processInfo);
 
-                        emit eventCreateProcess(&processInfo);
+                emit eventCreateProcess(&processInfo);
 
-                        XInfoDB::THREAD_INFO threadInfo={};
+                XInfoDB::THREAD_INFO threadInfo={};
 
-                        threadInfo.nThreadID=nProcessID;
+                threadInfo.nThreadID=nProcessID;
 
-                        getXInfoDB()->addThreadInfo(&threadInfo);
+                getXInfoDB()->addThreadInfo(&threadInfo);
 
-                        emit eventCreateThread(&threadInfo);
+                emit eventCreateThread(&threadInfo);
 
-                        // TODO Breakpoint to EntryPoint
-                        // TODO add thread
-                    }
+                // TODO if
+
+                XInfoDB::BREAKPOINT_INFO breakPointInfo={};
+
+                breakPointInfo.nAddress=getXInfoDB()->getCurrentInstructionPointerById(nProcessID);
+                breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
+                breakPointInfo.bpInfo=XInfoDB::BPI_PROCESSENTRYPOINT;
+
+                breakPointInfo.pHProcessMemoryIO=getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
+                breakPointInfo.pHProcessMemoryQuery=getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
+                breakPointInfo.nProcessID=getXInfoDB()->getProcessInfo()->nProcessID;
+                breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nMainThreadID;
+
+//                getXInfoDB()->suspendAllThreads();
+                getXInfoDB()->_lockId(nProcessID);
+                emit eventBreakPoint(&breakPointInfo);
+            }
+
+            while(isDebugActive())
+            {
+                qDebug("DEBUG ACTIVE");
+
+                getXInfoDB()->_waitID(nProcessID);
+
+                bool bContinue=false;
+                STATE _state=waitForSignal(nProcessID); // TODO result
+
+                qDebug("Code: %x",_state.nCode);
+
+                if(_state.debuggerStatus==DEBUGGER_STATUS_STOP)
+                {
+                    qDebug("process stoped: %x",_state.nCode);
 
                     if(_state.nCode==5)
                     {
@@ -134,43 +148,18 @@ bool XLinuxDebugger::load()
 
                         breakPointInfo.nAddress=getXInfoDB()->getCurrentInstructionPointerById(nProcessID);
 
-                        if(bProcessEntryPoint)
-                        {
-                            breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
-                            breakPointInfo.bpInfo=XInfoDB::BPI_PROCESSENTRYPOINT;
-                        }
-
                         breakPointInfo.pHProcessMemoryIO=getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
                         breakPointInfo.pHProcessMemoryQuery=getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
                         breakPointInfo.nProcessID=getXInfoDB()->getProcessInfo()->nProcessID;
                         breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nMainThreadID;
 
-                        getXInfoDB()->suspendAllThreads();
-
+//                        getXInfoDB()->suspendAllThreads();
+                        getXInfoDB()->_lockId(nProcessID);
                         emit eventBreakPoint(&breakPointInfo);
 
 //                        getXInfoDB()->_lockId(getXInfoDB()->getProcessInfo()->nMainThreadID);
 //                        getXInfoDB()->_waitID(getXInfoDB()->getProcessInfo()->nMainThreadID);
 
-//                        while()
-//                        {
-//                            QThread::msleep(10);
-//                        }
-
-                        if(bProcessEntryPoint)
-                        {
-                            bContinue=true;
-                        }
-                    }
-
-                    if(!_bIsTemp)
-                    {
-//                        XProcess::HANDLEID handleThread={};
-//                        handleThread.nID=getXInfoDB()->getProcessInfo()->nProcessID;
-
-//                        getXInfoDB()->stepInto(handleThread);
-
-//                        _bIsTemp=true;
                     }
                 }
                 else if(_state.debuggerStatus==DEBUGGER_STATUS_EXIT)

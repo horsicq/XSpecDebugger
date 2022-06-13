@@ -42,7 +42,7 @@ bool XUnixDebugger::stop()
 void XUnixDebugger::cleanUp()
 {
     XUnixDebugger::stop();
-
+#ifdef Q_OS_LINUX
     if(getXInfoDB()->getProcessInfo()->hProcessMemoryIO)
     {
         XProcess::closeMemoryIO(getXInfoDB()->getProcessInfo()->hProcessMemoryIO);
@@ -54,6 +54,7 @@ void XUnixDebugger::cleanUp()
         XProcess::closeMemoryQuery(getXInfoDB()->getProcessInfo()->hProcessMemoryQuery);
         getXInfoDB()->getProcessInfo()->hProcessMemoryQuery=0;
     }
+#endif
 }
 
 XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName,QString sDirectory)
