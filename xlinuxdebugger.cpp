@@ -79,7 +79,7 @@ bool XLinuxDebugger::load()
 
             if(_stateStart.debuggerStatus==DEBUGGER_STATUS_STOP)
             {
-//                        setPtraceOptions(nProcessID); // Set options
+                setPtraceOptions(nProcessID); // Set options
 
                 XInfoDB::PROCESS_INFO processInfo={};
 
@@ -121,7 +121,7 @@ bool XLinuxDebugger::load()
                 breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nMainThreadID;
 
 //                getXInfoDB()->suspendAllThreads();
-                getXInfoDB()->_lockId(nProcessID);
+//                getXInfoDB()->_lockId(nProcessID);
                 emit eventBreakPoint(&breakPointInfo);
             }
 
@@ -130,6 +130,8 @@ bool XLinuxDebugger::load()
                 qDebug("DEBUG ACTIVE");
 
                 getXInfoDB()->_waitID(nProcessID);
+
+                qDebug("DEBUG ACTIVE 2");
 
                 bool bContinue=false;
                 STATE _state=waitForSignal(nProcessID); // TODO result
@@ -154,7 +156,7 @@ bool XLinuxDebugger::load()
                         breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nMainThreadID;
 
 //                        getXInfoDB()->suspendAllThreads();
-                        getXInfoDB()->_lockId(nProcessID);
+//                        getXInfoDB()->_lockId(nProcessID);
                         emit eventBreakPoint(&breakPointInfo);
 
 //                        getXInfoDB()->_lockId(getXInfoDB()->getProcessInfo()->nMainThreadID);

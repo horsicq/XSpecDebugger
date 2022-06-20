@@ -26,7 +26,7 @@ XWindowsDebugger::XWindowsDebugger(QObject *pParent,XInfoDB *pXInfoDB) : XAbstra
 }
 
 bool XWindowsDebugger::load()
-{
+{    
     bool bResult=false;
 
     qint32 nFlags=DEBUG_PROCESS|DEBUG_ONLY_THIS_PROCESS|CREATE_SUSPENDED; // TODO check CREATE_UNICODE_ENVIRONMENT | CREATE_NEW_CONSOLE;

@@ -223,6 +223,20 @@ bool XAbstractDebugger::dumpToFile(QString sFileName)
     return bResult;
 }
 
+bool XAbstractDebugger::stepInto(X_HANDLE hThread)
+{
+#ifdef QT_DEBUG
+    qDebug("Current thread: %d",QThread::currentThreadId());
+#endif
+
+    bool bResult=false;
+
+    bResult=getXInfoDB()->stepIntoByHandle(hThread);
+    getXInfoDB()->resumeAllThreads();
+
+    return bResult;
+}
+
 bool XAbstractDebugger::stepOver(XProcess::HANDLEID handleID)
 {
     bool bResult=false;
@@ -290,11 +304,23 @@ bool XAbstractDebugger::isDebugActive()
 
 void XAbstractDebugger::process()
 {
+#ifdef QT_DEBUG
+    qDebug("Current thread: %d",QThread::currentThreadId());
+#endif
+
     load();
 }
 
-void XAbstractDebugger::testSlot()
+void XAbstractDebugger::testSlot(X_ID nThreadId)
 {
-    qDebug("Test");
+#ifdef QT_DEBUG
+    qDebug("testSlot: Current thread: %d",QThread::currentThreadId());
+#endif
+#ifdef Q_OS_LINUX
+    user_regs_struct regs={};
+    errno=0;
+    ptrace(PTRACE_GETREGS,nThreadId,nullptr,&regs);
+    qDebug("ptrace failed: %s",strerror(errno));
+#endif
 }
 

@@ -95,7 +95,8 @@ public:
 
 public slots:
     void process();
-    void testSlot();
+    void testSlot(X_ID nThreadId); // TODO remove
+    bool stepInto(X_HANDLE hThread);
 
 signals:
     void messageString(XAbstractDebugger::MT messageType,QString sText);
