@@ -124,7 +124,7 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID)
     do
     {
     #if defined(Q_OS_LINUX)
-        ret=waitpid(nProcessID,&nResult,__WALL|WUNTRACED);
+        ret=waitpid(nProcessID,&nResult,__WALL);
     #endif
     #if defined(Q_OS_OSX)
         ret=waitpid(nProcessID,&nResult,P_ALL);

@@ -223,10 +223,10 @@ bool XAbstractDebugger::dumpToFile(QString sFileName)
     return bResult;
 }
 
-bool XAbstractDebugger::stepInto(X_HANDLE hThread)
+bool XAbstractDebugger::stepIntoByHandle(X_HANDLE hThread)
 {
 #ifdef QT_DEBUG
-    qDebug("Current thread: %d",QThread::currentThreadId());
+    qDebug("Current thread: %X",QThread::currentThreadId());
 #endif
 
     bool bResult=false;
@@ -235,6 +235,13 @@ bool XAbstractDebugger::stepInto(X_HANDLE hThread)
     getXInfoDB()->resumeAllThreads();
 
     return bResult;
+}
+
+bool XAbstractDebugger::stepIntoById(X_ID nThreadId)
+{
+#ifdef QT_DEBUG
+    qDebug("Current thread: %X",QThread::currentThreadId());
+#endif
 }
 
 bool XAbstractDebugger::stepOver(XProcess::HANDLEID handleID)

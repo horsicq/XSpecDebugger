@@ -127,56 +127,70 @@ bool XLinuxDebugger::load()
 
             while(isDebugActive())
             {
-                qDebug("DEBUG ACTIVE");
+                qint32 nResult=0;
 
-                getXInfoDB()->_waitID(nProcessID);
+                // TODO a function
+                pid_t ret=waitpid(nProcessID,&nResult,__WALL|WNOHANG);
 
-                qDebug("DEBUG ACTIVE 2");
-
-                bool bContinue=false;
-                STATE _state=waitForSignal(nProcessID); // TODO result
-
-                qDebug("Code: %x",_state.nCode);
-
-                if(_state.debuggerStatus==DEBUGGER_STATUS_STOP)
+                if(ret>0)
                 {
-                    qDebug("process stoped: %x",_state.nCode);
-
-                    if(_state.nCode==5)
-                    {
-                        qDebug("BREAKPOINT");
-
-                        XInfoDB::BREAKPOINT_INFO breakPointInfo={};
-
-                        breakPointInfo.nAddress=getXInfoDB()->getCurrentInstructionPointerById(nProcessID);
-
-                        breakPointInfo.pHProcessMemoryIO=getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
-                        breakPointInfo.pHProcessMemoryQuery=getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
-                        breakPointInfo.nProcessID=getXInfoDB()->getProcessInfo()->nProcessID;
-                        breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nMainThreadID;
-
-//                        getXInfoDB()->suspendAllThreads();
-//                        getXInfoDB()->_lockId(nProcessID);
-                        emit eventBreakPoint(&breakPointInfo);
-
-//                        getXInfoDB()->_lockId(getXInfoDB()->getProcessInfo()->nMainThreadID);
-//                        getXInfoDB()->_waitID(getXInfoDB()->getProcessInfo()->nMainThreadID);
-
-                    }
-                }
-                else if(_state.debuggerStatus==DEBUGGER_STATUS_EXIT)
-                {
-                    qDebug("process exited with code %x",_state.nCode);
-                    break;
+                    qDebug("process nResult: %x",nResult);
                 }
 
-                if(bContinue)
-                {
-//                    continueThread(nProcessID);
-                }
-
-//                continueThread(nProcessID);
+                QThread::msleep(1000);
             }
+
+//            while(isDebugActive())
+//            {
+//                qDebug("DEBUG ACTIVE");
+
+////                getXInfoDB()->_waitID(nProcessID);
+////                qDebug("DEBUG ACTIVE 2");
+
+//                bool bContinue=false;
+//                STATE _state=waitForSignal(nProcessID); // TODO result
+
+//                qDebug("Code: %x",_state.nCode);
+
+//                if(_state.debuggerStatus==DEBUGGER_STATUS_STOP)
+//                {
+//                    qDebug("process stoped: %x",_state.nCode);
+
+//                    if(_state.nCode==5)
+//                    {
+//                        qDebug("BREAKPOINT");
+
+//                        XInfoDB::BREAKPOINT_INFO breakPointInfo={};
+
+//                        breakPointInfo.nAddress=getXInfoDB()->getCurrentInstructionPointerById(nProcessID);
+
+//                        breakPointInfo.pHProcessMemoryIO=getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
+//                        breakPointInfo.pHProcessMemoryQuery=getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
+//                        breakPointInfo.nProcessID=getXInfoDB()->getProcessInfo()->nProcessID;
+//                        breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nMainThreadID;
+
+////                        getXInfoDB()->suspendAllThreads();
+////                        getXInfoDB()->_lockId(nProcessID);
+//                        emit eventBreakPoint(&breakPointInfo);
+
+////                        getXInfoDB()->_lockId(getXInfoDB()->getProcessInfo()->nMainThreadID);
+////                        getXInfoDB()->_waitID(getXInfoDB()->getProcessInfo()->nMainThreadID);
+
+//                    }
+//                }
+//                else if(_state.debuggerStatus==DEBUGGER_STATUS_EXIT)
+//                {
+//                    qDebug("process exited with code %x",_state.nCode);
+//                    break;
+//                }
+
+//                if(bContinue)
+//                {
+////                    continueThread(nProcessID);
+//                }
+
+////                continueThread(nProcessID);
+//            }
 
 //            qDebug("Address: %llX",getCurrentAddress(handleThreadID));
 
