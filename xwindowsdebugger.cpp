@@ -164,6 +164,20 @@ XBinary::MODE XWindowsDebugger::getMode()
     return result;
 }
 
+bool XWindowsDebugger::stepIntoByHandle(X_HANDLE hThread)
+{
+#ifdef QT_DEBUG
+    qDebug("Current thread: %X",QThread::currentThreadId());
+#endif
+
+    bool bResult=false;
+
+    bResult=getXInfoDB()->stepIntoByHandle(hThread);
+    getXInfoDB()->resumeAllThreads();
+
+    return bResult;
+}
+
 quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
     quint32 nResult=DBG_EXCEPTION_NOT_HANDLED;

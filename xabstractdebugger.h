@@ -93,11 +93,12 @@ public:
     void setDebugActive(bool bState);
     bool isDebugActive();
 
+    virtual bool stepIntoByHandle(X_HANDLE hThread);
+    virtual bool stepIntoById(X_ID nThreadId);
+
 public slots:
     void process();
     void testSlot(X_ID nThreadId); // TODO remove
-    bool stepIntoByHandle(X_HANDLE hThread);
-    bool stepIntoById(X_ID nThreadId);
 
 signals:
     void messageString(XAbstractDebugger::MT messageType,QString sText);
