@@ -125,20 +125,20 @@ bool XLinuxDebugger::load()
                 emit eventBreakPoint(&breakPointInfo);
             }
 
-            while(isDebugActive())
-            {
-                qint32 nResult=0;
+//            while(isDebugActive())
+//            {
+//                qint32 nResult=0;
 
-                // TODO a function
-                pid_t ret=waitpid(nProcessID,&nResult,__WALL|WNOHANG);
+//                // TODO a function
+//                pid_t ret=waitpid(nProcessID,&nResult,__WALL|WNOHANG);
 
-                if(ret>0)
-                {
-                    qDebug("process nResult: %x",nResult);
-                }
+//                if(ret>0)
+//                {
+//                    qDebug("process nResult: %x",nResult);
+//                }
 
-                QThread::msleep(1000);
-            }
+//                QThread::msleep(1000);
+//            }
 
 //            while(isDebugActive())
 //            {
