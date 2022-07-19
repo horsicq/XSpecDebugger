@@ -125,6 +125,15 @@ bool XLinuxDebugger::load()
                 emit eventBreakPoint(&breakPointInfo);
             }
 
+            getXInfoDB()->testFunction();
+
+            while(isDebugActive())
+            {
+                QThread::msleep(50);
+            }
+
+//            getXInfoDB()->testFunction();
+
 //            while(isDebugActive())
 //            {
 //                qint32 nResult=0;
