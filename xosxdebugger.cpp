@@ -119,7 +119,6 @@ bool XOSXDebugger::load()
                 breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nMainThreadID;
 
 //                getXInfoDB()->suspendAllThreads();
-                getXInfoDB()->_lockId(nProcessID);
                 emit eventBreakPoint(&breakPointInfo);
             }
         }

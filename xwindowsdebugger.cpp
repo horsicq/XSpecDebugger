@@ -435,8 +435,6 @@ quint32 XWindowsDebugger::on_EXIT_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
 quint32 XWindowsDebugger::on_EXIT_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
-    setDebugActive(false);
-
     XInfoDB::EXITPROCESS_INFO exitProcessInfo={};
     exitProcessInfo.nProcessID=pDebugEvent->dwProcessId;
     exitProcessInfo.nThreadID=pDebugEvent->dwThreadId;
@@ -446,6 +444,8 @@ quint32 XWindowsDebugger::on_EXIT_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     getXInfoDB()->removeThreadInfo(threadInfo.nThreadID);
 
     emit eventExitProcess(&exitProcessInfo);
+
+    setDebugActive(false);
 
     return DBG_CONTINUE;
 }

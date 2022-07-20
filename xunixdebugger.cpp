@@ -62,8 +62,9 @@ XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName,QS
     EXECUTEPROCESS result={};
 
     result.sStatus="Error";
-
-//    if(::chdir(qPrintable(sDirectory))==0)
+#ifdef Q_OS_MAC
+    if(::chdir(qPrintable(sDirectory))==0)
+#endif
     {
         char **ppArgv=new char *[2];
 

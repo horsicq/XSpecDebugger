@@ -243,6 +243,14 @@ bool XAbstractDebugger::stepIntoById(X_ID nThreadId)
     return false;
 }
 
+void XAbstractDebugger::wait()
+{
+    while(isDebugActive())
+    {
+        QThread::msleep(100);
+    }
+}
+
 bool XAbstractDebugger::stepOver(XProcess::HANDLEID handleID)
 {
     bool bResult=false;

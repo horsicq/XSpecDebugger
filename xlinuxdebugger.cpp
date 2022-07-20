@@ -127,10 +127,10 @@ bool XLinuxDebugger::load()
 
             getXInfoDB()->testFunction();
 
-            while(isDebugActive())
-            {
-                QThread::msleep(50);
-            }
+//            while(isDebugActive())
+//            {
+//                QThread::msleep(50);
+//            }
 
 //            getXInfoDB()->testFunction();
 
