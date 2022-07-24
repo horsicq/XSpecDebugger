@@ -22,7 +22,7 @@
 
 XUnixDebugger::XUnixDebugger(QObject *pParent,XInfoDB *pXInfoDB) : XAbstractDebugger(pParent,pXInfoDB)
 {
-
+    g_pTimer=nullptr;
 }
 
 bool XUnixDebugger::stop()
@@ -31,9 +31,12 @@ bool XUnixDebugger::stop()
 
     if(kill(getXInfoDB()->getProcessInfo()->nProcessID,SIGKILL)!=-1)
     {
+        stopDebugLoop();
+
+        setDebugActive(false);
+
         bResult=true;
     }
-
 //    sleep(1000);
 
     return bResult;
@@ -42,6 +45,8 @@ bool XUnixDebugger::stop()
 void XUnixDebugger::cleanUp()
 {
     XUnixDebugger::stop();
+    XUnixDebugger::wait();
+    // TODO stopDebugEvent
 #ifdef Q_OS_LINUX
     if(getXInfoDB()->getProcessInfo()->hProcessMemoryIO)
     {
@@ -116,7 +121,7 @@ void XUnixDebugger::setPtraceOptions(qint64 nThreadID)
     // mb TODO
 }
 
-XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID)
+XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID,qint32 nOptions)
 {
     STATE result={};
 
@@ -126,48 +131,46 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID)
     // TODO a function
     do
     {
-    #if defined(Q_OS_LINUX)
-        ret=waitpid(nProcessID,&nResult,__WALL);
-    #endif
-    #if defined(Q_OS_OSX)
-        ret=waitpid(nProcessID,&nResult,P_ALL);
-    #endif
+        ret=waitpid(nProcessID,&nResult,nOptions);
     }
     while((ret==-1)&&(errno==EINTR));
 
-    if(ret==-1)
+    if(ret<0)
     {
         qDebug("waitpid failed: %s",strerror(errno));
     }
 
-    if(WIFSTOPPED(nResult))
+    if(ret>0)
     {
-        result.debuggerStatus=DEBUGGER_STATUS_STOP;
-        result.nCode=WSTOPSIG(nResult);
-
-        if(WSTOPSIG(nResult)==SIGABRT)
+        if(WIFSTOPPED(nResult))
         {
-            qDebug("process unexpectedly aborted");
+            result.debuggerStatus=DEBUGGER_STATUS_STOP;
+            result.nCode=WSTOPSIG(nResult);
+
+            if(WSTOPSIG(nResult)==SIGABRT)
+            {
+                qDebug("process unexpectedly aborted");
+            }
+            else
+            {
+
+            }
+            qDebug("WSTOPSIG %x",WSTOPSIG(nResult));
         }
-        else
+        else if(WIFEXITED(nResult))
         {
-
+            result.debuggerStatus=DEBUGGER_STATUS_EXIT;
+            result.nCode=WEXITSTATUS(nResult);
         }
-        qDebug("WSTOPSIG %x",WSTOPSIG(nResult));
-    }
-    else if(WIFEXITED(nResult))
-    {
-        result.debuggerStatus=DEBUGGER_STATUS_EXIT;
-        result.nCode=WEXITSTATUS(nResult);
-    }
-    else if(WIFSIGNALED(nResult))
-    {
-        result.debuggerStatus=DEBUGGER_STATUS_SIGNAL;
-        result.nCode=WTERMSIG(nResult);
-    }
-    // TODO fast events
+        else if(WIFSIGNALED(nResult))
+        {
+            result.debuggerStatus=DEBUGGER_STATUS_SIGNAL;
+            result.nCode=WTERMSIG(nResult);
+        }
+        // TODO fast events
 
-    qDebug("STATUS: %x",nResult);
+        qDebug("STATUS: %x",nResult);
+    }
 
     return result;
 }
@@ -219,4 +222,58 @@ bool XUnixDebugger::_setStep(XProcess::HANDLEID handleID)
 //    // TODO result
 
     return bResult;
+}
+
+void XUnixDebugger::startDebugLoop()
+{
+    stopDebugLoop();
+
+    g_pTimer=new QTimer(this);
+
+    connect(g_pTimer,SIGNAL(timeout()),this,SLOT(_debugEvent()));
+
+    g_pTimer->start(N_N_DEDELAY);
+}
+
+void XUnixDebugger::stopDebugLoop()
+{
+    if(g_pTimer)
+    {
+        g_pTimer->stop();
+
+        delete g_pTimer;
+
+        g_pTimer=nullptr;
+    }
+}
+
+bool XUnixDebugger::stepIntoById(X_ID nThreadId)
+{
+    return getXInfoDB()->stepIntoById(nThreadId);
+}
+
+void XUnixDebugger::_debugEvent()
+{
+    if(isDebugActive())
+    {
+        qint64 nId=getXInfoDB()->getProcessInfo()->nProcessID;
+
+        STATE state=waitForSignal(nId,__WALL|WNOHANG);
+
+        if(state.debuggerStatus==DEBUGGER_STATUS_STOP)
+        {
+            XInfoDB::BREAKPOINT_INFO breakPointInfo={};
+
+            breakPointInfo.nAddress=getXInfoDB()->getCurrentInstructionPointerById(nId);
+            breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
+            breakPointInfo.bpInfo=XInfoDB::BPI_PROCESSENTRYPOINT;
+
+            breakPointInfo.pHProcessMemoryIO=getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
+            breakPointInfo.pHProcessMemoryQuery=getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
+            breakPointInfo.nProcessID=getXInfoDB()->getProcessInfo()->nProcessID;
+            breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nMainThreadID;
+
+            emit eventBreakPoint(&breakPointInfo);
+        }
+    }
 }

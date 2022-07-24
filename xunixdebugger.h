@@ -22,6 +22,7 @@
 #define XUNIXDEBUGGER_H
 
 #include "xabstractdebugger.h"
+#include <QTimer>
 
 class XUnixDebugger : public XAbstractDebugger
 {
@@ -54,10 +55,21 @@ public:
 
     EXECUTEPROCESS executeProcess(QString sFileName,QString sDirectory); // TODO args, TODO sDirectory
     void setPtraceOptions(qint64 nThreadID);
-    STATE waitForSignal(qint64 nProcessID);
+    STATE waitForSignal(qint64 nProcessID,qint32 nOptions);
     void continueThread(qint64 nThreadID); // TODO rename to resumrThread
     static bool resumeThread(XProcess::HANDLEID handleID); // TODO remove
     virtual bool _setStep(XProcess::HANDLEID handleID); // TODO remove
+    void startDebugLoop();
+    void stopDebugLoop();
+
+    virtual bool stepIntoById(X_ID nThreadId);
+
+public slots:
+    void _debugEvent();
+
+private:
+    const int N_N_DEDELAY=50;
+    QTimer *g_pTimer;
 };
 
 #endif // XUNIXDEBUGGER_H

@@ -237,7 +237,7 @@ bool XAbstractDebugger::stepIntoById(X_ID nThreadId)
 {
     Q_UNUSED(nThreadId)
 #ifdef QT_DEBUG
-    qDebug("TODO XAbstractDebugger::stepIntoByHandle");
+    qDebug("TODO XAbstractDebugger::stepIntoById");
 #endif
 
     return false;

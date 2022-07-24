@@ -75,7 +75,7 @@ bool XLinuxDebugger::load()
 
             setDebugActive(true);
 
-            STATE _stateStart=waitForSignal(nProcessID); // TODO result
+            STATE _stateStart=waitForSignal(nProcessID,__WALL); // TODO result
 
             if(_stateStart.debuggerStatus==DEBUGGER_STATUS_STOP)
             {
@@ -125,7 +125,7 @@ bool XLinuxDebugger::load()
                 emit eventBreakPoint(&breakPointInfo);
             }
 
-            getXInfoDB()->testFunction();
+            startDebugLoop();
 
 //            while(isDebugActive())
 //            {
