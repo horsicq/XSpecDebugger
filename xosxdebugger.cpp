@@ -101,6 +101,7 @@ bool XOSXDebugger::load()
                 XInfoDB::THREAD_INFO threadInfo={};
 
                 threadInfo.nThreadID=nProcessID;
+                threadInfo.threadStatus=XInfoDB::THREAD_STATUS_PAUSED;
 
                 getXInfoDB()->addThreadInfo(&threadInfo);
 

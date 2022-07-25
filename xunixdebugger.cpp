@@ -37,7 +37,6 @@ bool XUnixDebugger::stop()
 
         bResult=true;
     }
-//    sleep(1000);
 
     return bResult;
 }
