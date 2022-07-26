@@ -95,6 +95,8 @@ public:
 
     virtual bool stepIntoByHandle(X_HANDLE hThread);
     virtual bool stepIntoById(X_ID nThreadId);
+    virtual bool stepOverByHandle(X_HANDLE hThread);
+    virtual bool stepOverById(X_ID nThreadId);
     void wait();
 
 public slots:

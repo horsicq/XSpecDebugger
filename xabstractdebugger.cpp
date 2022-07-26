@@ -243,6 +243,26 @@ bool XAbstractDebugger::stepIntoById(X_ID nThreadId)
     return false;
 }
 
+bool XAbstractDebugger::stepOverByHandle(X_HANDLE hThread)
+{
+    Q_UNUSED(hThread)
+#ifdef QT_DEBUG
+    qDebug("TODO XAbstractDebugger::stepIntoByHandle");
+#endif
+
+    return false;
+}
+
+bool XAbstractDebugger::stepOverById(X_ID nThreadId)
+{
+    Q_UNUSED(nThreadId)
+#ifdef QT_DEBUG
+    qDebug("TODO XAbstractDebugger::stepIntoById");
+#endif
+
+    return false;
+}
+
 void XAbstractDebugger::wait()
 {
     while(isDebugActive())

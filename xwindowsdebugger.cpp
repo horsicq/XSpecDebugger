@@ -166,10 +166,6 @@ XBinary::MODE XWindowsDebugger::getMode()
 
 bool XWindowsDebugger::stepIntoByHandle(X_HANDLE hThread)
 {
-#ifdef QT_DEBUG
-    qDebug("Current thread: %X",QThread::currentThreadId());
-#endif
-
     bool bResult=false;
 
     bResult=getXInfoDB()->stepIntoByHandle(hThread);
