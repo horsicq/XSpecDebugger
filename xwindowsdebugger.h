@@ -36,6 +36,7 @@ public:
     virtual QString getArch();
     virtual XBinary::MODE getMode();
     virtual bool stepIntoByHandle(X_HANDLE hThread);
+    virtual bool stepOverByHandle(X_HANDLE hThread);
 
 private:
     quint32 on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent);

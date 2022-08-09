@@ -174,6 +174,16 @@ bool XWindowsDebugger::stepIntoByHandle(X_HANDLE hThread)
     return bResult;
 }
 
+bool XWindowsDebugger::stepOverByHandle(X_HANDLE hThread)
+{
+    bool bResult=false;
+
+    bResult=getXInfoDB()->stepOverByHandle(hThread);
+    getXInfoDB()->resumeAllThreads();
+
+    return bResult;
+}
+
 quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
     quint32 nResult=DBG_EXCEPTION_NOT_HANDLED;
