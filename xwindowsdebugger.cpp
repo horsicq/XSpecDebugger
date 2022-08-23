@@ -169,7 +169,11 @@ bool XWindowsDebugger::stepIntoByHandle(X_HANDLE hThread)
     bool bResult=false;
 
     bResult=getXInfoDB()->stepIntoByHandle(hThread);
-    getXInfoDB()->resumeAllThreads();
+
+    if(bResult)
+    {
+        bResult=getXInfoDB()->resumeAllThreads();
+    }
 
     return bResult;
 }
@@ -179,7 +183,11 @@ bool XWindowsDebugger::stepOverByHandle(X_HANDLE hThread)
     bool bResult=false;
 
     bResult=getXInfoDB()->stepOverByHandle(hThread);
-    getXInfoDB()->resumeAllThreads();
+
+    if(bResult)
+    {
+        getXInfoDB()->resumeAllThreads();
+    }
 
     return bResult;
 }
