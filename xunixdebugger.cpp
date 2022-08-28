@@ -251,6 +251,11 @@ bool XUnixDebugger::stepIntoById(X_ID nThreadId)
     return getXInfoDB()->stepIntoById(nThreadId);
 }
 
+bool XUnixDebugger::stepOverById(X_ID nThreadId)
+{
+    return getXInfoDB()->stepOverById(nThreadId);
+}
+
 void XUnixDebugger::_debugEvent()
 {
     if(isDebugActive())

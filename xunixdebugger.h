@@ -63,6 +63,7 @@ public:
     void stopDebugLoop();
 
     virtual bool stepIntoById(X_ID nThreadId);
+    virtual bool stepOverById(X_ID nThreadId);
 
 public slots:
     void _debugEvent();
