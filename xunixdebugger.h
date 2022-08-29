@@ -62,8 +62,8 @@ public:
     void startDebugLoop();
     void stopDebugLoop();
 
-    virtual bool stepIntoById(X_ID nThreadId);
-    virtual bool stepOverById(X_ID nThreadId);
+    virtual bool stepIntoById(X_ID nThreadId,XInfoDB::BPI bpInfo);
+    virtual bool stepOverById(X_ID nThreadId,XInfoDB::BPI bpInfo);
 
 public slots:
     void _debugEvent();

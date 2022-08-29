@@ -246,14 +246,14 @@ void XUnixDebugger::stopDebugLoop()
     }
 }
 
-bool XUnixDebugger::stepIntoById(X_ID nThreadId)
+bool XUnixDebugger::stepIntoById(X_ID nThreadId,XInfoDB::BPI bpInfo)
 {
-    return getXInfoDB()->stepIntoById(nThreadId);
+    return getXInfoDB()->stepIntoById(nThreadId,bpInfo);
 }
 
-bool XUnixDebugger::stepOverById(X_ID nThreadId)
+bool XUnixDebugger::stepOverById(X_ID nThreadId,XInfoDB::BPI bpInfo)
 {
-    return getXInfoDB()->stepOverById(nThreadId);
+    return getXInfoDB()->stepOverById(nThreadId,bpInfo);
 }
 
 void XUnixDebugger::_debugEvent()

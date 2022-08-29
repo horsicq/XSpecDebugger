@@ -223,7 +223,7 @@ bool XAbstractDebugger::dumpToFile(QString sFileName)
     return bResult;
 }
 
-bool XAbstractDebugger::stepIntoByHandle(X_HANDLE hThread)
+bool XAbstractDebugger::stepIntoByHandle(X_HANDLE hThread,XInfoDB::BPI bpInfo)
 {
     Q_UNUSED(hThread)
 #ifdef QT_DEBUG
@@ -233,7 +233,7 @@ bool XAbstractDebugger::stepIntoByHandle(X_HANDLE hThread)
     return false;
 }
 
-bool XAbstractDebugger::stepIntoById(X_ID nThreadId)
+bool XAbstractDebugger::stepIntoById(X_ID nThreadId,XInfoDB::BPI bpInfo)
 {
     Q_UNUSED(nThreadId)
 #ifdef QT_DEBUG
@@ -243,7 +243,7 @@ bool XAbstractDebugger::stepIntoById(X_ID nThreadId)
     return false;
 }
 
-bool XAbstractDebugger::stepOverByHandle(X_HANDLE hThread)
+bool XAbstractDebugger::stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo)
 {
     Q_UNUSED(hThread)
 #ifdef QT_DEBUG
@@ -253,7 +253,7 @@ bool XAbstractDebugger::stepOverByHandle(X_HANDLE hThread)
     return false;
 }
 
-bool XAbstractDebugger::stepOverById(X_ID nThreadId)
+bool XAbstractDebugger::stepOverById(X_ID nThreadId,XInfoDB::BPI bpInfo)
 {
     Q_UNUSED(nThreadId)
 #ifdef QT_DEBUG

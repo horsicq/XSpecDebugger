@@ -164,11 +164,11 @@ XBinary::MODE XWindowsDebugger::getMode()
     return result;
 }
 
-bool XWindowsDebugger::stepIntoByHandle(X_HANDLE hThread)
+bool XWindowsDebugger::stepIntoByHandle(X_HANDLE hThread,XInfoDB::BPI bpInfo)
 {
     bool bResult=false;
 
-    bResult=getXInfoDB()->stepIntoByHandle(hThread);
+    bResult=getXInfoDB()->stepIntoByHandle(hThread,bpInfo);
 
     if(bResult)
     {
@@ -178,11 +178,11 @@ bool XWindowsDebugger::stepIntoByHandle(X_HANDLE hThread)
     return bResult;
 }
 
-bool XWindowsDebugger::stepOverByHandle(X_HANDLE hThread)
+bool XWindowsDebugger::stepOverByHandle(X_HANDLE hThread,XInfoDB::BPI bpInfo)
 {
     bool bResult=false;
 
-    bResult=getXInfoDB()->stepOverByHandle(hThread);
+    bResult=getXInfoDB()->stepOverByHandle(hThread,bpInfo);
 
     if(bResult)
     {

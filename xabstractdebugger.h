@@ -93,10 +93,10 @@ public:
     void setDebugActive(bool bState);
     bool isDebugActive();
 
-    virtual bool stepIntoByHandle(X_HANDLE hThread);
-    virtual bool stepIntoById(X_ID nThreadId);
-    virtual bool stepOverByHandle(X_HANDLE hThread);
-    virtual bool stepOverById(X_ID nThreadId);
+    virtual bool stepIntoByHandle(X_HANDLE hThread,XInfoDB::BPI bpInfo);
+    virtual bool stepIntoById(X_ID nThreadId,XInfoDB::BPI bpInfo);
+    virtual bool stepOverByHandle(X_HANDLE hThread,XInfoDB::BPI bpInfo);
+    virtual bool stepOverById(X_ID nThreadId,XInfoDB::BPI bpInfo);
     void wait();
 
 public slots:
