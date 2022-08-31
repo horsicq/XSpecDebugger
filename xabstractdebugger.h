@@ -86,8 +86,6 @@ public:
 
     bool dumpToFile(QString sFileName);
 
-    bool stepOver(XProcess::HANDLEID handleID); // TODO move to XInfoDB
-
     char *allocateAnsiStringMemory(QString sFileName); // TODO move to XInfoDB
 
     void setDebugActive(bool bState);

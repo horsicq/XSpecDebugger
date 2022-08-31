@@ -168,7 +168,7 @@ bool XWindowsDebugger::stepIntoByHandle(X_HANDLE hThread,XInfoDB::BPI bpInfo)
 {
     bool bResult=false;
 
-    bResult=getXInfoDB()->stepIntoByHandle(hThread,bpInfo);
+    bResult=getXInfoDB()->stepIntoByHandle(hThread,bpInfo,true);
 
     if(bResult)
     {
@@ -182,7 +182,7 @@ bool XWindowsDebugger::stepOverByHandle(X_HANDLE hThread,XInfoDB::BPI bpInfo)
 {
     bool bResult=false;
 
-    bResult=getXInfoDB()->stepOverByHandle(hThread,bpInfo);
+    bResult=getXInfoDB()->stepOverByHandle(hThread,bpInfo,true);
 
     if(bResult)
     {
@@ -310,25 +310,52 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             nResult=DBG_CONTINUE;
         }
 
-        if(getXInfoDB()->getThreadBreakpoints()->contains(pDebugEvent->dwThreadId))
+        if(getXInfoDB()->getThreadBreakpoints()->contains(breakPointInfo.hThread))
         {
-            XInfoDB::BREAKPOINT stepBP=getXInfoDB()->getThreadBreakpoints()->value(pDebugEvent->dwThreadId);
+            XInfoDB::BREAKPOINT stepBP=getXInfoDB()->getThreadBreakpoints()->value(breakPointInfo.hThread);
 
-            getXInfoDB()->getThreadBreakpoints()->remove(pDebugEvent->dwThreadId);
+            if((stepBP.bpInfo==XInfoDB::BPI_STEPINTO)||(stepBP.bpInfo==XInfoDB::BPI_STEPOVER))
+            {
+                getXInfoDB()->getThreadBreakpoints()->remove(breakPointInfo.hThread);
 
-//            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
-            getXInfoDB()->suspendAllThreads();
+                getXInfoDB()->suspendAllThreads();
 
-            breakPointInfo.bpType=stepBP.bpType;
-            breakPointInfo.bpInfo=stepBP.bpInfo;
-            breakPointInfo.sInfo=stepBP.sInfo;
+                breakPointInfo.bpType=stepBP.bpType;
+                breakPointInfo.bpInfo=stepBP.bpInfo;
+                breakPointInfo.sInfo=stepBP.sInfo;
 
-            emit eventBreakPoint(&breakPointInfo);
+                emit eventBreakPoint(&breakPointInfo);
+            }
+            else if((stepBP.bpInfo==XInfoDB::BPI_TRACEINTO)||(stepBP.bpInfo==XInfoDB::BPI_TRACEOVER))
+            {
+                // TODO
+                // Check suspend threads
+                getXInfoDB()->suspendAllThreads();
 
-//            if(bThreadsSuspended)
-//            {
-//                getXInfoDB()->resumeOtherThreads(breakPointInfo.nThreadID);
-//            }
+                if(false) // TODO Check trace conditions
+                {
+                    if(stepBP.bpInfo==XInfoDB::BPI_TRACEINTO)
+                    {
+                        getXInfoDB()->stepIntoByHandle(breakPointInfo.hThread,stepBP.bpInfo,false);
+                    }
+                    else if(stepBP.bpInfo==XInfoDB::BPI_TRACEOVER)
+                    {
+                        getXInfoDB()->stepOverByHandle(breakPointInfo.hThread,stepBP.bpInfo,false);
+                    }
+
+                    getXInfoDB()->resumeAllThreads();
+                }
+                else
+                {
+                    getXInfoDB()->getThreadBreakpoints()->remove(breakPointInfo.hThread);
+
+                    breakPointInfo.bpType=stepBP.bpType;
+                    breakPointInfo.bpInfo=stepBP.bpInfo;
+                    breakPointInfo.sInfo=stepBP.sInfo;
+
+                    emit eventBreakPoint(&breakPointInfo);
+                }
+            }
 
             nResult=DBG_CONTINUE;
         }

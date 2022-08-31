@@ -271,48 +271,6 @@ void XAbstractDebugger::wait()
     }
 }
 
-bool XAbstractDebugger::stepOver(XProcess::HANDLEID handleID)
-{
-    bool bResult=false;
-
-    quint64 nAddress=getXInfoDB()->getCurrentInstructionPointerByHandle(handleID.hHandle);
-    QByteArray baData=getXInfoDB()->read_array(nAddress,15);
-
-    XCapstone::OPCODE_ID opcodeID=XCapstone::getOpcodeID(g_handle,nAddress,baData.data(),baData.size());
-
-//    if(XCapstone::isRetOpcode(opcodeID.nOpcodeID)||XCapstone::isJmpOpcode(opcodeID.nOpcodeID))
-//    {
-//        BREAKPOINT breakPoint={};
-//        breakPoint.bpType=BPT_CODE_HARDWARE;
-//        breakPoint.bpInfo=BPI_STEPOVER;
-
-//        g_mapThreadSteps.insert(hThread,breakPoint);
-
-//        return _setStep(hThread);
-//    }
-//    else
-//    {
-//        bResult=setBP(nAddress+opcodeID.nSize,BPT_CODE_SOFTWARE,BPI_STEPOVER,1);
-//    }
-
-    if(XCapstone::isCallOpcode(opcodeID.nOpcodeID))
-    {
-        bResult=getXInfoDB()->addBreakPoint(nAddress+opcodeID.nSize,XInfoDB::BPT_CODE_SOFTWARE,XInfoDB::BPI_STEPOVER,1);
-    }
-    else
-    {
-        XInfoDB::BREAKPOINT breakPoint={};
-        breakPoint.bpType=XInfoDB::BPT_CODE_HARDWARE;
-        breakPoint.bpInfo=XInfoDB::BPI_STEPOVER;
-
-        getXInfoDB()->getThreadBreakpoints()->insert(handleID.nID,breakPoint);
-
-        return getXInfoDB()->_setStepByHandle(handleID.hHandle);
-    }
-
-    return bResult;
-}
-
 char *XAbstractDebugger::allocateAnsiStringMemory(QString sFileName)
 {
     char *pResult=nullptr;
