@@ -248,12 +248,12 @@ void XUnixDebugger::stopDebugLoop()
 
 bool XUnixDebugger::stepIntoById(X_ID nThreadId,XInfoDB::BPI bpInfo)
 {
-    return getXInfoDB()->stepIntoById(nThreadId,bpInfo);
+    return getXInfoDB()->stepIntoById(nThreadId,bpInfo,true);
 }
 
 bool XUnixDebugger::stepOverById(X_ID nThreadId,XInfoDB::BPI bpInfo)
 {
-    return getXInfoDB()->stepOverById(nThreadId,bpInfo);
+    return getXInfoDB()->stepOverById(nThreadId,bpInfo,true);
 }
 
 void XUnixDebugger::_debugEvent()
