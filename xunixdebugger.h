@@ -44,6 +44,7 @@ public:
 
     struct STATE
     {
+        pid_t nThreadId;
         quint32 nCode;
         DEBUGGER_STATUS debuggerStatus;
     };
@@ -56,7 +57,7 @@ public:
     EXECUTEPROCESS executeProcess(QString sFileName,QString sDirectory); // TODO args, TODO sDirectory
     void setPtraceOptions(qint64 nThreadID);
     STATE waitForSignal(qint64 nProcessID,qint32 nOptions);
-    void continueThread(qint64 nThreadID); // TODO rename to resumrThread
+    void continueThread(qint64 nThreadID); // TODO rename to resumeThread TODO remove
     static bool resumeThread(XProcess::HANDLEID handleID); // TODO remove
     virtual bool _setStep(XProcess::HANDLEID handleID); // TODO remove
     void startDebugLoop();

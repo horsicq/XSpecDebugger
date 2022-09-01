@@ -124,23 +124,33 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID,qint32 nOpti
 {
     STATE result={};
 
-    pid_t ret=0;
+    pid_t nThreadId=0;
     qint32 nResult=0;
 
     // TODO a function
+    // TODO Clone event
     do
     {
-        ret=waitpid(nProcessID,&nResult,nOptions);
+        nThreadId=waitpid(nProcessID,&nResult,nOptions);
     }
-    while((ret==-1)&&(errno==EINTR));
+    while((nThreadId==-1)&&(errno==EINTR));
 
-    if(ret<0)
+    if(nThreadId<0)
     {
         qDebug("waitpid failed: %s",strerror(errno));
     }
 
-    if(ret>0)
+    if(nThreadId>0)
     {
+        result.nThreadId=nThreadId;
+
+        siginfo_t sigInfo={};
+
+        if(ptrace(PTRACE_GETSIGINFO,nThreadId,0,&sigInfo)<0)
+        {
+            qDebug("Error: %s",strerror(errno));
+        }
+
         if(WIFSTOPPED(nResult))
         {
             result.debuggerStatus=DEBUGGER_STATUS_STOP;
