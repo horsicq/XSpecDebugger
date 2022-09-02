@@ -151,6 +151,37 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID,qint32 nOpti
             qDebug("Error: %s",strerror(errno));
         }
 
+        qDebug("si_code: %x",sigInfo.si_code);
+        qDebug("si_errno: %x",sigInfo.si_errno);
+        qDebug("si_signo: %x",sigInfo.si_signo);
+
+        qDebug("si_pid: %x",sigInfo.si_pid);
+        qDebug("si_uid: %x",sigInfo.si_uid);
+        qDebug("si_timerid: %x",sigInfo.si_timerid);
+        qDebug("si_overrun: %x",sigInfo.si_overrun);
+
+        qDebug("si_status: %x",sigInfo.si_status);
+        qDebug("si_utime: %lx",sigInfo.si_utime);
+        qDebug("si_stime: %lx",sigInfo.si_stime);
+
+        qDebug("si_value: %llx",(quint64)sigInfo.si_value.sival_int);
+        qDebug("si_int: %x",sigInfo.si_int);
+        qDebug("si_ptr: %llx",(quint64)sigInfo.si_ptr);
+
+        qDebug("si_addr: %llx",(quint64)sigInfo.si_addr);
+        qDebug("si_addr_lsb: %x",sigInfo.si_addr_lsb);
+        qDebug("si_lower: %llx",(quint64)sigInfo.si_lower);
+        qDebug("si_upper: %llx",(quint64)sigInfo.si_upper);
+        qDebug("si_pkey: %x",sigInfo.si_pkey);
+        qDebug("si_band: %lx",sigInfo.si_band);
+        qDebug("si_fd: %x",sigInfo.si_fd);
+
+        qDebug("si_call_addr: %llx",(quint64)sigInfo.si_call_addr);
+        qDebug("si_syscall: %x",sigInfo.si_syscall);
+        qDebug("si_arch: %x",sigInfo.si_arch);
+
+        // 80 = SI_KERNEL
+
         if(WIFSTOPPED(nResult))
         {
             result.debuggerStatus=DEBUGGER_STATUS_STOP;
