@@ -51,6 +51,7 @@ public:
 
     explicit XUnixDebugger(QObject *pParent,XInfoDB *pXInfoDB);
 
+    virtual bool run();
     virtual bool stop();
     virtual void cleanUp();
 

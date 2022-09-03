@@ -59,6 +59,7 @@ public:
     void setXInfoDB(XInfoDB *pXInfoDB);
     XInfoDB *getXInfoDB();
     virtual bool load()=0;
+    virtual bool run();
     virtual bool stop();
     virtual void cleanUp();
     virtual QString getArch()=0;

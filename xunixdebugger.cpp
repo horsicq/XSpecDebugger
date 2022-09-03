@@ -25,6 +25,13 @@ XUnixDebugger::XUnixDebugger(QObject *pParent,XInfoDB *pXInfoDB) : XAbstractDebu
     g_pTimer=nullptr;
 }
 
+bool XUnixDebugger::run()
+{
+    // TODO
+
+    return false;
+}
+
 bool XUnixDebugger::stop()
 {
     bool bResult=false;

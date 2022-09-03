@@ -37,8 +37,21 @@ XInfoDB *XAbstractDebugger::getXInfoDB()
     return g_pXInfoDB;
 }
 
+bool XAbstractDebugger::run()
+{
+#ifdef QT_DEBUG
+    qDebug("TODO XAbstractDebugger::run");
+#endif
+
+    return false;
+}
+
 bool XAbstractDebugger::stop()
 {
+#ifdef QT_DEBUG
+    qDebug("TODO XAbstractDebugger::stop");
+#endif
+
     return false;
 }
 
