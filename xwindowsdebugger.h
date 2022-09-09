@@ -30,6 +30,7 @@ class XWindowsDebugger : public XAbstractDebugger
     
 public:
     explicit XWindowsDebugger(QObject *pParent,XInfoDB *pXInfoDB);
+    virtual bool run();
     virtual bool load();
     virtual bool stop();
     virtual void cleanUp();

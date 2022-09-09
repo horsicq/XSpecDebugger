@@ -25,6 +25,11 @@ XWindowsDebugger::XWindowsDebugger(QObject *pParent,XInfoDB *pXInfoDB) : XAbstra
     XWindowsDebugger::cleanUp();
 }
 
+bool XWindowsDebugger::run()
+{
+    return getXInfoDB()->resumeAllThreads();
+}
+
 bool XWindowsDebugger::load()
 {    
     bool bResult=false;

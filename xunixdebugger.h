@@ -47,6 +47,7 @@ public:
         pid_t nThreadId;
         quint32 nCode;
         DEBUGGER_STATUS debuggerStatus;
+        XADDR nAddress;
     };
 
     explicit XUnixDebugger(QObject *pParent,XInfoDB *pXInfoDB);

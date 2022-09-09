@@ -28,8 +28,7 @@ XUnixDebugger::XUnixDebugger(QObject *pParent,XInfoDB *pXInfoDB) : XAbstractDebu
 bool XUnixDebugger::run()
 {
     // TODO
-
-    return false;
+    return getXInfoDB()->resumeAllThreads();
 }
 
 bool XUnixDebugger::stop()
