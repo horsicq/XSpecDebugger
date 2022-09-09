@@ -256,7 +256,7 @@ bool XAbstractDebugger::stepIntoById(X_ID nThreadId,XInfoDB::BPI bpInfo)
     return false;
 }
 
-bool XAbstractDebugger::stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo)
+bool XAbstractDebugger::stepOverByHandle(X_HANDLE hThread,XInfoDB::BPI bpInfo)
 {
     Q_UNUSED(hThread)
 #ifdef QT_DEBUG
