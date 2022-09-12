@@ -149,6 +149,7 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID,qint32 nOpti
     if(nThreadId>0)
     {
         result.nThreadId=nThreadId;
+        result.nAddress=getXInfoDB()->getCurrentInstructionPointerById(nThreadId);
 
         siginfo_t sigInfo={};
 
@@ -162,6 +163,7 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID,qint32 nOpti
         qDebug("si_signo: %x",sigInfo.si_signo);
 
         qDebug("si_pid: %x",sigInfo.si_pid);
+        qDebug("si_pid: %d",sigInfo.si_pid);
         qDebug("si_uid: %x",sigInfo.si_uid);
         qDebug("si_timerid: %x",sigInfo.si_timerid);
         qDebug("si_overrun: %x",sigInfo.si_overrun);
@@ -315,7 +317,7 @@ void XUnixDebugger::_debugEvent()
         {
             XInfoDB::BREAKPOINT_INFO breakPointInfo={};
 
-            breakPointInfo.nAddress=getXInfoDB()->getCurrentInstructionPointerById(nId);
+            breakPointInfo.nAddress=state.nAddress;
             breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
             breakPointInfo.bpInfo=XInfoDB::BPI_PROCESSENTRYPOINT;
 
