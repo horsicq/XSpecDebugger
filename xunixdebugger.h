@@ -39,11 +39,14 @@ public:
         DEBUGGER_STATUS_UNKNOWN=0,
         DEBUGGER_STATUS_SIGNAL,
         DEBUGGER_STATUS_STOP,
+        DEBUGGER_STATUS_STEP,
+        DEBUGGER_STATUS_KERNEL,
         DEBUGGER_STATUS_EXIT
     };
 
     struct STATE
     {
+        bool bIsValid;
         pid_t nThreadId;
         quint32 nCode;
         DEBUGGER_STATUS debuggerStatus;

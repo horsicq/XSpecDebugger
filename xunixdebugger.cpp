@@ -148,6 +148,7 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID,qint32 nOpti
 
     if(nThreadId>0)
     {
+        result.bIsValid=true;
         result.nThreadId=nThreadId;
         result.nAddress=getXInfoDB()->getCurrentInstructionPointerById(nThreadId);
 
@@ -190,7 +191,17 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID,qint32 nOpti
 
         // 80 = SI_KERNEL
 
-        if(WIFSTOPPED(nResult))
+        if(sigInfo.si_code==TRAP_TRACE)
+        {
+            result.debuggerStatus=DEBUGGER_STATUS_STEP;
+            result.nCode=WSTOPSIG(nResult);
+        }
+        else if(sigInfo.si_code==SI_KERNEL)
+        {
+            result.debuggerStatus=DEBUGGER_STATUS_KERNEL;
+            result.nCode=WSTOPSIG(nResult);
+        }
+        else if(WIFSTOPPED(nResult))
         {
             result.debuggerStatus=DEBUGGER_STATUS_STOP;
             result.nCode=WSTOPSIG(nResult);
@@ -313,20 +324,42 @@ void XUnixDebugger::_debugEvent()
 
         STATE state=waitForSignal(nId,__WALL|WNOHANG);
 
-        if(state.debuggerStatus==DEBUGGER_STATUS_STOP)
+        if(state.bIsValid)
         {
-            XInfoDB::BREAKPOINT_INFO breakPointInfo={};
+            if( (state.debuggerStatus==DEBUGGER_STATUS_STEP)||
+                (state.debuggerStatus==DEBUGGER_STATUS_KERNEL))
+            {
+                XInfoDB::BREAKPOINT_INFO breakPointInfo={};
 
-            breakPointInfo.nAddress=state.nAddress;
-            breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
-            breakPointInfo.bpInfo=XInfoDB::BPI_PROCESSENTRYPOINT;
+                bool bSuccess=false;
 
-            breakPointInfo.pHProcessMemoryIO=getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
-            breakPointInfo.pHProcessMemoryQuery=getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
-            breakPointInfo.nProcessID=getXInfoDB()->getProcessInfo()->nProcessID;
-            breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nMainThreadID;
+                if(state.debuggerStatus==DEBUGGER_STATUS_STEP)
+                {
+                    breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
+                    breakPointInfo.bpInfo=XInfoDB::BPI_STEPINTO; // TODO STEPOVER
 
-            emit eventBreakPoint(&breakPointInfo);
+                    bSuccess=true;
+                }
+                else if(state.debuggerStatus==DEBUGGER_STATUS_KERNEL)
+                {
+                    // TODO Check breakpoints
+                    breakPointInfo.bpType=XInfoDB::BPT_CODE_SOFTWARE;
+                    breakPointInfo.bpInfo=XInfoDB::BPI_STEPINTO;
+
+                    bSuccess=true;
+                }
+
+                if(bSuccess)
+                {
+                    breakPointInfo.nAddress=state.nAddress;
+                    breakPointInfo.pHProcessMemoryIO=getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
+                    breakPointInfo.pHProcessMemoryQuery=getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
+                    breakPointInfo.nProcessID=getXInfoDB()->getProcessInfo()->nProcessID;
+                    breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nMainThreadID;
+
+                    emit eventBreakPoint(&breakPointInfo);
+                }
+            }
         }
     }
 }
