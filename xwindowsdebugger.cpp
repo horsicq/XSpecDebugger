@@ -173,7 +173,7 @@ bool XWindowsDebugger::stepIntoByHandle(X_HANDLE hThread,XInfoDB::BPI bpInfo)
 {
     bool bResult=false;
 
-    bResult=getXInfoDB()->stepIntoByHandle(hThread,bpInfo,true);
+    bResult=getXInfoDB()->stepInto_Handle(hThread,bpInfo,true);
 
     if(bResult)
     {
@@ -187,7 +187,7 @@ bool XWindowsDebugger::stepOverByHandle(X_HANDLE hThread,XInfoDB::BPI bpInfo)
 {
     bool bResult=false;
 
-    bResult=getXInfoDB()->stepOverByHandle(hThread,bpInfo,true);
+    bResult=getXInfoDB()->stepOver_Handle(hThread,bpInfo,true);
 
     if(bResult)
     {
@@ -221,7 +221,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
             XInfoDB::BREAKPOINT _currentBP=getXInfoDB()->findBreakPointByAddress(nExceptionAddress);
 
-            getXInfoDB()->setCurrentIntructionPointerByHandle(breakPointInfo.hThread,nExceptionAddress); // go to prev instruction address
+            getXInfoDB()->setCurrentIntructionPointer_Handle(breakPointInfo.hThread,nExceptionAddress); // go to prev instruction address
 
             getXInfoDB()->removeBreakPoint(nExceptionAddress,_currentBP.bpType);
 
@@ -270,7 +270,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             if(_currentBP.nCount)
             {
                 g_mapThreadBPToRestore.insert(pDebugEvent->dwThreadId,_currentBP);
-                getXInfoDB()->_setStepByHandle(breakPointInfo.hThread);
+                getXInfoDB()->_setStep_Handle(breakPointInfo.hThread);
             }
 
 //            if(bThreadsSuspended)
@@ -341,11 +341,11 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                 {
                     if(stepBP.bpInfo==XInfoDB::BPI_TRACEINTO)
                     {
-                        getXInfoDB()->stepIntoByHandle(breakPointInfo.hThread,stepBP.bpInfo,false);
+                        getXInfoDB()->stepInto_Handle(breakPointInfo.hThread,stepBP.bpInfo,false);
                     }
                     else if(stepBP.bpInfo==XInfoDB::BPI_TRACEOVER)
                     {
-                        getXInfoDB()->stepOverByHandle(breakPointInfo.hThread,stepBP.bpInfo,false);
+                        getXInfoDB()->stepOver_Handle(breakPointInfo.hThread,stepBP.bpInfo,false);
                     }
 
                     getXInfoDB()->resumeAllThreads();

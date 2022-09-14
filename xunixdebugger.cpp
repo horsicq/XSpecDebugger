@@ -150,7 +150,7 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID,qint32 nOpti
     {
         result.bIsValid=true;
         result.nThreadId=nThreadId;
-        result.nAddress=getXInfoDB()->getCurrentInstructionPointerById(nThreadId);
+        result.nAddress=getXInfoDB()->getCurrentInstructionPointer_Id(nThreadId);
 
         siginfo_t sigInfo={};
 
@@ -198,6 +198,7 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID,qint32 nOpti
         }
         else if(sigInfo.si_code==SI_KERNEL)
         {
+            result.nAddress=result.nAddress-1; // BP
             result.debuggerStatus=DEBUGGER_STATUS_KERNEL;
             result.nCode=WSTOPSIG(nResult);
         }
@@ -308,12 +309,12 @@ void XUnixDebugger::stopDebugLoop()
 
 bool XUnixDebugger::stepIntoById(X_ID nThreadId,XInfoDB::BPI bpInfo)
 {
-    return getXInfoDB()->stepIntoById(nThreadId,bpInfo,true);
+    return getXInfoDB()->stepInto_Id(nThreadId,bpInfo,true);
 }
 
 bool XUnixDebugger::stepOverById(X_ID nThreadId,XInfoDB::BPI bpInfo)
 {
-    return getXInfoDB()->stepOverById(nThreadId,bpInfo,true);
+    return getXInfoDB()->stepOver_Id(nThreadId,bpInfo,true);
 }
 
 void XUnixDebugger::_debugEvent()
@@ -335,18 +336,35 @@ void XUnixDebugger::_debugEvent()
 
                 if(state.debuggerStatus==DEBUGGER_STATUS_STEP)
                 {
-                    breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
-                    breakPointInfo.bpInfo=XInfoDB::BPI_STEPINTO; // TODO STEPOVER
+                    if(getXInfoDB()->getThreadBreakpoints()->contains(state.nThreadId))
+                    {
+                        breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
+                        breakPointInfo.bpInfo=XInfoDB::BPI_STEPINTO; // TODO STEPOVER
 
-                    bSuccess=true;
+                        bSuccess=true;
+                    }
+                    else
+                    {
+                        // TODO not custom trace
+                    }
                 }
                 else if(state.debuggerStatus==DEBUGGER_STATUS_KERNEL)
                 {
-                    // TODO Check breakpoints
-                    breakPointInfo.bpType=XInfoDB::BPT_CODE_SOFTWARE;
-                    breakPointInfo.bpInfo=XInfoDB::BPI_STEPINTO;
+                    if(getXInfoDB()->isBreakPointPresent(state.nAddress,XInfoDB::BPT_CODE_SOFTWARE))
+                    {
+                        // TODO Check suspend all threads
+                        XInfoDB::BREAKPOINT _currentBP=getXInfoDB()->findBreakPointByAddress(state.nAddress);
+                        breakPointInfo.bpType=_currentBP.bpType;
+                        breakPointInfo.bpInfo=_currentBP.bpInfo;
 
-                    bSuccess=true;
+                        getXInfoDB()->setCurrentIntructionPointer_Id(state.nThreadId,state.nAddress); // go to prev instruction address
+
+                        getXInfoDB()->removeBreakPoint(state.nAddress,_currentBP.bpType);
+
+                        // TODO restore
+
+                        bSuccess=true;
+                    }
                 }
 
                 if(bSuccess)

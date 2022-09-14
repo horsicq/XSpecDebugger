@@ -81,12 +81,14 @@ bool XLinuxDebugger::load()
             {
                 setPtraceOptions(nProcessID); // Set options
 
+                // TODO load symbols
+
                 XInfoDB::PROCESS_INFO processInfo={};
 
                 processInfo.nProcessID=nProcessID;
                 processInfo.nMainThreadID=nProcessID;
                 processInfo.sFileName=sFileName;
-//                        processInfo.sBaseFileName;
+                processInfo.sBaseFileName=QFileInfo(sFileName).baseName();
 //                        processInfo.nImageBase;
 //                        processInfo.nImageSize;
 //                        processInfo.nStartAddress;
@@ -108,11 +110,11 @@ bool XLinuxDebugger::load()
 
                 emit eventCreateThread(&threadInfo);
 
-                // TODO if
+                // TODO if BP on system
 
                 XInfoDB::BREAKPOINT_INFO breakPointInfo={};
 
-                breakPointInfo.nAddress=getXInfoDB()->getCurrentInstructionPointerById(nProcessID);
+                breakPointInfo.nAddress=getXInfoDB()->getCurrentInstructionPointer_Id(nProcessID);
                 breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
                 breakPointInfo.bpInfo=XInfoDB::BPI_PROCESSENTRYPOINT;
 

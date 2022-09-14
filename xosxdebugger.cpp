@@ -111,7 +111,7 @@ bool XOSXDebugger::load()
 
                 XInfoDB::BREAKPOINT_INFO breakPointInfo={};
 
-                breakPointInfo.nAddress=getXInfoDB()->getCurrentInstructionPointerById(nProcessID);
+                breakPointInfo.nAddress=getXInfoDB()->getCurrentInstructionPointer_Id(nProcessID);
                 breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
                 breakPointInfo.bpInfo=XInfoDB::BPI_PROCESSENTRYPOINT;
 
