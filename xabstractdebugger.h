@@ -103,6 +103,7 @@ public slots:
     void testSlot(X_ID nThreadId); // TODO remove
 
 signals:
+    void cannotLoadFile(QString sFileName); // TODO send if cannot load file to debugger
     void messageString(XAbstractDebugger::MT messageType,QString sText);
 
     void eventCreateProcess(XInfoDB::PROCESS_INFO *pProcessInfo);
