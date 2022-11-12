@@ -24,20 +24,19 @@
 #include "xabstractdebugger.h"
 #include "xpe.h"
 
-class XWindowsDebugger : public XAbstractDebugger
-{
+class XWindowsDebugger : public XAbstractDebugger {
     Q_OBJECT
-    
+
 public:
-    explicit XWindowsDebugger(QObject *pParent,XInfoDB *pXInfoDB);
+    explicit XWindowsDebugger(QObject *pParent, XInfoDB *pXInfoDB);
     virtual bool run();
     virtual bool load();
     virtual bool stop();
     virtual void cleanUp();
     virtual QString getArch();
     virtual XBinary::MODE getMode();
-    virtual bool stepIntoByHandle(X_HANDLE hThread,XInfoDB::BPI bpInfo);
-    virtual bool stepOverByHandle(X_HANDLE hThread,XInfoDB::BPI bpInfo);
+    virtual bool stepIntoByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo);
+    virtual bool stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo);
 
 private:
     quint32 on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent);
@@ -51,9 +50,9 @@ private:
     quint32 on_RIP_EVENT(DEBUG_EVENT *pDebugEvent);
 
 private:
-    QMap<qint64,XInfoDB::BREAKPOINT> g_mapThreadBPToRestore;
-    QMap<QString,XInfoDB::FUNCTION_INFO> g_mapFunctionInfos; // TODO move to XInfoDB
-//    QMap<qint64,XBinary::FUNCTION_ADDRESS> g_mapFunctionAddresses; // mb TODO move to Abstract
+    QMap<qint64, XInfoDB::BREAKPOINT> g_mapThreadBPToRestore;
+    QMap<QString, XInfoDB::FUNCTION_INFO> g_mapFunctionInfos;  // TODO move to XInfoDB
+    //    QMap<qint64,XBinary::FUNCTION_ADDRESS> g_mapFunctionAddresses; // mb TODO move to Abstract
 };
 
-#endif // XWINDOWSDEBUGGER_H
+#endif  // XWINDOWSDEBUGGER_H

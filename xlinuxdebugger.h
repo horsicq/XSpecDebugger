@@ -23,19 +23,17 @@
 
 #include "xunixdebugger.h"
 
-class XLinuxDebugger : public XUnixDebugger
-{
+class XLinuxDebugger : public XUnixDebugger {
     Q_OBJECT
 
 public:
-    explicit XLinuxDebugger(QObject *pParent,XInfoDB *pXInfoDB);
+    explicit XLinuxDebugger(QObject *pParent, XInfoDB *pXInfoDB);
     virtual bool load();
     virtual void cleanUp();
     virtual QString getArch();
     virtual XBinary::MODE getMode();
 
 signals:
-
 };
 
-#endif // XLINUXDEBUGGER_H
+#endif  // XLINUXDEBUGGER_H

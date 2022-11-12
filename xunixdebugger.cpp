@@ -20,360 +20,306 @@
  */
 #include "xunixdebugger.h"
 
-XUnixDebugger::XUnixDebugger(QObject *pParent,XInfoDB *pXInfoDB) : XAbstractDebugger(pParent,pXInfoDB)
-{
-    g_pTimer=nullptr;
+XUnixDebugger::XUnixDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent, pXInfoDB) {
+    g_pTimer = nullptr;
 }
 
-bool XUnixDebugger::run()
-{
+bool XUnixDebugger::run() {
     // TODO
     return getXInfoDB()->resumeAllThreads();
 }
 
-bool XUnixDebugger::stop()
-{
-    bool bResult=false;
+bool XUnixDebugger::stop() {
+    bool bResult = false;
 
-    if(kill(getXInfoDB()->getProcessInfo()->nProcessID,SIGKILL)!=-1)
-    {
+    if (kill(getXInfoDB()->getProcessInfo()->nProcessID, SIGKILL) != -1) {
         stopDebugLoop();
 
         setDebugActive(false);
 
-        bResult=true;
+        bResult = true;
     }
 
     return bResult;
 }
 
-void XUnixDebugger::cleanUp()
-{
+void XUnixDebugger::cleanUp() {
     XUnixDebugger::stop();
     XUnixDebugger::wait();
     // TODO stopDebugEvent
 #ifdef Q_OS_LINUX
-    if(getXInfoDB()->getProcessInfo()->hProcessMemoryIO)
-    {
+    if (getXInfoDB()->getProcessInfo()->hProcessMemoryIO) {
         XProcess::closeMemoryIO(getXInfoDB()->getProcessInfo()->hProcessMemoryIO);
-        getXInfoDB()->getProcessInfo()->hProcessMemoryIO=0;
+        getXInfoDB()->getProcessInfo()->hProcessMemoryIO = 0;
     }
 
-    if(getXInfoDB()->getProcessInfo()->hProcessMemoryQuery)
-    {
+    if (getXInfoDB()->getProcessInfo()->hProcessMemoryQuery) {
         XProcess::closeMemoryQuery(getXInfoDB()->getProcessInfo()->hProcessMemoryQuery);
-        getXInfoDB()->getProcessInfo()->hProcessMemoryQuery=0;
+        getXInfoDB()->getProcessInfo()->hProcessMemoryQuery = 0;
     }
 #endif
 }
 
-XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName,QString sDirectory)
-{
-    EXECUTEPROCESS result={};
+XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName, QString sDirectory) {
+    EXECUTEPROCESS result = {};
 
-    result.sStatus="Error";
+    result.sStatus = "Error";
 #ifdef Q_OS_MAC
-    if(::chdir(qPrintable(sDirectory))==0)
+    if (::chdir(qPrintable(sDirectory)) == 0)
 #endif
     {
-        char **ppArgv=new char *[2];
+        char **ppArgv = new char *[2];
 
-        ppArgv[0]=allocateAnsiStringMemory(sFileName);
+        ppArgv[0] = allocateAnsiStringMemory(sFileName);
 
-    #ifdef QT_DEBUG
-        qDebug("FileName %s",ppArgv[0]);
-    #endif
+#ifdef QT_DEBUG
+        qDebug("FileName %s", ppArgv[0]);
+#endif
 
-        qint32 nRet=execv(ppArgv[0],ppArgv); // TODO Unicode
+        qint32 nRet = execv(ppArgv[0], ppArgv);  // TODO Unicode
 
-        if(nRet==-1)
-        {
-            result.sStatus=QString("execv() failed: %1").arg(strerror(errno));
+        if (nRet == -1) {
+            result.sStatus = QString("execv() failed: %1").arg(strerror(errno));
 
-        #ifdef QT_DEBUG
-            qDebug("Status %s",result.sStatus.toLatin1().data());
-        #endif
+#ifdef QT_DEBUG
+            qDebug("Status %s", result.sStatus.toLatin1().data());
+#endif
         }
 
-        for(qint32 i=0;i<2;i++)
-        {
-            delete [] ppArgv[i];
+        for (qint32 i = 0; i < 2; i++) {
+            delete[] ppArgv[i];
         }
 
-        delete [] ppArgv;
+        delete[] ppArgv;
     }
 
     return result;
 }
 
-void XUnixDebugger::setPtraceOptions(qint64 nThreadID)
-{
+void XUnixDebugger::setPtraceOptions(qint64 nThreadID) {
     // TODO getOptions !!!
     // TODO result bool
 //    long options=PTRACE_O_TRACECLONE;
 //    long options=PTRACE_O_EXITKILL|PTRACE_O_TRACESYSGOOD|PTRACE_O_TRACEFORK;
 #if defined(Q_OS_LINUX)
-    long options=PTRACE_O_EXITKILL|PTRACE_O_TRACECLONE;
+    long options = PTRACE_O_EXITKILL | PTRACE_O_TRACECLONE;
     // PTRACE_O_TRACECLONE create thread
 
-    if(ptrace(PTRACE_SETOPTIONS,nThreadID,0,options)==-1)
-    {
-    #ifdef QT_DEBUG
+    if (ptrace(PTRACE_SETOPTIONS, nThreadID, 0, options) == -1) {
+#ifdef QT_DEBUG
         qDebug("Cannot PTRACE_SETOPTIONS");
-    #endif
+#endif
     }
 #endif
     // mb TODO
 }
 
-XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID,qint32 nOptions)
-{
-    STATE result={};
+XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID, qint32 nOptions) {
+    STATE result = {};
 
-    pid_t nThreadId=0;
-    qint32 nResult=0;
+    pid_t nThreadId = 0;
+    qint32 nResult = 0;
 
     // TODO a function
     // TODO Clone event
-    do
-    {
-        nThreadId=waitpid(nProcessID,&nResult,nOptions);
-    }
-    while((nThreadId==-1)&&(errno==EINTR));
+    do {
+        nThreadId = waitpid(nProcessID, &nResult, nOptions);
+    } while ((nThreadId == -1) && (errno == EINTR));
 
-    if(nThreadId<0)
-    {
-        qDebug("waitpid failed: %s",strerror(errno));
+    if (nThreadId < 0) {
+        qDebug("waitpid failed: %s", strerror(errno));
     }
 
-    if(nThreadId>0)
-    {
-        result.bIsValid=true;
-        result.nThreadId=nThreadId;
-        result.nAddress=getXInfoDB()->getCurrentInstructionPointer_Id(nThreadId);
+    if (nThreadId > 0) {
+        result.bIsValid = true;
+        result.nThreadId = nThreadId;
+        result.nAddress = getXInfoDB()->getCurrentInstructionPointer_Id(nThreadId);
 
-        siginfo_t sigInfo={};
+        siginfo_t sigInfo = {};
 
-        if(ptrace(PTRACE_GETSIGINFO,nThreadId,0,&sigInfo)<0)
-        {
-            qDebug("Error: %s",strerror(errno));
+        if (ptrace(PTRACE_GETSIGINFO, nThreadId, 0, &sigInfo) < 0) {
+            qDebug("Error: %s", strerror(errno));
         }
 
-        qDebug("si_code: %x",sigInfo.si_code);
-        qDebug("si_errno: %x",sigInfo.si_errno);
-        qDebug("si_signo: %x",sigInfo.si_signo);
+        qDebug("si_code: %x", sigInfo.si_code);
+        qDebug("si_errno: %x", sigInfo.si_errno);
+        qDebug("si_signo: %x", sigInfo.si_signo);
 
-        qDebug("si_pid: %x",sigInfo.si_pid);
-        qDebug("si_pid: %d",sigInfo.si_pid);
-        qDebug("si_uid: %x",sigInfo.si_uid);
-        qDebug("si_timerid: %x",sigInfo.si_timerid);
-        qDebug("si_overrun: %x",sigInfo.si_overrun);
+        qDebug("si_pid: %x", sigInfo.si_pid);
+        qDebug("si_pid: %d", sigInfo.si_pid);
+        qDebug("si_uid: %x", sigInfo.si_uid);
+        qDebug("si_timerid: %x", sigInfo.si_timerid);
+        qDebug("si_overrun: %x", sigInfo.si_overrun);
 
-        qDebug("si_status: %x",sigInfo.si_status);
-        qDebug("si_utime: %lx",sigInfo.si_utime);
-        qDebug("si_stime: %lx",sigInfo.si_stime);
+        qDebug("si_status: %x", sigInfo.si_status);
+        qDebug("si_utime: %lx", sigInfo.si_utime);
+        qDebug("si_stime: %lx", sigInfo.si_stime);
 
-        qDebug("si_value: %llx",(quint64)sigInfo.si_value.sival_int);
-        qDebug("si_int: %x",sigInfo.si_int);
-        qDebug("si_ptr: %llx",(quint64)sigInfo.si_ptr);
+        qDebug("si_value: %llx", (quint64)sigInfo.si_value.sival_int);
+        qDebug("si_int: %x", sigInfo.si_int);
+        qDebug("si_ptr: %llx", (quint64)sigInfo.si_ptr);
 
-        qDebug("si_addr: %llx",(quint64)sigInfo.si_addr);
-        qDebug("si_addr_lsb: %x",sigInfo.si_addr_lsb);
-        qDebug("si_lower: %llx",(quint64)sigInfo.si_lower);
-        qDebug("si_upper: %llx",(quint64)sigInfo.si_upper);
-        qDebug("si_pkey: %x",sigInfo.si_pkey);
-        qDebug("si_band: %lx",sigInfo.si_band);
-        qDebug("si_fd: %x",sigInfo.si_fd);
+        qDebug("si_addr: %llx", (quint64)sigInfo.si_addr);
+        qDebug("si_addr_lsb: %x", sigInfo.si_addr_lsb);
+        qDebug("si_lower: %llx", (quint64)sigInfo.si_lower);
+        qDebug("si_upper: %llx", (quint64)sigInfo.si_upper);
+        qDebug("si_pkey: %x", sigInfo.si_pkey);
+        qDebug("si_band: %lx", sigInfo.si_band);
+        qDebug("si_fd: %x", sigInfo.si_fd);
 
-        qDebug("si_call_addr: %llx",(quint64)sigInfo.si_call_addr);
-        qDebug("si_syscall: %x",sigInfo.si_syscall);
-        qDebug("si_arch: %x",sigInfo.si_arch);
+        qDebug("si_call_addr: %llx", (quint64)sigInfo.si_call_addr);
+        qDebug("si_syscall: %x", sigInfo.si_syscall);
+        qDebug("si_arch: %x", sigInfo.si_arch);
 
         // 80 = SI_KERNEL
 
-        if(sigInfo.si_code==TRAP_TRACE)
-        {
-            result.debuggerStatus=DEBUGGER_STATUS_STEP;
-            result.nCode=WSTOPSIG(nResult);
-        }
-        else if(sigInfo.si_code==SI_KERNEL)
-        {
-            result.nAddress=result.nAddress-1; // BP
-            result.debuggerStatus=DEBUGGER_STATUS_KERNEL;
-            result.nCode=WSTOPSIG(nResult);
-        }
-        else if(WIFSTOPPED(nResult))
-        {
-            result.debuggerStatus=DEBUGGER_STATUS_STOP;
-            result.nCode=WSTOPSIG(nResult);
+        if (sigInfo.si_code == TRAP_TRACE) {
+            result.debuggerStatus = DEBUGGER_STATUS_STEP;
+            result.nCode = WSTOPSIG(nResult);
+        } else if (sigInfo.si_code == SI_KERNEL) {
+            result.nAddress = result.nAddress - 1;  // BP
+            result.debuggerStatus = DEBUGGER_STATUS_KERNEL;
+            result.nCode = WSTOPSIG(nResult);
+        } else if (WIFSTOPPED(nResult)) {
+            result.debuggerStatus = DEBUGGER_STATUS_STOP;
+            result.nCode = WSTOPSIG(nResult);
 
-            if(WSTOPSIG(nResult)==SIGABRT)
-            {
+            if (WSTOPSIG(nResult) == SIGABRT) {
                 qDebug("process unexpectedly aborted");
+            } else {
             }
-            else
-            {
-
-            }
-            qDebug("WSTOPSIG %x",WSTOPSIG(nResult));
-        }
-        else if(WIFEXITED(nResult))
-        {
-            result.debuggerStatus=DEBUGGER_STATUS_EXIT;
-            result.nCode=WEXITSTATUS(nResult);
-        }
-        else if(WIFSIGNALED(nResult))
-        {
-            result.debuggerStatus=DEBUGGER_STATUS_SIGNAL;
-            result.nCode=WTERMSIG(nResult);
+            qDebug("WSTOPSIG %x", WSTOPSIG(nResult));
+        } else if (WIFEXITED(nResult)) {
+            result.debuggerStatus = DEBUGGER_STATUS_EXIT;
+            result.nCode = WEXITSTATUS(nResult);
+        } else if (WIFSIGNALED(nResult)) {
+            result.debuggerStatus = DEBUGGER_STATUS_SIGNAL;
+            result.nCode = WTERMSIG(nResult);
         }
         // TODO fast events
 
-        qDebug("STATUS: %x",nResult);
+        qDebug("STATUS: %x", nResult);
     }
 
     return result;
 }
 
-void XUnixDebugger::continueThread(qint64 nThreadID)
-{
+void XUnixDebugger::continueThread(qint64 nThreadID) {
     // TODO
 #if defined(Q_OS_LINUX)
-    if(ptrace(PTRACE_CONT,nThreadID,0,0))
-    {
+    if (ptrace(PTRACE_CONT, nThreadID, 0, 0)) {
         int wait_status;
-        waitpid(nThreadID,&wait_status,0);
+        waitpid(nThreadID, &wait_status, 0);
     }
 #endif
 #if defined(Q_OS_OSX)
-    ptrace(PT_CONTINUE,nThreadID,0,0);
+    ptrace(PT_CONTINUE, nThreadID, 0, 0);
 #endif
 
-//    int wait_status;
-//    waitpid(nThreadID,&wait_status,0);
+    //    int wait_status;
+    //    waitpid(nThreadID,&wait_status,0);
     // TODO result
 }
 
-bool XUnixDebugger::resumeThread(XProcess::HANDLEID handleID)
-{
-    bool bResult=false;
+bool XUnixDebugger::resumeThread(XProcess::HANDLEID handleID) {
+    bool bResult = false;
 #if defined(Q_OS_LINUX)
-    if(ptrace(PTRACE_CONT,handleID.nID,0,0))
-    {
+    if (ptrace(PTRACE_CONT, handleID.nID, 0, 0)) {
         int wait_status;
-        waitpid(handleID.nID,&wait_status,0);
+        waitpid(handleID.nID, &wait_status, 0);
     }
 #endif
     return bResult;
 }
 
-bool XUnixDebugger::_setStep(XProcess::HANDLEID handleID)
-{
+bool XUnixDebugger::_setStep(XProcess::HANDLEID handleID) {
     // TODO handle return
-    bool bResult=true;
+    bool bResult = true;
 #if defined(Q_OS_LINUX)
-    ptrace(PTRACE_SINGLESTEP,handleID.nID,0,0);
+    ptrace(PTRACE_SINGLESTEP, handleID.nID, 0, 0);
 #endif
 #if defined(Q_OS_OSX)
-    ptrace(PT_STEP,handleID.nID,0,0);
+    ptrace(PT_STEP, handleID.nID, 0, 0);
 #endif
-//    int wait_status;
-//    waitpid(handleID.nID,&wait_status,0);
-//    // TODO result
+    //    int wait_status;
+    //    waitpid(handleID.nID,&wait_status,0);
+    //    // TODO result
 
     return bResult;
 }
 
-void XUnixDebugger::startDebugLoop()
-{
+void XUnixDebugger::startDebugLoop() {
     stopDebugLoop();
 
-    g_pTimer=new QTimer(this);
+    g_pTimer = new QTimer(this);
 
-    connect(g_pTimer,SIGNAL(timeout()),this,SLOT(_debugEvent()));
+    connect(g_pTimer, SIGNAL(timeout()), this, SLOT(_debugEvent()));
 
     g_pTimer->start(N_N_DEDELAY);
 }
 
-void XUnixDebugger::stopDebugLoop()
-{
-    if(g_pTimer)
-    {
+void XUnixDebugger::stopDebugLoop() {
+    if (g_pTimer) {
         g_pTimer->stop();
 
         delete g_pTimer;
 
-        g_pTimer=nullptr;
+        g_pTimer = nullptr;
     }
 }
 
-bool XUnixDebugger::stepIntoById(X_ID nThreadId,XInfoDB::BPI bpInfo)
-{
-    return getXInfoDB()->stepInto_Id(nThreadId,bpInfo,true);
+bool XUnixDebugger::stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo) {
+    return getXInfoDB()->stepInto_Id(nThreadId, bpInfo, true);
 }
 
-bool XUnixDebugger::stepOverById(X_ID nThreadId,XInfoDB::BPI bpInfo)
-{
-    return getXInfoDB()->stepOver_Id(nThreadId,bpInfo,true);
+bool XUnixDebugger::stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo) {
+    return getXInfoDB()->stepOver_Id(nThreadId, bpInfo, true);
 }
 
-void XUnixDebugger::_debugEvent()
-{
-    if(isDebugActive())
-    {
-        qint64 nId=getXInfoDB()->getProcessInfo()->nProcessID;
+void XUnixDebugger::_debugEvent() {
+    if (isDebugActive()) {
+        qint64 nId = getXInfoDB()->getProcessInfo()->nProcessID;
 
-        STATE state=waitForSignal(nId,__WALL|WNOHANG);
+        STATE state = waitForSignal(nId, __WALL | WNOHANG);
 
-        if(state.bIsValid)
-        {
-            if( (state.debuggerStatus==DEBUGGER_STATUS_STEP)||
-                (state.debuggerStatus==DEBUGGER_STATUS_KERNEL))
-            {
-                XInfoDB::BREAKPOINT_INFO breakPointInfo={};
+        if (state.bIsValid) {
+            if ((state.debuggerStatus == DEBUGGER_STATUS_STEP) || (state.debuggerStatus == DEBUGGER_STATUS_KERNEL)) {
+                XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
 
-                bool bSuccess=false;
+                bool bSuccess = false;
 
-                if(state.debuggerStatus==DEBUGGER_STATUS_STEP)
-                {
-                    if(getXInfoDB()->getThreadBreakpoints()->contains(state.nThreadId))
-                    {
-                        breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
-                        breakPointInfo.bpInfo=XInfoDB::BPI_STEPINTO; // TODO STEPOVER
+                if (state.debuggerStatus == DEBUGGER_STATUS_STEP) {
+                    if (getXInfoDB()->getThreadBreakpoints()->contains(state.nThreadId)) {
+                        breakPointInfo.bpType = XInfoDB::BPT_CODE_HARDWARE;
+                        breakPointInfo.bpInfo = XInfoDB::BPI_STEPINTO;  // TODO STEPOVER
 
-                        bSuccess=true;
-                    }
-                    else
-                    {
+                        bSuccess = true;
+                    } else {
                         // TODO not custom trace
                     }
-                }
-                else if(state.debuggerStatus==DEBUGGER_STATUS_KERNEL)
-                {
-                    if(getXInfoDB()->isBreakPointPresent(state.nAddress,XInfoDB::BPT_CODE_SOFTWARE))
-                    {
+                } else if (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) {
+                    if (getXInfoDB()->isBreakPointPresent(state.nAddress, XInfoDB::BPT_CODE_SOFTWARE)) {
                         // TODO Check suspend all threads
-                        XInfoDB::BREAKPOINT _currentBP=getXInfoDB()->findBreakPointByAddress(state.nAddress);
-                        breakPointInfo.bpType=_currentBP.bpType;
-                        breakPointInfo.bpInfo=_currentBP.bpInfo;
+                        XInfoDB::BREAKPOINT _currentBP = getXInfoDB()->findBreakPointByAddress(state.nAddress);
+                        breakPointInfo.bpType = _currentBP.bpType;
+                        breakPointInfo.bpInfo = _currentBP.bpInfo;
 
-                        getXInfoDB()->setCurrentIntructionPointer_Id(state.nThreadId,state.nAddress); // go to prev instruction address
+                        getXInfoDB()->setCurrentIntructionPointer_Id(state.nThreadId, state.nAddress);  // go to prev instruction address
 
-                        getXInfoDB()->removeBreakPoint(state.nAddress,_currentBP.bpType);
+                        getXInfoDB()->removeBreakPoint(state.nAddress, _currentBP.bpType);
 
                         // TODO restore
 
-                        bSuccess=true;
+                        bSuccess = true;
                     }
                 }
 
-                if(bSuccess)
-                {
-                    breakPointInfo.nAddress=state.nAddress;
-                    breakPointInfo.pHProcessMemoryIO=getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
-                    breakPointInfo.pHProcessMemoryQuery=getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
-                    breakPointInfo.nProcessID=getXInfoDB()->getProcessInfo()->nProcessID;
-                    breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nMainThreadID;
+                if (bSuccess) {
+                    breakPointInfo.nAddress = state.nAddress;
+                    breakPointInfo.pHProcessMemoryIO = getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
+                    breakPointInfo.pHProcessMemoryQuery = getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
+                    breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
+                    breakPointInfo.nThreadID = getXInfoDB()->getProcessInfo()->nMainThreadID;
 
                     emit eventBreakPoint(&breakPointInfo);
                 }

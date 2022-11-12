@@ -21,22 +21,21 @@
 #ifndef XABSTRACTDEBUGGER_H
 #define XABSTRACTDEBUGGER_H
 
+#include <QThread>
+
 #include "xbinary.h"
 #include "xcapstone.h"
+#include "xinfodb.h"
 #include "xprocess.h"
 #include "xprocessdevice.h"
-#include "xinfodb.h"
-#include <QThread>
 
 // TODO Attach
 // TODO Detach
-class XAbstractDebugger : public QObject
-{
+class XAbstractDebugger : public QObject {
     Q_OBJECT
-    
+
 public:
-    struct OPTIONS
-    {
+    struct OPTIONS {
         QString sFileName;
         QString sDirectory;
         QString sArguments;
@@ -44,26 +43,25 @@ public:
         bool bBreakpointOnSystem;
         bool bBreakpointOnProgramEntryPoint;
         bool bBreakPointOnDLLMain;
-        bool bBreakPointOnTLSFunction;      // For Windows TLS
+        bool bBreakPointOnTLSFunction;  // For Windows TLS
     };
 
-    enum MT
-    {
-        MT_UNKNOWN=0,
+    enum MT {
+        MT_UNKNOWN = 0,
         MT_INFO,
         MT_WARNING,
         MT_ERROR
     };
 
-    explicit XAbstractDebugger(QObject *pParent,XInfoDB *pXInfoDB);
+    explicit XAbstractDebugger(QObject *pParent, XInfoDB *pXInfoDB);
     void setXInfoDB(XInfoDB *pXInfoDB);
     XInfoDB *getXInfoDB();
-    virtual bool load()=0;
+    virtual bool load() = 0;
     virtual bool run();
     virtual bool stop();
     virtual void cleanUp();
-    virtual QString getArch()=0;
-    virtual XBinary::MODE getMode()=0;
+    virtual QString getArch() = 0;
+    virtual XBinary::MODE getMode() = 0;
 
     void setDisasmMode(XBinary::DM disasmMode);
     void setTraceFileName(QString sTraceFileName);
@@ -73,38 +71,38 @@ public:
     void setOptions(OPTIONS options);
     OPTIONS *getOptions();
 
-    void _messageString(MT messageType,QString sText);
+    void _messageString(MT messageType, QString sText);
 
-    qint64 getFunctionAddress(QString sFunctionName); // TODO move to XInfoDB
-    QString getAddressSymbolString(quint64 nAddress); // TODO move to XInfoDB
+    qint64 getFunctionAddress(QString sFunctionName);  // TODO move to XInfoDB
+    QString getAddressSymbolString(quint64 nAddress);  // TODO move to XInfoDB
 
-    qint64 getRetAddress(XProcess::HANDLEID handleID); // TODO move to XInfoDB
+    qint64 getRetAddress(XProcess::HANDLEID handleID);  // TODO move to XInfoDB
 
-    XCapstone::DISASM_STRUCT disasm(quint64 nAddress); // TODO move to XInfoDB
+    XCapstone::DISASM_STRUCT disasm(quint64 nAddress);  // TODO move to XInfoDB
 
-    bool isUserCode(quint64 nAddress); // TODO move to XInfoDB
-    bool bIsSystemCode(quint64 nAddress); // TODO move to XInfoDB
+    bool isUserCode(quint64 nAddress);     // TODO move to XInfoDB
+    bool bIsSystemCode(quint64 nAddress);  // TODO move to XInfoDB
 
     bool dumpToFile(QString sFileName);
 
-    char *allocateAnsiStringMemory(QString sFileName); // TODO move to XInfoDB
+    char *allocateAnsiStringMemory(QString sFileName);  // TODO move to XInfoDB
 
     void setDebugActive(bool bState);
     bool isDebugActive();
 
-    virtual bool stepIntoByHandle(X_HANDLE hThread,XInfoDB::BPI bpInfo);
-    virtual bool stepIntoById(X_ID nThreadId,XInfoDB::BPI bpInfo);
-    virtual bool stepOverByHandle(X_HANDLE hThread,XInfoDB::BPI bpInfo);
-    virtual bool stepOverById(X_ID nThreadId,XInfoDB::BPI bpInfo);
+    virtual bool stepIntoByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo);
+    virtual bool stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo);
+    virtual bool stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo);
+    virtual bool stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo);
     void wait();
 
 public slots:
     void process();
-    void testSlot(X_ID nThreadId); // TODO remove
+    void testSlot(X_ID nThreadId);  // TODO remove
 
 signals:
-    void cannotLoadFile(QString sFileName); // TODO send if cannot load file to debugger
-    void messageString(XAbstractDebugger::MT messageType,QString sText);
+    void cannotLoadFile(QString sFileName);  // TODO send if cannot load file to debugger
+    void messageString(XAbstractDebugger::MT messageType, QString sText);
 
     void eventCreateProcess(XInfoDB::PROCESS_INFO *pProcessInfo);
     void eventExitProcess(XInfoDB::EXITPROCESS_INFO *pExitProcessInfo);
@@ -125,4 +123,4 @@ private:
     bool g_bIsDebugActive;
 };
 
-#endif // XABSTRACTDEBUGGER_H
+#endif  // XABSTRACTDEBUGGER_H

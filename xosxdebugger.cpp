@@ -20,88 +20,79 @@
  */
 #include "xosxdebugger.h"
 
-XOSXDebugger::XOSXDebugger(QObject *pParent,XInfoDB *pXInfoDB) : XUnixDebugger(pParent,pXInfoDB)
-{
-
+XOSXDebugger::XOSXDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XUnixDebugger(pParent, pXInfoDB) {
 }
 
-bool XOSXDebugger::load()
-{
-    bool bResult=false;
+bool XOSXDebugger::load() {
+    bool bResult = false;
 
-    QString sFileName=getOptions()->sFileName;
-    QString sDirectory=getOptions()->sDirectory;
+    QString sFileName = getOptions()->sFileName;
+    QString sDirectory = getOptions()->sDirectory;
 
-    quint32 nMapSize=0x1000;
-    char *pMapMemory=(char *)mmap(nullptr,nMapSize,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
+    quint32 nMapSize = 0x1000;
+    char *pMapMemory = (char *)mmap(nullptr, nMapSize, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
-    XBinary::_zeroMemory(pMapMemory,nMapSize);
+    XBinary::_zeroMemory(pMapMemory, nMapSize);
 
-    if(XBinary::isFileExists(sFileName))
-    {
-        qint32 nProcessID=fork();
+    if (XBinary::isFileExists(sFileName)) {
+        qint32 nProcessID = fork();
 
-        if(nProcessID==0)
-        {
+        if (nProcessID == 0) {
             // Child process
-            //ptrace(PTRACE_TRACEME,0,nullptr,nullptr);
-            ptrace(PT_TRACE_ME,0,0,0);
+            // ptrace(PTRACE_TRACEME,0,nullptr,nullptr);
+            ptrace(PT_TRACE_ME, 0, 0, 0);
 
             // TODO redirect console
 
-            EXECUTEPROCESS ep=executeProcess(sFileName,sDirectory);
+            EXECUTEPROCESS ep = executeProcess(sFileName, sDirectory);
 
-            XBinary::_copyMemory(pMapMemory,ep.sStatus.toLatin1().data(),ep.sStatus.toLatin1().size());
+            XBinary::_copyMemory(pMapMemory, ep.sStatus.toLatin1().data(), ep.sStatus.toLatin1().size());
 
             // Never reach
             abort();
-        }
-        else if(nProcessID>0)
-        {
+        } else if (nProcessID > 0) {
             // Parent
-        #ifdef QT_DEBUG
+#ifdef QT_DEBUG
             qDebug("Forked");
-        #endif
+#endif
 
-            QString sStatusString=pMapMemory;
-            munmap(pMapMemory,nMapSize);
+            QString sStatusString = pMapMemory;
+            munmap(pMapMemory, nMapSize);
 
-        #ifdef QT_DEBUG
-            if(sStatusString!="")
-            {
-                qDebug("Status %s",sStatusString.toLatin1().data());
+#ifdef QT_DEBUG
+            if (sStatusString != "") {
+                qDebug("Status %s", sStatusString.toLatin1().data());
             }
-        #endif
+#endif
 
             setDebugActive(true);
 
-            STATE _stateStart=waitForSignal(nProcessID); // TODO result
+            STATE _stateStart = waitForSignal(nProcessID);  // TODO result
 
-            if(_stateStart.debuggerStatus==DEBUGGER_STATUS_STOP)
-            {
-//                        setPtraceOptions(nProcessID); // Set options
+            if (_stateStart.debuggerStatus == DEBUGGER_STATUS_STOP) {
+                //                        setPtraceOptions(nProcessID); // Set options
 
-                XInfoDB::PROCESS_INFO processInfo={};
+                XInfoDB::PROCESS_INFO processInfo = {};
 
-                processInfo.nProcessID=nProcessID;
-                processInfo.nMainThreadID=nProcessID;
-                processInfo.sFileName=sFileName;
-//                        processInfo.sBaseFileName;
-//                        processInfo.nImageBase;
-//                        processInfo.nImageSize;
-//                        processInfo.nStartAddress;
-//                        processInfo.nThreadLocalBase;
-                processInfo.hProcess=XProcess::openProcess(nProcessID);
-//                        processInfo.hMainThread;
+                processInfo.nProcessID = nProcessID;
+                processInfo.nMainThreadID = nProcessID;
+                processInfo.sFileName = sFileName;
+                //                        processInfo.sBaseFileName;
+                //                        processInfo.nImageBase;
+                //                        processInfo.nImageSize;
+                //                        processInfo.nStartAddress;
+                //                        processInfo.nThreadLocalBase;
+                processInfo.hProcess = XProcess::openProcess(nProcessID);
+                //                        processInfo.hMainThread;
 
                 getXInfoDB()->setProcessInfo(processInfo);
 
                 emit eventCreateProcess(&processInfo);
 
-                XInfoDB::THREAD_INFO threadInfo={};
+                XInfoDB::THREAD_INFO threadInfo = {};
 
-                threadInfo.nThreadID=nProcessID;
-                threadInfo.threadStatus=XInfoDB::THREAD_STATUS_PAUSED;
+                threadInfo.nThreadID = nProcessID;
+                threadInfo.threadStatus = XInfoDB::THREAD_STATUS_PAUSED;
 
                 getXInfoDB()->addThreadInfo(&threadInfo);
 
@@ -109,22 +100,20 @@ bool XOSXDebugger::load()
 
                 // TODO if
 
-                XInfoDB::BREAKPOINT_INFO breakPointInfo={};
+                XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
 
-                breakPointInfo.nAddress=getXInfoDB()->getCurrentInstructionPointer_Id(nProcessID);
-                breakPointInfo.bpType=XInfoDB::BPT_CODE_HARDWARE;
-                breakPointInfo.bpInfo=XInfoDB::BPI_PROCESSENTRYPOINT;
+                breakPointInfo.nAddress = getXInfoDB()->getCurrentInstructionPointer_Id(nProcessID);
+                breakPointInfo.bpType = XInfoDB::BPT_CODE_HARDWARE;
+                breakPointInfo.bpInfo = XInfoDB::BPI_PROCESSENTRYPOINT;
 
-                breakPointInfo.hProcess=getXInfoDB()->getProcessInfo()->hProcess;
-                breakPointInfo.nProcessID=getXInfoDB()->getProcessInfo()->nProcessID;
-                breakPointInfo.nThreadID=getXInfoDB()->getProcessInfo()->nMainThreadID;
+                breakPointInfo.hProcess = getXInfoDB()->getProcessInfo()->hProcess;
+                breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
+                breakPointInfo.nThreadID = getXInfoDB()->getProcessInfo()->nMainThreadID;
 
-//                getXInfoDB()->suspendAllThreads();
+                //                getXInfoDB()->suspendAllThreads();
                 emit eventBreakPoint(&breakPointInfo);
             }
-        }
-        else if(nProcessID==-1)
-        {
+        } else if (nProcessID == -1) {
             // TODO error
         }
     }
@@ -132,19 +121,15 @@ bool XOSXDebugger::load()
     return bResult;
 }
 
-void XOSXDebugger::cleanUp()
-{
-
+void XOSXDebugger::cleanUp() {
 }
 
-QString XOSXDebugger::getArch()
-{
+QString XOSXDebugger::getArch() {
     // TODO
     return "AMD64";
 }
 
-XBinary::MODE XOSXDebugger::getMode()
-{
+XBinary::MODE XOSXDebugger::getMode() {
     // TODO
     return XBinary::MODE_64;
 }
