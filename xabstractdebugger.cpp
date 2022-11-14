@@ -182,8 +182,7 @@ XCapstone::DISASM_STRUCT XAbstractDebugger::disasm(quint64 nAddress) {
 bool XAbstractDebugger::isUserCode(quint64 nAddress) {
     bool bResult = false;
 
-    if ((getXInfoDB()->getProcessInfo()->nImageBase <= nAddress) &&
-        (getXInfoDB()->getProcessInfo()->nImageBase + getXInfoDB()->getProcessInfo()->nImageSize > nAddress)) {
+    if ((getXInfoDB()->getProcessInfo()->nImageBase <= nAddress) && (getXInfoDB()->getProcessInfo()->nImageBase + getXInfoDB()->getProcessInfo()->nImageSize > nAddress)) {
         bResult = true;
     }
 

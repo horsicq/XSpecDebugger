@@ -45,8 +45,8 @@ bool XWindowsDebugger::load() {
     sturtupInfo.cb = sizeof(sturtupInfo);
 
     QString sArguments = QString("\"%1\" \"%2\"").arg(getOptions()->sFileName, getOptions()->sArguments);
-    BOOL bCreateProcess = CreateProcessW((const wchar_t *)(getOptions()->sFileName.utf16()), (wchar_t *)sArguments.utf16(), nullptr, nullptr, 0, nFlags,
-                                         nullptr, nullptr, &sturtupInfo, &processInfo);
+    BOOL bCreateProcess = CreateProcessW((const wchar_t *)(getOptions()->sFileName.utf16()), (wchar_t *)sArguments.utf16(), nullptr, nullptr, 0, nFlags, nullptr, nullptr,
+                                         &sturtupInfo, &processInfo);
 
     if (bCreateProcess) {
         cleanUp();
@@ -449,8 +449,7 @@ quint32 XWindowsDebugger::on_LOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent) {
 }
 
 quint32 XWindowsDebugger::on_UNLOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent) {
-    XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo =
-        getXInfoDB()->getSharedObjectInfos()->value((qint64)(pDebugEvent->u.UnloadDll.lpBaseOfDll));  // TODO make findByAddressFunction
+    XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo = getXInfoDB()->getSharedObjectInfos()->value((qint64)(pDebugEvent->u.UnloadDll.lpBaseOfDll));  // TODO make findByAddressFunction
     getXInfoDB()->removeSharedObjectInfo(&sharedObjectInfo);
 
     // XBinary::removeFunctionAddressesByModule(&g_mapFunctionAddresses,sharedObjectInfo.nImageBase);
@@ -467,11 +466,9 @@ quint32 XWindowsDebugger::on_OUTPUT_DEBUG_STRING_EVENT(DEBUG_EVENT *pDebugEvent)
     debugStringInfo.nThreadID = pDebugEvent->dwThreadId;
 
     if (pDebugEvent->u.DebugString.fUnicode) {
-        debugStringInfo.sDebugString =
-            getXInfoDB()->read_unicodeString((qint64)(pDebugEvent->u.DebugString.lpDebugStringData), pDebugEvent->u.DebugString.nDebugStringLength);
+        debugStringInfo.sDebugString = getXInfoDB()->read_unicodeString((qint64)(pDebugEvent->u.DebugString.lpDebugStringData), pDebugEvent->u.DebugString.nDebugStringLength);
     } else {
-        debugStringInfo.sDebugString =
-            getXInfoDB()->read_ansiString((qint64)(pDebugEvent->u.DebugString.lpDebugStringData), pDebugEvent->u.DebugString.nDebugStringLength);
+        debugStringInfo.sDebugString = getXInfoDB()->read_ansiString((qint64)(pDebugEvent->u.DebugString.lpDebugStringData), pDebugEvent->u.DebugString.nDebugStringLength);
     }
 #ifdef QT_DEBUG
     qDebug(debugStringInfo.sDebugString.toLatin1().data());
