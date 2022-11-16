@@ -20,10 +20,12 @@
  */
 #include "xlinuxdebugger.h"
 
-XLinuxDebugger::XLinuxDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XUnixDebugger(pParent, pXInfoDB) {
+XLinuxDebugger::XLinuxDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XUnixDebugger(pParent, pXInfoDB)
+{
 }
 
-bool XLinuxDebugger::load() {
+bool XLinuxDebugger::load()
+{
     bool bResult = false;
 
     QString sFileName = getOptions()->sFileName;
@@ -133,15 +135,18 @@ bool XLinuxDebugger::load() {
     return bResult;
 }
 
-void XLinuxDebugger::cleanUp() {
+void XLinuxDebugger::cleanUp()
+{
 }
 
-QString XLinuxDebugger::getArch() {
+QString XLinuxDebugger::getArch()
+{
     // TODO
     return "AMD64";
 }
 
-XBinary::MODE XLinuxDebugger::getMode() {
+XBinary::MODE XLinuxDebugger::getMode()
+{
     // TODO
     return XBinary::MODE_64;
 }

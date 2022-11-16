@@ -20,10 +20,12 @@
  */
 #include "xosxdebugger.h"
 
-XOSXDebugger::XOSXDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XUnixDebugger(pParent, pXInfoDB) {
+XOSXDebugger::XOSXDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XUnixDebugger(pParent, pXInfoDB)
+{
 }
 
-bool XOSXDebugger::load() {
+bool XOSXDebugger::load()
+{
     bool bResult = false;
 
     QString sFileName = getOptions()->sFileName;
@@ -121,15 +123,18 @@ bool XOSXDebugger::load() {
     return bResult;
 }
 
-void XOSXDebugger::cleanUp() {
+void XOSXDebugger::cleanUp()
+{
 }
 
-QString XOSXDebugger::getArch() {
+QString XOSXDebugger::getArch()
+{
     // TODO
     return "AMD64";
 }
 
-XBinary::MODE XOSXDebugger::getMode() {
+XBinary::MODE XOSXDebugger::getMode()
+{
     // TODO
     return XBinary::MODE_64;
 }

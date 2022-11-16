@@ -20,15 +20,18 @@
  */
 #include "xwindowsdebugger.h"
 
-XWindowsDebugger::XWindowsDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent, pXInfoDB) {
+XWindowsDebugger::XWindowsDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent, pXInfoDB)
+{
     XWindowsDebugger::cleanUp();
 }
 
-bool XWindowsDebugger::run() {
+bool XWindowsDebugger::run()
+{
     return getXInfoDB()->resumeAllThreads();
 }
 
-bool XWindowsDebugger::load() {
+bool XWindowsDebugger::load()
+{
     bool bResult = false;
 
     qint32 nFlags = DEBUG_PROCESS | DEBUG_ONLY_THIS_PROCESS | CREATE_SUSPENDED;  // TODO check CREATE_UNICODE_ENVIRONMENT | CREATE_NEW_CONSOLE;
@@ -104,11 +107,13 @@ bool XWindowsDebugger::load() {
     return bResult;
 }
 
-bool XWindowsDebugger::stop() {
+bool XWindowsDebugger::stop()
+{
     return (bool)TerminateProcess(getXInfoDB()->getProcessInfo()->hProcess, 0);
 }
 
-void XWindowsDebugger::cleanUp() {
+void XWindowsDebugger::cleanUp()
+{
     XWindowsDebugger::stop();
 
     XAbstractDebugger::cleanUp();
@@ -116,7 +121,8 @@ void XWindowsDebugger::cleanUp() {
     g_mapThreadBPToRestore.clear();
 }
 
-QString XWindowsDebugger::getArch() {
+QString XWindowsDebugger::getArch()
+{
     QString sResult;
     // TODO ARM!
 #ifdef Q_PROCESSOR_X86_32
@@ -128,7 +134,8 @@ QString XWindowsDebugger::getArch() {
     return sResult;
 }
 
-XBinary::MODE XWindowsDebugger::getMode() {
+XBinary::MODE XWindowsDebugger::getMode()
+{
     XBinary::MODE result = XBinary::MODE_32;
 #ifdef Q_PROCESSOR_X86_32
     result = XBinary::MODE_32;
@@ -139,7 +146,8 @@ XBinary::MODE XWindowsDebugger::getMode() {
     return result;
 }
 
-bool XWindowsDebugger::stepIntoByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo) {
+bool XWindowsDebugger::stepIntoByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo)
+{
     bool bResult = false;
 
     bResult = getXInfoDB()->stepInto_Handle(hThread, bpInfo, true);
@@ -151,7 +159,8 @@ bool XWindowsDebugger::stepIntoByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo) {
     return bResult;
 }
 
-bool XWindowsDebugger::stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo) {
+bool XWindowsDebugger::stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo)
+{
     bool bResult = false;
 
     bResult = getXInfoDB()->stepOver_Handle(hThread, bpInfo, true);
@@ -163,7 +172,8 @@ bool XWindowsDebugger::stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo) {
     return bResult;
 }
 
-quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent) {
+quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
+{
     quint32 nResult = DBG_EXCEPTION_NOT_HANDLED;
 
     quint32 nExceptionCode = pDebugEvent->u.Exception.ExceptionRecord.ExceptionCode;
@@ -342,7 +352,8 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent) {
     return nResult;
 }
 
-quint32 XWindowsDebugger::on_CREATE_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent) {
+quint32 XWindowsDebugger::on_CREATE_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
+{
     XInfoDB::THREAD_INFO threadInfo = {};
     threadInfo.nThreadID = pDebugEvent->dwThreadId;
     threadInfo.hThread = pDebugEvent->u.CreateThread.hThread;
@@ -355,7 +366,8 @@ quint32 XWindowsDebugger::on_CREATE_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     return DBG_CONTINUE;
 }
 
-quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent) {
+quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
+{
     XInfoDB::PROCESS_INFO processInfo = {};
     processInfo.nProcessID = pDebugEvent->dwProcessId;
     processInfo.nMainThreadID = pDebugEvent->dwThreadId;
@@ -403,7 +415,8 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
     return DBG_CONTINUE;
 }
 
-quint32 XWindowsDebugger::on_EXIT_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent) {
+quint32 XWindowsDebugger::on_EXIT_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
+{
     XInfoDB::THREAD_INFO threadInfo = getXInfoDB()->findThreadInfoByID((qint64)(pDebugEvent->dwThreadId));
     getXInfoDB()->removeThreadInfo(threadInfo.nThreadID);
 
@@ -416,7 +429,8 @@ quint32 XWindowsDebugger::on_EXIT_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent) {
     return DBG_CONTINUE;
 }
 
-quint32 XWindowsDebugger::on_EXIT_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent) {
+quint32 XWindowsDebugger::on_EXIT_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
+{
     XInfoDB::EXITPROCESS_INFO exitProcessInfo = {};
     exitProcessInfo.nProcessID = pDebugEvent->dwProcessId;
     exitProcessInfo.nThreadID = pDebugEvent->dwThreadId;
@@ -432,7 +446,8 @@ quint32 XWindowsDebugger::on_EXIT_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent) 
     return DBG_CONTINUE;
 }
 
-quint32 XWindowsDebugger::on_LOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent) {
+quint32 XWindowsDebugger::on_LOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
+{
     XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo = {};
     sharedObjectInfo.nImageBase = (qint64)(pDebugEvent->u.LoadDll.lpBaseOfDll);
     sharedObjectInfo.nImageSize = XProcess::getRegionAllocationSize(getXInfoDB()->getProcessInfo()->hProcess, sharedObjectInfo.nImageBase);
@@ -448,7 +463,8 @@ quint32 XWindowsDebugger::on_LOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent) {
     return DBG_CONTINUE;
 }
 
-quint32 XWindowsDebugger::on_UNLOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent) {
+quint32 XWindowsDebugger::on_UNLOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
+{
     XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo = getXInfoDB()->getSharedObjectInfos()->value((qint64)(pDebugEvent->u.UnloadDll.lpBaseOfDll));  // TODO make findByAddressFunction
     getXInfoDB()->removeSharedObjectInfo(&sharedObjectInfo);
 
@@ -461,7 +477,8 @@ quint32 XWindowsDebugger::on_UNLOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent) {
     return DBG_CONTINUE;
 }
 
-quint32 XWindowsDebugger::on_OUTPUT_DEBUG_STRING_EVENT(DEBUG_EVENT *pDebugEvent) {
+quint32 XWindowsDebugger::on_OUTPUT_DEBUG_STRING_EVENT(DEBUG_EVENT *pDebugEvent)
+{
     XInfoDB::DEBUGSTRING_INFO debugStringInfo = {};
     debugStringInfo.nThreadID = pDebugEvent->dwThreadId;
 
@@ -478,7 +495,8 @@ quint32 XWindowsDebugger::on_OUTPUT_DEBUG_STRING_EVENT(DEBUG_EVENT *pDebugEvent)
     return DBG_CONTINUE;
 }
 
-quint32 XWindowsDebugger::on_RIP_EVENT(DEBUG_EVENT *pDebugEvent) {
+quint32 XWindowsDebugger::on_RIP_EVENT(DEBUG_EVENT *pDebugEvent)
+{
 #ifdef QT_DEBUG
     qDebug("on_RIP_EVENT");
 #endif

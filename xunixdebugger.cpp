@@ -20,16 +20,19 @@
  */
 #include "xunixdebugger.h"
 
-XUnixDebugger::XUnixDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent, pXInfoDB) {
+XUnixDebugger::XUnixDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent, pXInfoDB)
+{
     g_pTimer = nullptr;
 }
 
-bool XUnixDebugger::run() {
+bool XUnixDebugger::run()
+{
     // TODO
     return getXInfoDB()->resumeAllThreads();
 }
 
-bool XUnixDebugger::stop() {
+bool XUnixDebugger::stop()
+{
     bool bResult = false;
 
     if (kill(getXInfoDB()->getProcessInfo()->nProcessID, SIGKILL) != -1) {
@@ -43,7 +46,8 @@ bool XUnixDebugger::stop() {
     return bResult;
 }
 
-void XUnixDebugger::cleanUp() {
+void XUnixDebugger::cleanUp()
+{
     XUnixDebugger::stop();
     XUnixDebugger::wait();
     // TODO stopDebugEvent
@@ -60,7 +64,8 @@ void XUnixDebugger::cleanUp() {
 #endif
 }
 
-XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName, QString sDirectory) {
+XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName, QString sDirectory)
+{
     EXECUTEPROCESS result = {};
 
     result.sStatus = "Error";
@@ -96,7 +101,8 @@ XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName, Q
     return result;
 }
 
-void XUnixDebugger::setPtraceOptions(qint64 nThreadID) {
+void XUnixDebugger::setPtraceOptions(qint64 nThreadID)
+{
     // TODO getOptions !!!
     // TODO result bool
 //    long options=PTRACE_O_TRACECLONE;
@@ -114,7 +120,8 @@ void XUnixDebugger::setPtraceOptions(qint64 nThreadID) {
     // mb TODO
 }
 
-XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID, qint32 nOptions) {
+XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID, qint32 nOptions)
+{
     STATE result = {};
 
     pid_t nThreadId = 0;
@@ -204,7 +211,8 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID, qint32 nOpt
     return result;
 }
 
-void XUnixDebugger::continueThread(qint64 nThreadID) {
+void XUnixDebugger::continueThread(qint64 nThreadID)
+{
     // TODO
 #if defined(Q_OS_LINUX)
     if (ptrace(PTRACE_CONT, nThreadID, 0, 0)) {
@@ -221,7 +229,8 @@ void XUnixDebugger::continueThread(qint64 nThreadID) {
     // TODO result
 }
 
-bool XUnixDebugger::resumeThread(XProcess::HANDLEID handleID) {
+bool XUnixDebugger::resumeThread(XProcess::HANDLEID handleID)
+{
     bool bResult = false;
 #if defined(Q_OS_LINUX)
     if (ptrace(PTRACE_CONT, handleID.nID, 0, 0)) {
@@ -232,7 +241,8 @@ bool XUnixDebugger::resumeThread(XProcess::HANDLEID handleID) {
     return bResult;
 }
 
-bool XUnixDebugger::_setStep(XProcess::HANDLEID handleID) {
+bool XUnixDebugger::_setStep(XProcess::HANDLEID handleID)
+{
     // TODO handle return
     bool bResult = true;
 #if defined(Q_OS_LINUX)
@@ -248,7 +258,8 @@ bool XUnixDebugger::_setStep(XProcess::HANDLEID handleID) {
     return bResult;
 }
 
-void XUnixDebugger::startDebugLoop() {
+void XUnixDebugger::startDebugLoop()
+{
     stopDebugLoop();
 
     g_pTimer = new QTimer(this);
@@ -258,7 +269,8 @@ void XUnixDebugger::startDebugLoop() {
     g_pTimer->start(N_N_DEDELAY);
 }
 
-void XUnixDebugger::stopDebugLoop() {
+void XUnixDebugger::stopDebugLoop()
+{
     if (g_pTimer) {
         g_pTimer->stop();
 
@@ -268,15 +280,18 @@ void XUnixDebugger::stopDebugLoop() {
     }
 }
 
-bool XUnixDebugger::stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo) {
+bool XUnixDebugger::stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo)
+{
     return getXInfoDB()->stepInto_Id(nThreadId, bpInfo, true);
 }
 
-bool XUnixDebugger::stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo) {
+bool XUnixDebugger::stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo)
+{
     return getXInfoDB()->stepOver_Id(nThreadId, bpInfo, true);
 }
 
-void XUnixDebugger::_debugEvent() {
+void XUnixDebugger::_debugEvent()
+{
     if (isDebugActive()) {
         qint64 nId = getXInfoDB()->getProcessInfo()->nProcessID;
 

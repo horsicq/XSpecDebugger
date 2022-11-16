@@ -20,21 +20,25 @@
  */
 #include "xabstractdebugger.h"
 
-XAbstractDebugger::XAbstractDebugger(QObject *pParent, XInfoDB *pXInfoDB) : QObject(pParent) {
+XAbstractDebugger::XAbstractDebugger(QObject *pParent, XInfoDB *pXInfoDB) : QObject(pParent)
+{
     g_handle = 0;
     g_bIsDebugActive = false;
     g_pXInfoDB = pXInfoDB;
 }
 
-void XAbstractDebugger::setXInfoDB(XInfoDB *pXInfoDB) {
+void XAbstractDebugger::setXInfoDB(XInfoDB *pXInfoDB)
+{
     g_pXInfoDB = pXInfoDB;
 }
 
-XInfoDB *XAbstractDebugger::getXInfoDB() {
+XInfoDB *XAbstractDebugger::getXInfoDB()
+{
     return g_pXInfoDB;
 }
 
-bool XAbstractDebugger::run() {
+bool XAbstractDebugger::run()
+{
 #ifdef QT_DEBUG
     qDebug("TODO XAbstractDebugger::run");
 #endif
@@ -42,7 +46,8 @@ bool XAbstractDebugger::run() {
     return false;
 }
 
-bool XAbstractDebugger::stop() {
+bool XAbstractDebugger::stop()
+{
 #ifdef QT_DEBUG
     qDebug("TODO XAbstractDebugger::stop");
 #endif
@@ -50,46 +55,55 @@ bool XAbstractDebugger::stop() {
     return false;
 }
 
-void XAbstractDebugger::cleanUp() {
+void XAbstractDebugger::cleanUp()
+{
     XCapstone::closeHandle(&g_handle);
 }
 
-void XAbstractDebugger::setDisasmMode(XBinary::DM disasmMode) {
+void XAbstractDebugger::setDisasmMode(XBinary::DM disasmMode)
+{
     XCapstone::openHandle(disasmMode, &g_handle, true);
 }
 
-void XAbstractDebugger::setTraceFileName(QString sTraceFileName) {
+void XAbstractDebugger::setTraceFileName(QString sTraceFileName)
+{
     g_sTraceFileName = sTraceFileName;
 }
 
-void XAbstractDebugger::clearTraceFile() {
+void XAbstractDebugger::clearTraceFile()
+{
     if (g_sTraceFileName != "") {
         XBinary::clearFile(g_sTraceFileName);
     }
 }
 
-void XAbstractDebugger::writeToTraceFile(QString sString) {
+void XAbstractDebugger::writeToTraceFile(QString sString)
+{
     if (g_sTraceFileName != "") {
         XBinary::appendToFile(g_sTraceFileName, sString);
     }
 }
 
-void XAbstractDebugger::setOptions(XAbstractDebugger::OPTIONS options) {
+void XAbstractDebugger::setOptions(XAbstractDebugger::OPTIONS options)
+{
     g_options = options;
 }
 
-XAbstractDebugger::OPTIONS *XAbstractDebugger::getOptions() {
+XAbstractDebugger::OPTIONS *XAbstractDebugger::getOptions()
+{
     return &g_options;
 }
 
-void XAbstractDebugger::_messageString(XAbstractDebugger::MT messageType, QString sText) {
+void XAbstractDebugger::_messageString(XAbstractDebugger::MT messageType, QString sText)
+{
 #ifdef QT_DEBUG
     qDebug("%s", sText.toLatin1().data());
 #endif
     emit messageString(messageType, sText);
 }
 
-qint64 XAbstractDebugger::getFunctionAddress(QString sFunctionName) {
+qint64 XAbstractDebugger::getFunctionAddress(QString sFunctionName)
+{
     qint64 nResult = -1;
 
     QString sLibrary = sFunctionName.section("#", 0, 0);
@@ -122,7 +136,8 @@ qint64 XAbstractDebugger::getFunctionAddress(QString sFunctionName) {
     return nResult;
 }
 
-QString XAbstractDebugger::getAddressSymbolString(quint64 nAddress) {
+QString XAbstractDebugger::getAddressSymbolString(quint64 nAddress)
+{
     QString sResult;
 
     XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo = getXInfoDB()->findSharedInfoByAddress(nAddress);
@@ -151,7 +166,8 @@ QString XAbstractDebugger::getAddressSymbolString(quint64 nAddress) {
     return sResult;
 }
 
-qint64 XAbstractDebugger::getRetAddress(XProcess::HANDLEID handleID) {
+qint64 XAbstractDebugger::getRetAddress(XProcess::HANDLEID handleID)
+{
     qint64 nResult = 0;
 
 #ifdef Q_OS_WIN
@@ -173,13 +189,15 @@ qint64 XAbstractDebugger::getRetAddress(XProcess::HANDLEID handleID) {
     return nResult;
 }
 
-XCapstone::DISASM_STRUCT XAbstractDebugger::disasm(quint64 nAddress) {
+XCapstone::DISASM_STRUCT XAbstractDebugger::disasm(quint64 nAddress)
+{
     QByteArray baData = getXInfoDB()->read_array(nAddress, 15);
 
     return XCapstone::disasm(g_handle, nAddress, baData.data(), baData.size());
 }
 
-bool XAbstractDebugger::isUserCode(quint64 nAddress) {
+bool XAbstractDebugger::isUserCode(quint64 nAddress)
+{
     bool bResult = false;
 
     if ((getXInfoDB()->getProcessInfo()->nImageBase <= nAddress) && (getXInfoDB()->getProcessInfo()->nImageBase + getXInfoDB()->getProcessInfo()->nImageSize > nAddress)) {
@@ -189,11 +207,13 @@ bool XAbstractDebugger::isUserCode(quint64 nAddress) {
     return bResult;
 }
 
-bool XAbstractDebugger::bIsSystemCode(quint64 nAddress) {
+bool XAbstractDebugger::bIsSystemCode(quint64 nAddress)
+{
     return getXInfoDB()->findSharedInfoByAddress(nAddress).nImageBase;
 }
 
-bool XAbstractDebugger::dumpToFile(QString sFileName) {
+bool XAbstractDebugger::dumpToFile(QString sFileName)
+{
     bool bResult = false;
 
     //    XProcessDevice processDevice(this); // TODO -> XProcess
@@ -208,7 +228,8 @@ bool XAbstractDebugger::dumpToFile(QString sFileName) {
     return bResult;
 }
 
-bool XAbstractDebugger::stepIntoByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo) {
+bool XAbstractDebugger::stepIntoByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo)
+{
     Q_UNUSED(hThread)
 #ifdef QT_DEBUG
     qDebug("TODO XAbstractDebugger::stepIntoByHandle");
@@ -217,7 +238,8 @@ bool XAbstractDebugger::stepIntoByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo) 
     return false;
 }
 
-bool XAbstractDebugger::stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo) {
+bool XAbstractDebugger::stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo)
+{
     Q_UNUSED(nThreadId)
 #ifdef QT_DEBUG
     qDebug("TODO XAbstractDebugger::stepIntoById");
@@ -226,7 +248,8 @@ bool XAbstractDebugger::stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo) {
     return false;
 }
 
-bool XAbstractDebugger::stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo) {
+bool XAbstractDebugger::stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo)
+{
     Q_UNUSED(hThread)
 #ifdef QT_DEBUG
     qDebug("TODO XAbstractDebugger::stepIntoByHandle");
@@ -235,7 +258,8 @@ bool XAbstractDebugger::stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo) 
     return false;
 }
 
-bool XAbstractDebugger::stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo) {
+bool XAbstractDebugger::stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo)
+{
     Q_UNUSED(nThreadId)
 #ifdef QT_DEBUG
     qDebug("TODO XAbstractDebugger::stepIntoById");
@@ -244,13 +268,15 @@ bool XAbstractDebugger::stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo) {
     return false;
 }
 
-void XAbstractDebugger::wait() {
+void XAbstractDebugger::wait()
+{
     while (isDebugActive()) {
         QThread::msleep(100);
     }
 }
 
-char *XAbstractDebugger::allocateAnsiStringMemory(QString sFileName) {
+char *XAbstractDebugger::allocateAnsiStringMemory(QString sFileName)
+{
     char *pResult = nullptr;
 
     qint32 nSize = sFileName.length();
@@ -262,15 +288,18 @@ char *XAbstractDebugger::allocateAnsiStringMemory(QString sFileName) {
     return pResult;
 }
 
-void XAbstractDebugger::setDebugActive(bool bState) {
+void XAbstractDebugger::setDebugActive(bool bState)
+{
     g_bIsDebugActive = bState;
 }
 
-bool XAbstractDebugger::isDebugActive() {
+bool XAbstractDebugger::isDebugActive()
+{
     return g_bIsDebugActive;
 }
 
-void XAbstractDebugger::process() {
+void XAbstractDebugger::process()
+{
 #ifdef QT_DEBUG
     qDebug("Current thread: %d", QThread::currentThreadId());
 #endif
@@ -278,7 +307,8 @@ void XAbstractDebugger::process() {
     load();
 }
 
-void XAbstractDebugger::testSlot(X_ID nThreadId) {
+void XAbstractDebugger::testSlot(X_ID nThreadId)
+{
 #ifdef QT_DEBUG
     qDebug("testSlot: Current thread: %d", QThread::currentThreadId());
 #endif
