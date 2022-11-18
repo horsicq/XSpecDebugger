@@ -20,7 +20,8 @@
  */
 #include "xwindowsdebugger.h"
 
-XWindowsDebugger::XWindowsDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent, pXInfoDB)
+XWindowsDebugger::XWindowsDebugger(QObject *pParent, XInfoDB *pXInfoDB)
+    : XAbstractDebugger(pParent, pXInfoDB)
 {
     XWindowsDebugger::cleanUp();
 }

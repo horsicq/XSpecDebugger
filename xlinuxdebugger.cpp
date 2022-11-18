@@ -20,7 +20,8 @@
  */
 #include "xlinuxdebugger.h"
 
-XLinuxDebugger::XLinuxDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XUnixDebugger(pParent, pXInfoDB)
+XLinuxDebugger::XLinuxDebugger(QObject *pParent, XInfoDB *pXInfoDB)
+    : XUnixDebugger(pParent, pXInfoDB)
 {
 }
 
