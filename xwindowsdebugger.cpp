@@ -20,8 +20,7 @@
  */
 #include "xwindowsdebugger.h"
 
-XWindowsDebugger::XWindowsDebugger(QObject *pParent, XInfoDB *pXInfoDB)
-    : XAbstractDebugger(pParent, pXInfoDB)
+XWindowsDebugger::XWindowsDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent, pXInfoDB)
 {
     XWindowsDebugger::cleanUp();
 }
@@ -49,8 +48,7 @@ bool XWindowsDebugger::load()
     sturtupInfo.cb = sizeof(sturtupInfo);
 
     QString sArguments = QString("\"%1\" \"%2\"").arg(getOptions()->sFileName, getOptions()->sArguments);
-    BOOL bCreateProcess = CreateProcessW((const wchar_t *)(getOptions()->sFileName.utf16()), (wchar_t *)sArguments.utf16(), nullptr, nullptr, 0, nFlags, nullptr, nullptr,
-                                         &sturtupInfo, &processInfo);
+    BOOL bCreateProcess = CreateProcessW((const wchar_t *)(getOptions()->sFileName.utf16()), (wchar_t *)sArguments.utf16(), nullptr, nullptr, 0, nFlags, nullptr, nullptr, &sturtupInfo, &processInfo);
 
     if (bCreateProcess) {
         cleanUp();
