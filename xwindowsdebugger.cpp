@@ -465,7 +465,8 @@ quint32 XWindowsDebugger::on_LOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
 quint32 XWindowsDebugger::on_UNLOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
-    XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo = getXInfoDB()->getSharedObjectInfos()->value((qint64)(pDebugEvent->u.UnloadDll.lpBaseOfDll));  // TODO make findByAddressFunction
+    XInfoDB::SHAREDOBJECT_INFO sharedObjectInfo =
+        getXInfoDB()->getSharedObjectInfos()->value((qint64)(pDebugEvent->u.UnloadDll.lpBaseOfDll));  // TODO make findByAddressFunction
     getXInfoDB()->removeSharedObjectInfo(&sharedObjectInfo);
 
     // XBinary::removeFunctionAddressesByModule(&g_mapFunctionAddresses,sharedObjectInfo.nImageBase);
