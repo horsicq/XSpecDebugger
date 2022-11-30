@@ -484,9 +484,11 @@ quint32 XWindowsDebugger::on_OUTPUT_DEBUG_STRING_EVENT(DEBUG_EVENT *pDebugEvent)
     debugStringInfo.nThreadID = pDebugEvent->dwThreadId;
 
     if (pDebugEvent->u.DebugString.fUnicode) {
-        debugStringInfo.sDebugString = getXInfoDB()->read_unicodeString((qint64)(pDebugEvent->u.DebugString.lpDebugStringData), pDebugEvent->u.DebugString.nDebugStringLength);
+        debugStringInfo.sDebugString =
+            getXInfoDB()->read_unicodeString((qint64)(pDebugEvent->u.DebugString.lpDebugStringData), pDebugEvent->u.DebugString.nDebugStringLength);
     } else {
-        debugStringInfo.sDebugString = getXInfoDB()->read_ansiString((qint64)(pDebugEvent->u.DebugString.lpDebugStringData), pDebugEvent->u.DebugString.nDebugStringLength);
+        debugStringInfo.sDebugString =
+            getXInfoDB()->read_ansiString((qint64)(pDebugEvent->u.DebugString.lpDebugStringData), pDebugEvent->u.DebugString.nDebugStringLength);
     }
 #ifdef QT_DEBUG
     qDebug(debugStringInfo.sDebugString.toLatin1().data());
