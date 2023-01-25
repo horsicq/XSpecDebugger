@@ -41,7 +41,7 @@ bool XLinuxDebugger::load()
 
         if (nProcessID == 0) {
             // Child process
-            ptrace(PTRACE_TRACEME, 0, nullptr, nullptr);
+            ptrace(PTRACE_TRACEME, 0, nullptr, nullptr); // TODO errors
             // TODO redirect I/O
 
             EXECUTEPROCESS ep = executeProcess(sFileName, sDirectory);
