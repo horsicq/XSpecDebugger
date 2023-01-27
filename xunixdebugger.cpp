@@ -148,35 +148,15 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID, qint32 nOpt
             qDebug("Error: %s", strerror(errno));
         }
 
-        qDebug("si_code: %x", sigInfo.si_code);
-        qDebug("si_errno: %x", sigInfo.si_errno);
-        qDebug("si_signo: %x", sigInfo.si_signo);
-
-        qDebug("si_pid: %x", sigInfo.si_pid);
-        qDebug("si_pid: %d", sigInfo.si_pid);
-        qDebug("si_uid: %x", sigInfo.si_uid);
-        qDebug("si_timerid: %x", sigInfo.si_timerid);
-        qDebug("si_overrun: %x", sigInfo.si_overrun);
-
-        qDebug("si_status: %x", sigInfo.si_status);
-        qDebug("si_utime: %lx", sigInfo.si_utime);
-        qDebug("si_stime: %lx", sigInfo.si_stime);
-
-        qDebug("si_value: %llx", (quint64)sigInfo.si_value.sival_int);
-        qDebug("si_int: %x", sigInfo.si_int);
-        qDebug("si_ptr: %llx", (quint64)sigInfo.si_ptr);
-
-        qDebug("si_addr: %llx", (quint64)sigInfo.si_addr);
-        qDebug("si_addr_lsb: %x", sigInfo.si_addr_lsb);
-        qDebug("si_lower: %llx", (quint64)sigInfo.si_lower);
-        qDebug("si_upper: %llx", (quint64)sigInfo.si_upper);
-        qDebug("si_pkey: %x", sigInfo.si_pkey);
-        qDebug("si_band: %lx", sigInfo.si_band);
-        qDebug("si_fd: %x", sigInfo.si_fd);
-
-        qDebug("si_call_addr: %llx", (quint64)sigInfo.si_call_addr);
-        qDebug("si_syscall: %x", sigInfo.si_syscall);
-        qDebug("si_arch: %x", sigInfo.si_arch);
+        qDebug("Parent: si_signo %X", sigInfo.si_signo);
+        qDebug("Parent: si_code %X", sigInfo.si_code);
+        qDebug("Parent: si_value %X", sigInfo.si_value.sival_int);
+        qDebug("Parent: si_errno %X", sigInfo.si_errno);
+        qDebug("Parent: si_pid %d", sigInfo.si_pid);
+        qDebug("Parent: si_uid %d", sigInfo.si_uid);
+        qDebug("Parent: si_addr %lX", (uint64_t)sigInfo.si_addr);
+        qDebug("Parent: si_status %X", sigInfo.si_status);
+        qDebug("Parent: si_band %lX", sigInfo.si_band);
 
         // 80 = SI_KERNEL
 
@@ -338,6 +318,21 @@ void XUnixDebugger::_debugEvent()
 
                     emit eventBreakPoint(&breakPointInfo);
                 }
+            } else if (state.debuggerStatus == DEBUGGER_STATUS_EXIT) {
+                // TODO STOP
+                // mb TODO exitThread
+                g_pTimer->stop();
+
+                XInfoDB::EXITPROCESS_INFO exitProcessInfo = {};
+                exitProcessInfo.nProcessID = state.nThreadId;
+                exitProcessInfo.nThreadID = state.nThreadId;
+                exitProcessInfo.nExitCode = state.nCode;
+
+                getXInfoDB()->removeThreadInfo(state.nThreadId);
+
+                emit eventExitProcess(&exitProcessInfo);
+
+                setDebugActive(false);
             }
         }
     }
