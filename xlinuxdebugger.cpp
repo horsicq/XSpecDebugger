@@ -43,6 +43,7 @@ bool XLinuxDebugger::load()
             // Child process
             ptrace(PTRACE_TRACEME, 0, nullptr, nullptr);  // TODO errors
             // TODO redirect I/O
+            // TODO personality(ADDR_NO_RANDOMIZE);
 
             EXECUTEPROCESS ep = executeProcess(sFileName, sDirectory);
 

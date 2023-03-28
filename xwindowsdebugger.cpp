@@ -47,6 +47,7 @@ bool XWindowsDebugger::load()
     // TODO 32/64 !!! do not load if not the same(WOW64)
     sturtupInfo.cb = sizeof(sturtupInfo);
 
+    // mb TODO use only the second parameter! the first -> null cause length limitaion.
     QString sArguments = QString("\"%1\" \"%2\"").arg(getOptions()->sFileName, getOptions()->sArguments);
     BOOL bCreateProcess = CreateProcessW((const wchar_t *)(getOptions()->sFileName.utf16()), (wchar_t *)sArguments.utf16(), nullptr, nullptr, 0, nFlags, nullptr, nullptr,
                                          &sturtupInfo, &processInfo);
@@ -61,7 +62,7 @@ bool XWindowsDebugger::load()
         setDisasmMode(XBinary::DM_X86_64);
 #endif
 
-        setTraceFileName(XBinary::getResultFileName(getOptions()->sFileName, "trace.txt"));
+        setTraceFileName(XBinary::getResultFileName(getOptions()->sFileName, "trace.txt")); // TODO Check mb Remove
 
         bResult = true;
         DWORD dwProcessID = processInfo.dwProcessId;
