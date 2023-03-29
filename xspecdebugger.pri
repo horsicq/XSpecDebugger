@@ -2,10 +2,12 @@ INCLUDEPATH += $$PWD
 DEPENDPATH += $$PWD
 
 HEADERS += \
-    $$PWD/xabstractdebugger.h
+    $$PWD/xabstractdebugger.h \
+    $$PWD/xdebuggerconsole.h
 
 SOURCES += \
-    $$PWD/xabstractdebugger.cpp
+    $$PWD/xabstractdebugger.cpp \
+    $$PWD/xdebuggerconsole.cpp
 
 win32 {
     HEADERS += $$PWD/xwindowsdebugger.h

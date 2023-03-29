@@ -28,6 +28,7 @@ XUnixDebugger::XUnixDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDeb
 bool XUnixDebugger::run()
 {
     // TODO
+    // TODO resuleAllSuspendedThreads
     return getXInfoDB()->resumeAllThreads();
 }
 
@@ -152,8 +153,8 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID, qint32 nOpt
         qDebug("Parent: si_code %X", sigInfo.si_code);
         qDebug("Parent: si_value %X", sigInfo.si_value.sival_int);
         qDebug("Parent: si_errno %X", sigInfo.si_errno);
-        qDebug("Parent: si_pid %d", sigInfo.si_pid);
-        qDebug("Parent: si_uid %d", sigInfo.si_uid);
+        qDebug("Parent: si_pid %u", sigInfo.si_pid);
+        qDebug("Parent: si_uid %u", sigInfo.si_uid);
         qDebug("Parent: si_addr %lX", (uint64_t)sigInfo.si_addr);
         qDebug("Parent: si_status %X", sigInfo.si_status);
         qDebug("Parent: si_band %lX", sigInfo.si_band);
@@ -242,6 +243,8 @@ void XUnixDebugger::startDebugLoop()
 {
     stopDebugLoop();
 
+    qDebug("void XUnixDebugger::startDebugLoop()");
+
     g_pTimer = new QTimer(this);
 
     connect(g_pTimer, SIGNAL(timeout()), this, SLOT(_debugEvent()));
@@ -309,6 +312,7 @@ void XUnixDebugger::_debugEvent()
                     }
                 }
 
+                // TODO suspend all other threads
                 if (bSuccess) {
                     breakPointInfo.nAddress = state.nAddress;
                     breakPointInfo.pHProcessMemoryIO = getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
