@@ -21,6 +21,14 @@ public:
 
     void run(XAbstractDebugger::OPTIONS options);
 
+    struct COMMAND_RESULT {
+        QString sText;
+        QString sError;
+    };
+
+    static COMMAND_RESULT commandControl(QString sCommand, XAbstractDebugger *pDebugger);
+    // TODO History
+
 private slots:
     void onEventCreateProcess(XInfoDB::PROCESS_INFO *pProcessInfo);
     void onEventExitProcess(XInfoDB::EXITPROCESS_INFO *pExitProcessInfo);

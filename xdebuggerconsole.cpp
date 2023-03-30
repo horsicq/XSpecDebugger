@@ -82,20 +82,16 @@ void XDebuggerConsole::run(XAbstractDebugger::OPTIONS options)
 
     while (true) {
         QString sCommand;
-        sCommand = "step";
         sCommand = streamIn.readLine(256);
 
-        if (sCommand == "step") {
-    #ifdef Q_OS_WIN
-            g_pDebugger->stepIntoByHandle(breakpointInfoLast.hThread, XInfoDB::BPI_STEPINTO);
-    #endif
-    #ifdef Q_OS_LINUX
-            qDebug("STEP!!!STEP");
-            g_pDebugger->stepIntoById(breakpointInfoLast.nThreadID, XInfoDB::BPI_STEPINTO);
-    #endif
-        } else if (sCommand == "quit") {
-            qDebug("QUIT");
-            break;
+        COMMAND_RESULT commandResult = commandControl(sCommand, g_pDebugger);
+
+        if (commandResult.sText != "") {
+            printf("%s\n", commandResult.sText.toLatin1().data());
+        }
+
+        if (commandResult.sError != "") {
+            printf("%s\n", commandResult.sError.toLatin1().data());
         }
 
         {
@@ -107,6 +103,10 @@ void XDebuggerConsole::run(XAbstractDebugger::OPTIONS options)
             timer.start(500);  // use miliseconds
             loop.exec();
         }
+
+        if (!g_pDebugger->isDebugActive()) {
+            break;
+        }
     }
 
     delete g_pInfoDB;
@@ -116,9 +116,99 @@ void XDebuggerConsole::run(XAbstractDebugger::OPTIONS options)
     delete g_pDebugger;
 }
 
+XDebuggerConsole::COMMAND_RESULT XDebuggerConsole::commandControl(QString sCommand, XAbstractDebugger *pDebugger)
+{
+    COMMAND_RESULT result = {};
+
+    XInfoDB *pInfoDB = pDebugger->getXInfoDB();
+
+    // TODO setCurrentThreadByHandle, setCurrentThreadByHandle in XINfoDB
+    //
+    if (sCommand == "step") {
+//#ifdef Q_OS_WIN
+//        pDebugger->stepIntoByHandle(breakpointInfoLast.hThread, XInfoDB::BPI_STEPINTO);
+//#endif
+//#ifdef Q_OS_LINUX
+//        pDebugger->stepIntoById(breakpointInfoLast.nThreadID, XInfoDB::BPI_STEPINTO);
+//#endif
+    } else if (sCommand == "disasm") {
+        XADDR nCurrentAddress = 0;
+#ifdef Q_PROCESSOR_X86_32
+        nCurrentAddress = pInfoDB->getCurrentRegCache(XInfoDB::XREG_EIP).var.v_uint32;
+#endif
+#ifdef Q_PROCESSOR_X86_64
+        nCurrentAddress = pInfoDB->getCurrentRegCache(XInfoDB::XREG_RIP).var.v_uint64;
+#endif
+        for (int i = 0; i < 10; i++) {
+            XCapstone::DISASM_RESULT disasmResult = pInfoDB->disasm(nCurrentAddress);
+
+            if (disasmResult.bIsValid) {
+                printf("%llx: %s %s\n", nCurrentAddress, disasmResult.sMnemonic.toLatin1().data(), disasmResult.sString.toLatin1().data());
+            } else {
+                break;
+            }
+
+            nCurrentAddress += disasmResult.nSize;
+        }
+    } else if (sCommand == "regs") {
+#ifdef Q_PROCESSOR_X86_32
+        printf("EAX: %llx \n", pInfoDB->getCurrentRegCache(XInfoDB::XREG_EAX).var.v_uint32);
+        printf("ECX: %llx \n", pInfoDB->getCurrentRegCache(XInfoDB::XREG_EAX).var.v_uint32);
+        printf("EIP: %llx \n", pInfoDB->getCurrentRegCache(XInfoDB::XREG_EIP).var.v_uint32);
+#endif
+#ifdef Q_PROCESSOR_X86_64
+        printf("RAX: %llx \n", pInfoDB->getCurrentRegCache(XInfoDB::XREG_RAX).var.v_uint64);
+        printf("RCX: %llx \n", pInfoDB->getCurrentRegCache(XInfoDB::XREG_RCX).var.v_uint64);
+        printf("RIP: %llx \n", pInfoDB->getCurrentRegCache(XInfoDB::XREG_RIP).var.v_uint64);
+#endif
+    } else if (sCommand == "run") {
+        pDebugger->run();
+    } else if (sCommand == "modules") {
+        QList<XProcess::MODULE> *pModulesList = pInfoDB->getCurrentModulesList();
+
+        qint32 nNumberOfModules = pModulesList->count();
+
+        for (qint32 i = 0; i < nNumberOfModules; i++) {
+            printf("%llx %llx %s %s\n", pModulesList->at(i).nAddress, pModulesList->at(i).nSize, pModulesList->at(i).sName.toUtf8().data(), pModulesList->at(i).sFileName.toUtf8().data());
+        }
+    } else if (sCommand == "regions") {
+        QList<XProcess::MEMORY_REGION> *pRegionsList = pInfoDB->getCurrentMemoryRegionsList();
+
+        qint32 nNumberOfRegions = pRegionsList->count();
+
+        for (qint32 i = 0; i < nNumberOfRegions; i++) {
+            printf("%llx %llx\n", pRegionsList->at(i).nAddress, pRegionsList->at(i).nSize);
+        }
+    } else if (sCommand == "threads") {
+        QList<XProcess::THREAD_INFO> *pThreadsList = pInfoDB->getCurrentThreadsList();
+
+        qint32 nNumberOfThreads = pThreadsList->count();
+
+        for (qint32 i = 0; i < nNumberOfThreads; i++) {
+            printf("%lld\n", pThreadsList->at(i).nID);
+        }
+    } else if (sCommand.section(" ", 0, 0) == "bpx") {
+        XADDR nAddress = sCommand.section(" ", 0, 0).toULongLong(0, 16);
+
+        pInfoDB->addBreakPoint(nAddress);
+        printf("Address: %llx\n", nAddress);
+        printf("BPX\n");
+    } else if (sCommand == "quit") {
+        printf("STOP\n");
+        pDebugger->stop();
+        // TODO kill signal
+        //break;
+    } else {
+        printf("Unknown command: %s\n", sCommand.toLatin1().data());
+    }
+
+    return result;
+}
+
 void XDebuggerConsole::onEventCreateProcess(XInfoDB::PROCESS_INFO *pProcessInfo)
 {
     qDebug("void XDebuggerConsole::onEventCreateProcess(XInfoDB::PROCESS_INFO *pProcessInfo)");
+    qDebug("ProcessID: %lld", pProcessInfo->nProcessID);
 }
 
 void XDebuggerConsole::onEventExitProcess(XInfoDB::EXITPROCESS_INFO *pExitProcessInfo)
@@ -153,8 +243,27 @@ void XDebuggerConsole::onEventDebugString(XInfoDB::DEBUGSTRING_INFO *pDebugStrin
 
 void XDebuggerConsole::onEventBreakPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo)
 {
-    breakpointInfoLast = *pBreakPointInfo;
     qDebug("void XDebuggerConsole::onEventBreakPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo)");
+
+    breakpointInfoLast = *pBreakPointInfo;
+
+    XInfoDB::XREG_OPTIONS regOptions = {};
+    regOptions.bIP = true;
+    regOptions.bDebug = true;
+    regOptions.bFlags = true;
+    regOptions.bFloat = true;
+    regOptions.bGeneral = true;
+    regOptions.bSegments = true;
+    regOptions.bXMM = true;
+#ifdef Q_OS_WIN
+    g_pInfoDB->updateRegsByHandle(breakpointInfoLast.hThread, regOptions);
+#endif
+#ifdef Q_OS_LINUX
+    g_pInfoDB->updateRegsById(breakpointInfoLast.nThreadID, regOptions);
+#endif
+    g_pInfoDB->updateModulesList();
+    g_pInfoDB->updateMemoryRegionsList();
+    g_pInfoDB->updateThreadsList();
 }
 
 void XDebuggerConsole::onEventFunctionEnter(XInfoDB::FUNCTION_INFO *pFunctionInfo)

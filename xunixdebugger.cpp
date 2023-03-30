@@ -147,17 +147,17 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID, qint32 nOpt
 
         if (ptrace(PTRACE_GETSIGINFO, nThreadId, 0, &sigInfo) < 0) {
             qDebug("Error: %s", strerror(errno));
+        } else {
+            qDebug("Parent: si_signo %X", sigInfo.si_signo);
+            qDebug("Parent: si_code %X", sigInfo.si_code);
+            qDebug("Parent: si_value %X", sigInfo.si_value.sival_int);
+            qDebug("Parent: si_errno %X", sigInfo.si_errno);
+            qDebug("Parent: si_pid %u", sigInfo.si_pid);
+            qDebug("Parent: si_uid %u", sigInfo.si_uid);
+            qDebug("Parent: si_addr %lX", (uint64_t)sigInfo.si_addr);
+            qDebug("Parent: si_status %X", sigInfo.si_status);
+            qDebug("Parent: si_band %lX", sigInfo.si_band);
         }
-
-        qDebug("Parent: si_signo %X", sigInfo.si_signo);
-        qDebug("Parent: si_code %X", sigInfo.si_code);
-        qDebug("Parent: si_value %X", sigInfo.si_value.sival_int);
-        qDebug("Parent: si_errno %X", sigInfo.si_errno);
-        qDebug("Parent: si_pid %u", sigInfo.si_pid);
-        qDebug("Parent: si_uid %u", sigInfo.si_uid);
-        qDebug("Parent: si_addr %lX", (uint64_t)sigInfo.si_addr);
-        qDebug("Parent: si_status %X", sigInfo.si_status);
-        qDebug("Parent: si_band %lX", sigInfo.si_band);
 
         // 80 = SI_KERNEL
 
@@ -176,13 +176,15 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID, qint32 nOpt
                 qDebug("process unexpectedly aborted");
             } else {
             }
-            qDebug("WSTOPSIG %x", WSTOPSIG(nResult));
+            qDebug("!!!WSTOPSIG %x", WSTOPSIG(nResult));
         } else if (WIFEXITED(nResult)) {
             result.debuggerStatus = DEBUGGER_STATUS_EXIT;
             result.nCode = WEXITSTATUS(nResult);
+            qDebug("!!!WEXITSTATUS %x", WEXITSTATUS(nResult));
         } else if (WIFSIGNALED(nResult)) {
             result.debuggerStatus = DEBUGGER_STATUS_SIGNAL;
             result.nCode = WTERMSIG(nResult);
+            qDebug("!!!WTERMSIG %x", WTERMSIG(nResult));
         }
         // TODO fast events
 
@@ -242,8 +244,6 @@ bool XUnixDebugger::_setStep(XProcess::HANDLEID handleID)
 void XUnixDebugger::startDebugLoop()
 {
     stopDebugLoop();
-
-    qDebug("void XUnixDebugger::startDebugLoop()");
 
     g_pTimer = new QTimer(this);
 
