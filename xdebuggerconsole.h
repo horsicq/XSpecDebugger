@@ -22,12 +22,16 @@ public:
     void run(XAbstractDebugger::OPTIONS options);
 
     struct COMMAND_RESULT {
-        QString sText;
-        QString sError;
+        QList<QString> listTexts;
+        QList<QString> listErrors;
     };
 
-    static COMMAND_RESULT commandControl(QString sCommand, XAbstractDebugger *pDebugger);
-    // TODO History
+    static void commandControl(COMMAND_RESULT *pCommandResult, QString sCommand, XAbstractDebugger *pDebugger); // TODO PDStruct
+    // TODO History TODO init for init commandControl
+
+private:
+    static XADDR _getAddress(COMMAND_RESULT *pCommandResult, QString sString, XADDR nDefaultValue);
+    static qint32 _getNumber(COMMAND_RESULT *pCommandResult, QString sString, qint32 nDefaultValue);
 
 private slots:
     void onEventCreateProcess(XInfoDB::PROCESS_INFO *pProcessInfo);
@@ -47,7 +51,6 @@ private:
     QThread *g_pThread;
 #endif
     XAbstractDebugger *g_pDebugger;
-    XInfoDB::BREAKPOINT_INFO breakpointInfoLast;
     XAbstractDebugger::OPTIONS g_options;
 };
 

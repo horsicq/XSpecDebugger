@@ -273,9 +273,22 @@ bool XUnixDebugger::stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo)
     return getXInfoDB()->stepOver_Id(nThreadId, bpInfo, true);
 }
 
+bool XUnixDebugger::stepInto()
+{
+    return stepIntoById(getXInfoDB()->getCurrentThreadById(), XInfoDB::BPI_STEPINTO);
+}
+
+bool XUnixDebugger::stepOver()
+{
+    return stepIntoById(getXInfoDB()->getCurrentThreadById(), XInfoDB::BPI_STEPINTO);
+}
+
 void XUnixDebugger::_debugEvent()
 {
     if (isDebugActive()) {
+
+        bool bContinue = false;
+
         qint64 nId = getXInfoDB()->getProcessInfo()->nProcessID;
 
         STATE state = waitForSignal(nId, __WALL | WNOHANG);
@@ -284,15 +297,28 @@ void XUnixDebugger::_debugEvent()
             if ((state.debuggerStatus == DEBUGGER_STATUS_STEP) || (state.debuggerStatus == DEBUGGER_STATUS_KERNEL)) {
                 XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
 
-                bool bSuccess = false;
+                bool bBreakPoint = false;
 
                 if (state.debuggerStatus == DEBUGGER_STATUS_STEP) {
+                    bool bRestore = false;
+
+                    if (g_mapThreadBPToRestore.contains(state.nThreadId)) {
+                        XInfoDB::BREAKPOINT _currentBP = g_mapThreadBPToRestore.value(state.nThreadId);
+                        getXInfoDB()->addBreakPoint(_currentBP.nAddress, _currentBP.bpType, _currentBP.bpInfo, _currentBP.nCount, _currentBP.sInfo);
+                        g_mapThreadBPToRestore.remove(state.nThreadId);
+
+                        bRestore = true;
+                    }
+
                     if (getXInfoDB()->getThreadBreakpoints()->contains(state.nThreadId)) {
                         breakPointInfo.bpType = XInfoDB::BPT_CODE_HARDWARE;
                         breakPointInfo.bpInfo = XInfoDB::BPI_STEPINTO;  // TODO STEPOVER
 
-                        bSuccess = true;
+                        bBreakPoint = true;
                     } else {
+                        if (bRestore) {
+                            bContinue = true;
+                        }
                         // TODO not custom trace
                     }
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) {
@@ -306,21 +332,30 @@ void XUnixDebugger::_debugEvent()
 
                         getXInfoDB()->removeBreakPoint(state.nAddress, _currentBP.bpType);
 
-                        // TODO restore
+                        if (_currentBP.nCount != -1) {
+                            _currentBP.nCount--;
+                        }
 
-                        bSuccess = true;
+                        if (_currentBP.nCount) {
+                            g_mapThreadBPToRestore.insert(state.nThreadId, _currentBP);
+                            getXInfoDB()->_setStep_Id(breakPointInfo.nThreadID);
+                        }
+
+                        // TODO restore !!!
+
+                        bBreakPoint = true;
                     }
                 }
 
                 // TODO suspend all other threads
-                if (bSuccess) {
+                if (bBreakPoint) {
                     breakPointInfo.nAddress = state.nAddress;
                     breakPointInfo.pHProcessMemoryIO = getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
                     breakPointInfo.pHProcessMemoryQuery = getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
                     breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
-                    breakPointInfo.nThreadID = getXInfoDB()->getProcessInfo()->nMainThreadID;
+                    breakPointInfo.nThreadID = getXInfoDB()->getProcessInfo()->nMainThreadID; // TODO Check !!!
 
-                    emit eventBreakPoint(&breakPointInfo);
+                    _eventBreakPoint(&breakPointInfo);
                 }
             } else if (state.debuggerStatus == DEBUGGER_STATUS_EXIT) {
                 // TODO STOP
@@ -337,6 +372,10 @@ void XUnixDebugger::_debugEvent()
                 emit eventExitProcess(&exitProcessInfo);
 
                 setDebugActive(false);
+            }
+
+            if (bContinue) {
+                continueThread(state.nThreadId);
             }
         }
     }

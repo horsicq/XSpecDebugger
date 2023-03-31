@@ -173,6 +173,16 @@ bool XWindowsDebugger::stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo)
     return bResult;
 }
 
+bool XWindowsDebugger::stepInto()
+{
+    return stepIntoByHandle(getXInfoDB()->getCurrentThreadByHandle(), XInfoDB::BPI_STEPINTO);
+}
+
+bool XWindowsDebugger::stepOver()
+{
+    return stepOverByHandle(getXInfoDB()->getCurrentThreadByHandle(), XInfoDB::BPI_STEPINTO);
+}
+
 quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
     quint32 nResult = DBG_EXCEPTION_NOT_HANDLED;
@@ -229,7 +239,8 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                 //                {
                 //                    emit eventBreakPoint(&breakPointInfo);
                 //                }
-                emit eventBreakPoint(&breakPointInfo);
+
+                _eventBreakPoint(&breakPointInfo);
             }
 
             if (_currentBP.nCount != -1) {
@@ -256,7 +267,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                 breakPointInfo.bpType = XInfoDB::BPT_CODE_SOFTWARE;
                 breakPointInfo.bpInfo = XInfoDB::BPI_SYSTEM;
 
-                emit eventBreakPoint(&breakPointInfo);
+                _eventBreakPoint(&breakPointInfo);
 
                 //                if(bThreadsSuspended)
                 //                {
@@ -290,7 +301,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                 breakPointInfo.bpInfo = stepBP.bpInfo;
                 breakPointInfo.sInfo = stepBP.sInfo;
 
-                emit eventBreakPoint(&breakPointInfo);
+                _eventBreakPoint(&breakPointInfo);
             } else if ((stepBP.bpInfo == XInfoDB::BPI_TRACEINTO) || (stepBP.bpInfo == XInfoDB::BPI_TRACEOVER)) {
                 // TODO
                 // Check suspend threads
@@ -312,7 +323,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                     breakPointInfo.bpInfo = stepBP.bpInfo;
                     breakPointInfo.sInfo = stepBP.sInfo;
 
-                    emit eventBreakPoint(&breakPointInfo);
+                    _eventBreakPoint(&breakPointInfo);
                 }
             }
 
@@ -325,7 +336,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             breakPointInfo.bpType = XInfoDB::BPT_CODE_HARDWARE;
             breakPointInfo.bpInfo = XInfoDB::BPI_SYSTEM;
 
-            emit eventBreakPoint(&breakPointInfo);
+            _eventBreakPoint(&breakPointInfo);
 
             //            if(bThreadsSuspended)
             //            {

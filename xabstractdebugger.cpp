@@ -269,11 +269,50 @@ bool XAbstractDebugger::stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo)
     return false;
 }
 
+bool XAbstractDebugger::stepInto()
+{
+#ifdef QT_DEBUG
+    qDebug("TODO XAbstractDebugger::stepInto");
+#endif
+
+    return false;
+}
+
+bool XAbstractDebugger::stepOver()
+{
+#ifdef QT_DEBUG
+    qDebug("TODO XAbstractDebugger::stepOver");
+#endif
+
+    return false;
+}
+
 void XAbstractDebugger::wait()
 {
     while (isDebugActive()) {
-        QThread::msleep(100);
+//        QThread::msleep(100);
+        _waitEvents();
     }
+}
+
+void XAbstractDebugger::_waitEvents()
+{
+    QTimer timer;
+    timer.setSingleShot(true);
+
+    QEventLoop loop;
+    connect(&timer, SIGNAL(timeout()), &loop, SLOT(quit()));
+    timer.start(100);  // use miliseconds
+    loop.exec();
+}
+
+void XAbstractDebugger::_eventBreakPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo)
+{
+    getXInfoDB()->setCurrentThreadById(pBreakPointInfo->nThreadID);
+#ifdef Q_OS_WIN
+    getXInfoDB()->setCurrentThreadByHandle(pBreakPointInfo->hThread);
+#endif
+    emit eventBreakPoint(pBreakPointInfo);
 }
 
 char *XAbstractDebugger::allocateAnsiStringMemory(QString sFileName)

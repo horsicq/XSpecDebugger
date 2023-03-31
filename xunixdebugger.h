@@ -67,6 +67,8 @@ public:
 
     virtual bool stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo);
     virtual bool stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo);
+    virtual bool stepInto();
+    virtual bool stepOver();
 
 public slots:
     void _debugEvent();
@@ -74,6 +76,7 @@ public slots:
 private:
     const int N_N_DEDELAY = 50;
     QTimer *g_pTimer;
+    QMap<qint64, XInfoDB::BREAKPOINT> g_mapThreadBPToRestore;
 };
 
 #endif  // XUNIXDEBUGGER_H

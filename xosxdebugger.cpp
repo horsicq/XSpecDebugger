@@ -113,7 +113,7 @@ bool XOSXDebugger::load()
                 breakPointInfo.nThreadID = getXInfoDB()->getProcessInfo()->nMainThreadID;
 
                 //                getXInfoDB()->suspendAllThreads();
-                emit eventBreakPoint(&breakPointInfo);
+                _eventBreakPoint(&breakPointInfo);
             }
         } else if (nProcessID == -1) {
             // TODO error

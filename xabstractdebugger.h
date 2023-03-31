@@ -22,6 +22,7 @@
 #define XABSTRACTDEBUGGER_H
 
 #include <QThread>
+#include <QTimer>
 
 #include "xbinary.h"
 #include "xcapstone.h"
@@ -94,7 +95,14 @@ public:
     virtual bool stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo);
     virtual bool stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo);
     virtual bool stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo);
+
+    virtual bool stepInto();
+    virtual bool stepOver();
+
     void wait();
+    void _waitEvents();
+
+    void _eventBreakPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo);
 
 public slots:
     void process();

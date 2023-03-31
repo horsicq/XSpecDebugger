@@ -119,7 +119,7 @@ bool XLinuxDebugger::load()
 
                 //                getXInfoDB()->suspendAllThreads();
                 //                getXInfoDB()->_lockId(nProcessID);
-                emit eventBreakPoint(&breakPointInfo);
+                _eventBreakPoint(&breakPointInfo);
             }
 
             startDebugLoop();
