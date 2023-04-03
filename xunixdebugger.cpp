@@ -27,9 +27,18 @@ XUnixDebugger::XUnixDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDeb
 
 bool XUnixDebugger::run()
 {
+    bool bResult = false;
     // TODO
     // TODO resuleAllSuspendedThreads
-    return getXInfoDB()->resumeAllThreads();
+
+    qint64 nCurrentThreadId = getXInfoDB()->getCurrentThreadId();
+
+    if (g_mapBpOver[nCurrentThreadId] == BPOVER_STEP) {
+        bResult = stepIntoById(nCurrentThreadId, XInfoDB::BPI_STEPINTO_RESTOREBP);
+    } else {
+        bResult = getXInfoDB()->resumeAllThreads();
+    }
+    return bResult;
 }
 
 bool XUnixDebugger::stop()
@@ -63,6 +72,8 @@ void XUnixDebugger::cleanUp()
         getXInfoDB()->getProcessInfo()->hProcessMemoryQuery = 0;
     }
 #endif
+    g_mapBpOver.clear();
+    g_mapThreadBPToRestore.clear();
 }
 
 XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName, QString sDirectory)
@@ -175,6 +186,7 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID, qint32 nOpt
             if (WSTOPSIG(nResult) == SIGABRT) {
                 qDebug("process unexpectedly aborted");
             } else {
+
             }
             qDebug("!!!WSTOPSIG %x", WSTOPSIG(nResult));
         } else if (WIFEXITED(nResult)) {
@@ -275,12 +287,12 @@ bool XUnixDebugger::stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo)
 
 bool XUnixDebugger::stepInto()
 {
-    return stepIntoById(getXInfoDB()->getCurrentThreadById(), XInfoDB::BPI_STEPINTO);
+    return stepIntoById(getXInfoDB()->getCurrentThreadId(), XInfoDB::BPI_STEPINTO);
 }
 
 bool XUnixDebugger::stepOver()
 {
-    return stepIntoById(getXInfoDB()->getCurrentThreadById(), XInfoDB::BPI_STEPINTO);
+    return stepIntoById(getXInfoDB()->getCurrentThreadId(), XInfoDB::BPI_STEPINTO);
 }
 
 void XUnixDebugger::_debugEvent()
@@ -300,14 +312,12 @@ void XUnixDebugger::_debugEvent()
                 bool bBreakPoint = false;
 
                 if (state.debuggerStatus == DEBUGGER_STATUS_STEP) {
-                    bool bRestore = false;
-
                     if (g_mapThreadBPToRestore.contains(state.nThreadId)) {
                         XInfoDB::BREAKPOINT _currentBP = g_mapThreadBPToRestore.value(state.nThreadId);
                         getXInfoDB()->addBreakPoint(_currentBP.nAddress, _currentBP.bpType, _currentBP.bpInfo, _currentBP.nCount, _currentBP.sInfo);
                         g_mapThreadBPToRestore.remove(state.nThreadId);
 
-                        bRestore = true;
+                        g_mapBpOver[state.nThreadId] = BPOVER_RESTORE;
                     }
 
                     if (getXInfoDB()->getThreadBreakpoints()->contains(state.nThreadId)) {
@@ -315,12 +325,12 @@ void XUnixDebugger::_debugEvent()
                         breakPointInfo.bpInfo = XInfoDB::BPI_STEPINTO;  // TODO STEPOVER
 
                         bBreakPoint = true;
-                    } else {
-                        if (bRestore) {
-                            bContinue = true;
+
+                        if (g_mapBpOver[state.nThreadId] == BPOVER_RESTORE) {
+                            g_mapBpOver[state.nThreadId] == BPOVER_NORMAL;
                         }
-                        // TODO not custom trace
                     }
+                    // TODO not custom trace
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) {
                     if (getXInfoDB()->isBreakPointPresent(state.nAddress, XInfoDB::BPT_CODE_SOFTWARE)) {
                         // TODO Check suspend all threads
@@ -338,7 +348,7 @@ void XUnixDebugger::_debugEvent()
 
                         if (_currentBP.nCount) {
                             g_mapThreadBPToRestore.insert(state.nThreadId, _currentBP);
-                            getXInfoDB()->_setStep_Id(breakPointInfo.nThreadID);
+                            g_mapBpOver.insert(state.nThreadId, BPOVER_STEP);
                         }
 
                         // TODO restore !!!
@@ -374,8 +384,13 @@ void XUnixDebugger::_debugEvent()
                 setDebugActive(false);
             }
 
-            if (bContinue) {
+            if (g_mapBpOver[state.nThreadId] == BPOVER_RESTORE) {
                 continueThread(state.nThreadId);
+                g_mapBpOver.remove(state.nThreadId);
+            }
+
+            if (g_mapBpOver[state.nThreadId] == BPOVER_NORMAL) {
+                g_mapBpOver.remove(state.nThreadId);
             }
         }
     }

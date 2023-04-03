@@ -308,9 +308,9 @@ void XAbstractDebugger::_waitEvents()
 
 void XAbstractDebugger::_eventBreakPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo)
 {
-    getXInfoDB()->setCurrentThreadById(pBreakPointInfo->nThreadID);
+    getXInfoDB()->setCurrentThreadId(pBreakPointInfo->nThreadID);
 #ifdef Q_OS_WIN
-    getXInfoDB()->setCurrentThreadByHandle(pBreakPointInfo->hThread);
+    getXInfoDB()->setCurrentThreadHandle(pBreakPointInfo->hThread);
 #endif
     emit eventBreakPoint(pBreakPointInfo);
 }

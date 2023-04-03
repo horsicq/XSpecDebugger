@@ -175,12 +175,12 @@ bool XWindowsDebugger::stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo)
 
 bool XWindowsDebugger::stepInto()
 {
-    return stepIntoByHandle(getXInfoDB()->getCurrentThreadByHandle(), XInfoDB::BPI_STEPINTO);
+    return stepIntoByHandle(getXInfoDB()->getCurrentThreadHandle(), XInfoDB::BPI_STEPINTO);
 }
 
 bool XWindowsDebugger::stepOver()
 {
-    return stepOverByHandle(getXInfoDB()->getCurrentThreadByHandle(), XInfoDB::BPI_STEPINTO);
+    return stepOverByHandle(getXInfoDB()->getCurrentThreadHandle(), XInfoDB::BPI_STEPINTO);
 }
 
 quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
