@@ -290,7 +290,7 @@ bool XAbstractDebugger::stepOver()
 void XAbstractDebugger::wait()
 {
     while (isDebugActive()) {
-//        QThread::msleep(100);
+        //        QThread::msleep(100);
         _waitEvents();
     }
 }

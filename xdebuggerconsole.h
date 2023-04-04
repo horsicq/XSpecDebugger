@@ -13,8 +13,7 @@
 #include "xosxdebugger.h"
 #endif
 
-class XDebuggerConsole : public QObject
-{
+class XDebuggerConsole : public QObject {
     Q_OBJECT
 public:
     explicit XDebuggerConsole(QObject *pParent = nullptr);
@@ -26,7 +25,7 @@ public:
         QList<QString> listErrors;
     };
 
-    static void commandControl(COMMAND_RESULT *pCommandResult, QString sCommand, XAbstractDebugger *pDebugger); // TODO PDStruct
+    static void commandControl(COMMAND_RESULT *pCommandResult, QString sCommand, XAbstractDebugger *pDebugger);  // TODO PDStruct
     // TODO History TODO init for init commandControl
 
 private:
@@ -54,4 +53,4 @@ private:
     XAbstractDebugger::OPTIONS g_options;
 };
 
-#endif // XDEBUGGERCONSOLE_H
+#endif  // XDEBUGGERCONSOLE_H

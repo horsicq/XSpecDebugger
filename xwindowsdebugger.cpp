@@ -62,7 +62,7 @@ bool XWindowsDebugger::load()
         setDisasmMode(XBinary::DM_X86_64);
 #endif
 
-        setTraceFileName(XBinary::getResultFileName(getOptions()->sFileName, "trace.txt")); // TODO Check mb Remove
+        setTraceFileName(XBinary::getResultFileName(getOptions()->sFileName, "trace.txt"));  // TODO Check mb Remove
 
         bResult = true;
         DWORD dwProcessID = processInfo.dwProcessId;

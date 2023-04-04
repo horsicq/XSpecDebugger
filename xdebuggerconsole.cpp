@@ -20,8 +20,7 @@
  */
 #include "xdebuggerconsole.h"
 
-XDebuggerConsole::XDebuggerConsole(QObject *pParent)
-    : QObject(pParent)
+XDebuggerConsole::XDebuggerConsole(QObject *pParent) : QObject(pParent)
 {
     g_pInfoDB = nullptr;
 #ifdef Q_OS_WIN
@@ -90,11 +89,11 @@ void XDebuggerConsole::run(XAbstractDebugger::OPTIONS options)
         qint32 nNumberOfTexts = commandResult.listTexts.count();
         qint32 nNumberOfErrors = commandResult.listErrors.count();
 
-        for(qint32 i = 0; i < nNumberOfTexts; i++) {
+        for (qint32 i = 0; i < nNumberOfTexts; i++) {
             printf("%s\n", commandResult.listTexts.at(i).toUtf8().data());
         }
 
-        for(qint32 i = 0; i < nNumberOfErrors; i++) {
+        for (qint32 i = 0; i < nNumberOfErrors; i++) {
             printf("%s\n", commandResult.listErrors.at(i).toUtf8().data());
         }
 
@@ -138,12 +137,12 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, QString sC
         qint32 nCount = _getNumber(pCommandResult, sArg[2], 10);
 
         if (nDisasmAddress == -1) {
-    #ifdef Q_PROCESSOR_X86_32
+#ifdef Q_PROCESSOR_X86_32
             nCurrentAddress = pInfoDB->getCurrentRegCache(XInfoDB::XREG_EIP).var.v_uint32;
-    #endif
-    #ifdef Q_PROCESSOR_X86_64
+#endif
+#ifdef Q_PROCESSOR_X86_64
             nDisasmAddress = pInfoDB->getCurrentRegCache(XInfoDB::XREG_RIP).var.v_uint64;
-    #endif
+#endif
         }
 
         for (int i = 0; i < nCount; i++) {
@@ -176,7 +175,8 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, QString sC
         qint32 nNumberOfModules = pModulesList->count();
 
         for (qint32 i = 0; i < nNumberOfModules; i++) {
-            printf("%llx %llx %s %s\n", pModulesList->at(i).nAddress, pModulesList->at(i).nSize, pModulesList->at(i).sName.toUtf8().data(), pModulesList->at(i).sFileName.toUtf8().data());
+            printf("%llx %llx %s %s\n", pModulesList->at(i).nAddress, pModulesList->at(i).nSize, pModulesList->at(i).sName.toUtf8().data(),
+                   pModulesList->at(i).sFileName.toUtf8().data());
         }
     } else if (sArg[0] == "regions") {
         QList<XProcess::MEMORY_REGION> *pRegionsList = pInfoDB->getCurrentMemoryRegionsList();
@@ -200,9 +200,9 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, QString sC
         qint32 nNumberOfBreakPoints = pBreakPoints->count();
 
         for (qint32 i = 0; i < nNumberOfBreakPoints; i++) {
-            QString sString =QString("%1 %2 %3").arg(XBinary::valueToHexEx(pBreakPoints->at(i).nAddress),
-                                                     XBinary::valueToHexEx(pBreakPoints->at(i).nSize),
-                                                     QString::number(pBreakPoints->at(i).nCount));
+            QString sString = QString("%1 %2 %3")
+                                  .arg(XBinary::valueToHexEx(pBreakPoints->at(i).nAddress), XBinary::valueToHexEx(pBreakPoints->at(i).nSize),
+                                       QString::number(pBreakPoints->at(i).nCount));
             pCommandResult->listTexts.append(sString);
         }
 
@@ -215,7 +215,7 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, QString sC
     } else if (sArg[0] == "quit") {
         printf("STOP\n");
         pDebugger->stop();
-        //break;
+        // break;
     } else {
         QString sError = QString("%1: %2").arg(tr("Unknown command"), sCommand);
         pCommandResult->listErrors.append(sError);
@@ -232,7 +232,7 @@ XADDR XDebuggerConsole::_getAddress(COMMAND_RESULT *pCommandResult, QString sStr
 
         if (!bOK) {
             nResult = nDefaultValue;
-            QString sError = QString("%1: %2").arg(tr("Invalid address"),sString);
+            QString sError = QString("%1: %2").arg(tr("Invalid address"), sString);
             pCommandResult->listErrors.append(sError);
         }
     }
@@ -250,7 +250,7 @@ qint32 XDebuggerConsole::_getNumber(COMMAND_RESULT *pCommandResult, QString sStr
 
         if (!bOK) {
             nResult = nDefaultValue;
-            QString sError = QString("%1: %2").arg(tr("Invalid number"),sString);
+            QString sError = QString("%1: %2").arg(tr("Invalid number"), sString);
             pCommandResult->listErrors.append(sError);
         }
     }
@@ -317,7 +317,6 @@ void XDebuggerConsole::onEventBreakPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointIn
 #ifdef Q_OS_LINUX
     g_pInfoDB->updateRegsById(pBreakPointInfo->nThreadID, regOptions);
 #endif
-
 }
 
 void XDebuggerConsole::onEventFunctionEnter(XInfoDB::FUNCTION_INFO *pFunctionInfo)

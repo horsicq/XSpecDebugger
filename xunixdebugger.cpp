@@ -186,7 +186,6 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID, qint32 nOpt
             if (WSTOPSIG(nResult) == SIGABRT) {
                 qDebug("process unexpectedly aborted");
             } else {
-
             }
             qDebug("!!!WSTOPSIG %x", WSTOPSIG(nResult));
         } else if (WIFEXITED(nResult)) {
@@ -298,7 +297,6 @@ bool XUnixDebugger::stepOver()
 void XUnixDebugger::_debugEvent()
 {
     if (isDebugActive()) {
-
         bool bContinue = false;
 
         qint64 nId = getXInfoDB()->getProcessInfo()->nProcessID;
@@ -363,7 +361,7 @@ void XUnixDebugger::_debugEvent()
                     breakPointInfo.pHProcessMemoryIO = getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
                     breakPointInfo.pHProcessMemoryQuery = getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
                     breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
-                    breakPointInfo.nThreadID = getXInfoDB()->getProcessInfo()->nMainThreadID; // TODO Check !!!
+                    breakPointInfo.nThreadID = getXInfoDB()->getProcessInfo()->nMainThreadID;  // TODO Check !!!
 
                     _eventBreakPoint(&breakPointInfo);
                 }
