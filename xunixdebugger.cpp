@@ -34,7 +34,7 @@ bool XUnixDebugger::run()
     qint64 nCurrentThreadId = getXInfoDB()->getCurrentThreadId();
 
     if (g_mapBpOver[nCurrentThreadId] == BPOVER_STEP) {
-        bResult = stepIntoById(nCurrentThreadId, XInfoDB::BPI_STEPINTO_RESTOREBP);
+        bResult = getXInfoDB()->stepInto_Id(nCurrentThreadId, XInfoDB::BPI_STEPINTO_RESTOREBP, false);
     } else {
         bResult = getXInfoDB()->resumeAllThreads();
     }
@@ -325,7 +325,7 @@ void XUnixDebugger::_debugEvent()
                         bBreakPoint = true;
 
                         if (g_mapBpOver[state.nThreadId] == BPOVER_RESTORE) {
-                            g_mapBpOver[state.nThreadId] == BPOVER_NORMAL;
+                            g_mapBpOver[state.nThreadId] = BPOVER_NORMAL;
                         }
                     }
                     // TODO not custom trace
