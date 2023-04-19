@@ -110,7 +110,13 @@ bool XWindowsDebugger::load()
 
 bool XWindowsDebugger::stop()
 {
-    return (bool)TerminateProcess(getXInfoDB()->getProcessInfo()->hProcess, 0);
+    bool bResult = false;
+
+    if (getXInfoDB()->getProcessInfo()->hProcess) {
+        bResult = (bool)TerminateProcess(getXInfoDB()->getProcessInfo()->hProcess, 0);
+    }
+
+    return bResult;
 }
 
 void XWindowsDebugger::cleanUp()
