@@ -121,7 +121,18 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, QString sC
 
     XInfoDB *pInfoDB = pDebugger->getXInfoDB();
 
-    if (sArg[0] == "step") {
+    if (sArg[0] == "help") {
+        printf("step\n");
+        printf("disasm\n");
+        printf("regs\n");
+        printf("run\n");
+        printf("modules\n");
+        printf("regions\n");
+        printf("threads\n");
+        printf("breakpoints\n");
+        printf("bpx <ADDRES>\n");
+        printf("quit\n");
+    } else if (sArg[0] == "step") {
         qint32 nCount = _getNumber(pCommandResult, sArg[1], 1);
 
         if (nCount == 1) {
