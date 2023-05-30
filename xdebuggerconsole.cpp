@@ -119,28 +119,32 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, QString sC
         sArg[i] = sCommand.section(" ", i, i);
     }
 
-    XInfoDB *pInfoDB = pDebugger->getXInfoDB();
+    XInfoDB *pInfoDB = nullptr;
+
+    if (pDebugger) {
+        pInfoDB = pDebugger->getXInfoDB();
+    }
 
     if (sArg[0] == "help") {
-        printf("step\n");
-        printf("disasm\n");
-        printf("regs\n");
-        printf("run\n");
-        printf("modules\n");
-        printf("regions\n");
-        printf("threads\n");
-        printf("breakpoints\n");
-        printf("bpx <ADDRES>\n");
-        printf("quit\n");
+        pCommandResult->listTexts.append("step");
+        pCommandResult->listTexts.append("disasm");
+        pCommandResult->listTexts.append("regs");
+        pCommandResult->listTexts.append("run");
+        pCommandResult->listTexts.append("modules");
+        pCommandResult->listTexts.append("regions");
+        pCommandResult->listTexts.append("threads");
+        pCommandResult->listTexts.append("breakpoints");
+        pCommandResult->listTexts.append("bpx <ADDRESS>");
+        pCommandResult->listTexts.append("quit");
     } else if (sArg[0] == "step") {
         qint32 nCount = _getNumber(pCommandResult, sArg[1], 1);
 
         if (nCount == 1) {
             pDebugger->stepInto();
+            pDebugger->_waitEvents();
         } else if (nCount > 1) {
             for (qint32 i = 0; i < nCount; i++) {
                 commandControl(pCommandResult, sArg[0], pDebugger);
-                pDebugger->_waitEvents();
             }
         }
     } else if (sArg[0] == "disasm") {
@@ -219,10 +223,13 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, QString sC
 
     } else if (sArg[0] == "bpx") {
         XADDR nAddress = sCommand.section(" ", 1, 1).toULongLong(0, 16);
+        QString sString = "BPX: " + XBinary::valueToHexEx(nAddress);
 
-        pInfoDB->addBreakPoint(nAddress, XInfoDB::BPT_CODE_SOFTWARE);
-        printf("Address: %llx\n", nAddress);
-        printf("BPX\n");
+        if (pInfoDB->addBreakPoint(nAddress, XInfoDB::BPT_CODE_SOFTWARE)) {
+            pCommandResult->listTexts.append(sString);
+        } else {
+            pCommandResult->listTexts.append(tr("Cannot set") + sString);
+        }
     } else if (sArg[0] == "quit") {
         printf("STOP\n");
         pDebugger->stop();
