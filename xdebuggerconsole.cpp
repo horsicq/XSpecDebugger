@@ -89,6 +89,7 @@ void XDebuggerConsole::run(XAbstractDebugger::OPTIONS options)
         qint32 nNumberOfTexts = commandResult.listTexts.count();
         qint32 nNumberOfErrors = commandResult.listErrors.count();
 
+#ifndef QT_GUI_LIB
         for (qint32 i = 0; i < nNumberOfTexts; i++) {
             printf("%s\n", commandResult.listTexts.at(i).toUtf8().data());
         }
@@ -96,7 +97,7 @@ void XDebuggerConsole::run(XAbstractDebugger::OPTIONS options)
         for (qint32 i = 0; i < nNumberOfErrors; i++) {
             printf("%s\n", commandResult.listErrors.at(i).toUtf8().data());
         }
-
+#endif
         g_pDebugger->_waitEvents();
 
         if (!g_pDebugger->isDebugActive()) {
@@ -124,6 +125,8 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, QString sC
     if (pDebugger) {
         pInfoDB = pDebugger->getXInfoDB();
     }
+
+    pCommandResult->listTexts.append("CMD: " + sCommand);
 
     if (sArg[0] == "help") {
         pCommandResult->listTexts.append("step");
@@ -153,7 +156,7 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, QString sC
 
         if (nDisasmAddress == -1) {
 #ifdef Q_PROCESSOR_X86_32
-            nCurrentAddress = pInfoDB->getCurrentRegCache(XInfoDB::XREG_EIP).var.v_uint32;
+            nDisasmAddress = pInfoDB->getCurrentRegCache(XInfoDB::XREG_EIP).var.v_uint32;
 #endif
 #ifdef Q_PROCESSOR_X86_64
             nDisasmAddress = pInfoDB->getCurrentRegCache(XInfoDB::XREG_RIP).var.v_uint64;
@@ -164,7 +167,8 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, QString sC
             XCapstone::DISASM_RESULT disasmResult = pInfoDB->disasm(nDisasmAddress);
 
             if (disasmResult.bIsValid) {
-                printf("%llx: %s %s\n", nDisasmAddress, disasmResult.sMnemonic.toLatin1().data(), disasmResult.sString.toLatin1().data());
+                QString sString = QString("%1: %2 %3").arg(XBinary::valueToHexEx(nDisasmAddress), disasmResult.sMnemonic, disasmResult.sString);
+                pCommandResult->listTexts.append(sString);
             } else {
                 break;
             }
@@ -173,14 +177,14 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, QString sC
         }
     } else if (sArg[0] == "regs") {
 #ifdef Q_PROCESSOR_X86_32
-        printf("EAX: %llx \n", pInfoDB->getCurrentRegCache(XInfoDB::XREG_EAX).var.v_uint32);
-        printf("ECX: %llx \n", pInfoDB->getCurrentRegCache(XInfoDB::XREG_EAX).var.v_uint32);
-        printf("EIP: %llx \n", pInfoDB->getCurrentRegCache(XInfoDB::XREG_EIP).var.v_uint32);
+        pCommandResult->listTexts.append("EAX: " + XBinary::valueToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_EAX).var.v_uint32));
+        pCommandResult->listTexts.append("ECX: " + XBinary::valueToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_ECX).var.v_uint32));
+        pCommandResult->listTexts.append("EIP: " + XBinary::valueToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_EIP).var.v_uint32));
 #endif
 #ifdef Q_PROCESSOR_X86_64
-        printf("RAX: %llx \n", pInfoDB->getCurrentRegCache(XInfoDB::XREG_RAX).var.v_uint64);
-        printf("RCX: %llx \n", pInfoDB->getCurrentRegCache(XInfoDB::XREG_RCX).var.v_uint64);
-        printf("RIP: %llx \n", pInfoDB->getCurrentRegCache(XInfoDB::XREG_RIP).var.v_uint64);
+        pCommandResult->listTexts.append("RAX: " + XBinary::valueToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_RAX).var.v_uint64));
+        pCommandResult->listTexts.append("RCX: " + XBinary::valueToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_RCX).var.v_uint64));
+        pCommandResult->listTexts.append("RIP: " + XBinary::valueToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_RIP).var.v_uint64));
 #endif
     } else if (sArg[0] == "run") {
         pDebugger->run();
@@ -216,7 +220,8 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, QString sC
 
         for (qint32 i = 0; i < nNumberOfBreakPoints; i++) {
             QString sString = QString("%1 %2 %3")
-                                  .arg(XBinary::valueToHexEx(pBreakPoints->at(i).nAddress), XBinary::valueToHexEx(pBreakPoints->at(i).nSize),
+                                  .arg(XBinary::valueToHexEx(pBreakPoints->at(i).nAddress),
+                                       XBinary::valueToHexEx(pBreakPoints->at(i).nSize),
                                        QString::number(pBreakPoints->at(i).nCount));
             pCommandResult->listTexts.append(sString);
         }
