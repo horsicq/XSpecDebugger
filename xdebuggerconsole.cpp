@@ -220,8 +220,7 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, QString sC
 
         for (qint32 i = 0; i < nNumberOfBreakPoints; i++) {
             QString sString = QString("%1 %2 %3")
-                                  .arg(XBinary::valueToHexEx(pBreakPoints->at(i).nAddress),
-                                       XBinary::valueToHexEx(pBreakPoints->at(i).nSize),
+                                  .arg(XBinary::valueToHexEx(pBreakPoints->at(i).nAddress), XBinary::valueToHexEx(pBreakPoints->at(i).nSize),
                                        QString::number(pBreakPoints->at(i).nCount));
             pCommandResult->listTexts.append(sString);
         }
