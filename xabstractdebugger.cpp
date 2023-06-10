@@ -65,7 +65,7 @@ void XAbstractDebugger::setDisasmMode(XBinary::DM disasmMode)
     XCapstone::openHandle(disasmMode, &g_handle, true);
 }
 
-void XAbstractDebugger::setTraceFileName(QString sTraceFileName)
+void XAbstractDebugger::setTraceFileName(const QString &sTraceFileName)
 {
     g_sTraceFileName = sTraceFileName;
 }

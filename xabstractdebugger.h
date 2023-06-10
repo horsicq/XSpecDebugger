@@ -65,7 +65,7 @@ public:
     virtual XBinary::MODE getMode() = 0;
 
     void setDisasmMode(XBinary::DM disasmMode);
-    void setTraceFileName(QString sTraceFileName);
+    void setTraceFileName(const QString &sTraceFileName);
     void clearTraceFile();
     void writeToTraceFile(QString sString);
 
