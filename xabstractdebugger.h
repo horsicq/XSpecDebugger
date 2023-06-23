@@ -67,7 +67,7 @@ public:
     void setDisasmMode(XBinary::DM disasmMode);
     void setTraceFileName(const QString &sTraceFileName);
     void clearTraceFile();
-    void writeToTraceFile(QString sString);
+    void writeToTraceFile(const QString &sString);
 
     void setOptions(OPTIONS options);
     OPTIONS *getOptions();

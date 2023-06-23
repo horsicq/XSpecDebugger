@@ -77,7 +77,7 @@ void XAbstractDebugger::clearTraceFile()
     }
 }
 
-void XAbstractDebugger::writeToTraceFile(QString sString)
+void XAbstractDebugger::writeToTraceFile(const QString &sString)
 {
     if (g_sTraceFileName != "") {
         XBinary::appendToFile(g_sTraceFileName, sString);
