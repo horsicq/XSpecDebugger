@@ -94,7 +94,7 @@ XAbstractDebugger::OPTIONS *XAbstractDebugger::getOptions()
     return &g_options;
 }
 
-void XAbstractDebugger::_messageString(XAbstractDebugger::MT messageType, QString sText)
+void XAbstractDebugger::_messageString(XAbstractDebugger::MT messageType, const QString &sText)
 {
 #ifdef QT_DEBUG
     qDebug("%s", sText.toLatin1().data());

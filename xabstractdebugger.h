@@ -72,7 +72,7 @@ public:
     void setOptions(OPTIONS options);
     OPTIONS *getOptions();
 
-    void _messageString(MT messageType, QString sText);
+    void _messageString(MT messageType, const QString &sText);
 
     qint64 getFunctionAddress(QString sFunctionName);  // TODO move to XInfoDB
     QString getAddressSymbolString(quint64 nAddress);  // TODO move to XInfoDB
