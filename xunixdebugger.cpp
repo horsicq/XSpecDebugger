@@ -29,12 +29,12 @@ bool XUnixDebugger::run()
 {
     bool bResult = false;
     // TODO
-    // TODO resuleAllSuspendedThreads
+    // TODO resumeAllSuspendedThreads
 
     qint64 nCurrentThreadId = getXInfoDB()->getCurrentThreadId();
 
     if (g_mapBpOver[nCurrentThreadId] == BPOVER_STEP) {
-        bResult = getXInfoDB()->stepInto_Id(nCurrentThreadId, XInfoDB::BPI_STEPINTO_RESTOREBP, false);
+        bResult = getXInfoDB()->stepInto_Id(nCurrentThreadId, XInfoDB::BPI_STEPINTO_RESTOREBP, false); // TODO Check
     } else {
         bResult = getXInfoDB()->resumeAllThreads();
     }
@@ -113,8 +113,9 @@ XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName, Q
     return result;
 }
 
-void XUnixDebugger::setPtraceOptions(qint64 nThreadID)
+bool XUnixDebugger::setPtraceOptions(qint64 nThreadID)
 {
+    bool bResult = false;
     // TODO getOptions !!!
     // TODO result bool
 //    long options=PTRACE_O_TRACECLONE;
@@ -123,13 +124,16 @@ void XUnixDebugger::setPtraceOptions(qint64 nThreadID)
     long options = PTRACE_O_EXITKILL | PTRACE_O_TRACECLONE;
     // PTRACE_O_TRACECLONE create thread
 
-    if (ptrace(PTRACE_SETOPTIONS, nThreadID, 0, options) == -1) {
+    if (ptrace(PTRACE_SETOPTIONS, nThreadID, 0, options) != -1) {
+        bResult = true;
+    } else {
 #ifdef QT_DEBUG
         qDebug("Cannot PTRACE_SETOPTIONS");
 #endif
     }
 #endif
     // mb TODO
+    return bResult;
 }
 
 XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID, qint32 nOptions)
@@ -304,6 +308,8 @@ void XUnixDebugger::_debugEvent()
         STATE state = waitForSignal(nId, __WALL | WNOHANG);
 
         if (state.bIsValid) {
+            getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
+
             if ((state.debuggerStatus == DEBUGGER_STATUS_STEP) || (state.debuggerStatus == DEBUGGER_STATUS_KERNEL)) {
                 XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
 
@@ -385,7 +391,7 @@ void XUnixDebugger::_debugEvent()
             }
 
             if (g_mapBpOver[state.nThreadId] == BPOVER_RESTORE) {
-                continueThread(state.nThreadId);
+                getXInfoDB()->resumeThread_Id(state.nThreadId);
                 g_mapBpOver.remove(state.nThreadId);
             }
 

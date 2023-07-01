@@ -63,7 +63,7 @@ public:
     virtual void cleanUp();
 
     EXECUTEPROCESS executeProcess(QString sFileName, QString sDirectory);  // TODO args, TODO sDirectory
-    void setPtraceOptions(qint64 nThreadID);
+    bool setPtraceOptions(qint64 nThreadID);
     STATE waitForSignal(qint64 nProcessID, qint32 nOptions);
     void continueThread(qint64 nThreadID);                  // TODO rename to resumeThread TODO remove
     static bool resumeThread(XProcess::HANDLEID handleID);  // TODO remove
