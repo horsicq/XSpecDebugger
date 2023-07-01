@@ -34,7 +34,7 @@ bool XUnixDebugger::run()
     qint64 nCurrentThreadId = getXInfoDB()->getCurrentThreadId();
 
     if (g_mapBpOver[nCurrentThreadId] == BPOVER_STEP) {
-        bResult = getXInfoDB()->stepInto_Id(nCurrentThreadId, XInfoDB::BPI_STEPINTO_RESTOREBP, false); // TODO Check
+        bResult = getXInfoDB()->stepInto_Id(nCurrentThreadId, XInfoDB::BPI_STEPINTO_RESTOREBP, false);  // TODO Check
     } else {
         bResult = getXInfoDB()->resumeAllThreads();
     }
