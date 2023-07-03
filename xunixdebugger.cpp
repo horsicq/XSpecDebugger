@@ -303,7 +303,7 @@ bool XUnixDebugger::stepOver()
 void XUnixDebugger::_debugEvent()
 {
     if (isDebugActive()) {
-        //bool bContinue = false;
+        // bool bContinue = false;
 
         qint64 nId = getXInfoDB()->getProcessInfo()->nProcessID;
 
