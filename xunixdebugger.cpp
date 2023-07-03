@@ -78,6 +78,8 @@ void XUnixDebugger::cleanUp()
 
 XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName, QString sDirectory)
 {
+    // TODO Working directory
+    Q_UNUSED(sDirectory)
     EXECUTEPROCESS result = {};
 
     result.sStatus = "Error";
@@ -301,7 +303,7 @@ bool XUnixDebugger::stepOver()
 void XUnixDebugger::_debugEvent()
 {
     if (isDebugActive()) {
-        bool bContinue = false;
+        //bool bContinue = false;
 
         qint64 nId = getXInfoDB()->getProcessInfo()->nProcessID;
 

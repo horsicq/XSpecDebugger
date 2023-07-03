@@ -86,10 +86,10 @@ void XDebuggerConsole::run(XAbstractDebugger::OPTIONS options)
 
         commandControl(&commandResult, sCommand, g_pDebugger);
 
+#ifndef QT_GUI_LIB
         qint32 nNumberOfTexts = commandResult.listTexts.count();
         qint32 nNumberOfErrors = commandResult.listErrors.count();
 
-#ifndef QT_GUI_LIB
         for (qint32 i = 0; i < nNumberOfTexts; i++) {
             printf("%s\n", commandResult.listTexts.at(i).toUtf8().data());
         }
@@ -154,7 +154,7 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, QString sC
         XADDR nDisasmAddress = _getAddress(pCommandResult, sArg[1], -1);
         qint32 nCount = _getNumber(pCommandResult, sArg[2], 10);
 
-        if (nDisasmAddress == -1) {
+        if (nDisasmAddress == (XADDR)-1) {
 #ifdef Q_PROCESSOR_X86_32
             nDisasmAddress = pInfoDB->getCurrentRegCache(XInfoDB::XREG_EIP).var.v_uint32;
 #endif
@@ -288,31 +288,37 @@ void XDebuggerConsole::onEventCreateProcess(XInfoDB::PROCESS_INFO *pProcessInfo)
 
 void XDebuggerConsole::onEventExitProcess(XInfoDB::EXITPROCESS_INFO *pExitProcessInfo)
 {
+    Q_UNUSED(pExitProcessInfo)
     qDebug("void XDebuggerConsole::onEventExitProcess(XInfoDB::EXITPROCESS_INFO *pExitProcessInfo)");
 }
 
 void XDebuggerConsole::onEventCreateThread(XInfoDB::THREAD_INFO *pThreadInfo)
 {
+    Q_UNUSED(pThreadInfo)
     qDebug("void XDebuggerConsole::onEventCreateThread(XInfoDB::THREAD_INFO *pThreadInfo)");
 }
 
 void XDebuggerConsole::onEventExitThread(XInfoDB::EXITTHREAD_INFO *pExitThreadInfo)
 {
+    Q_UNUSED(pExitThreadInfo)
     qDebug("void XDebuggerConsole::onEventExitThread(XInfoDB::EXITTHREAD_INFO *pExitThreadInfo)");
 }
 
 void XDebuggerConsole::onEventLoadSharedObject(XInfoDB::SHAREDOBJECT_INFO *pSharedObjectInfo)
 {
+    Q_UNUSED(pSharedObjectInfo)
     qDebug("void XDebuggerConsole::onEventLoadSharedObject(XInfoDB::SHAREDOBJECT_INFO *pSharedObjectInfo)");
 }
 
 void XDebuggerConsole::onEventUnloadSharedObject(XInfoDB::SHAREDOBJECT_INFO *pSharedObjectInfo)
 {
+    Q_UNUSED(pSharedObjectInfo)
     qDebug("void XDebuggerConsole::onEventUnloadSharedObject(XInfoDB::SHAREDOBJECT_INFO *pSharedObjectInfo)");
 }
 
 void XDebuggerConsole::onEventDebugString(XInfoDB::DEBUGSTRING_INFO *pDebugString)
 {
+    Q_UNUSED(pDebugString)
     qDebug("void XDebuggerConsole::onEventDebugString(XInfoDB::DEBUGSTRING_INFO *pDebugString)");
 }
 
@@ -343,10 +349,12 @@ void XDebuggerConsole::onEventBreakPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointIn
 
 void XDebuggerConsole::onEventFunctionEnter(XInfoDB::FUNCTION_INFO *pFunctionInfo)
 {
+    Q_UNUSED(pFunctionInfo)
     qDebug("void XDebuggerConsole::onEventFunctionEnter(XInfoDB::FUNCTION_INFO *pFunctionInfo)");
 }
 
 void XDebuggerConsole::onEventFunctionLeave(XInfoDB::FUNCTION_INFO *pFunctionInfo)
 {
+    Q_UNUSED(pFunctionInfo)
     qDebug("void XDebuggerConsole::onEventFunctionLeave(XInfoDB::FUNCTION_INFO *pFunctionInfo)");
 }

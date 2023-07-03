@@ -184,6 +184,8 @@ qint64 XAbstractDebugger::getRetAddress(XProcess::HANDLEID handleID)
         nResult = getXInfoDB()->read_uint64((quint64)nSP);
 #endif
     }
+#else
+    Q_UNUSED(handleID)
 #endif
 
     return nResult;
@@ -215,6 +217,7 @@ bool XAbstractDebugger::bIsSystemCode(quint64 nAddress)
 
 bool XAbstractDebugger::dumpToFile(QString sFileName)
 {
+    Q_UNUSED(sFileName)
     bool bResult = false;
 
     //    XProcessDevice processDevice(this); // TODO -> XProcess
@@ -232,6 +235,7 @@ bool XAbstractDebugger::dumpToFile(QString sFileName)
 bool XAbstractDebugger::stepIntoByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo)
 {
     Q_UNUSED(hThread)
+    Q_UNUSED(bpInfo)
 #ifdef QT_DEBUG
     qDebug("TODO XAbstractDebugger::stepIntoByHandle");
 #endif
@@ -242,6 +246,7 @@ bool XAbstractDebugger::stepIntoByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo)
 bool XAbstractDebugger::stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo)
 {
     Q_UNUSED(nThreadId)
+    Q_UNUSED(bpInfo)
 #ifdef QT_DEBUG
     qDebug("TODO XAbstractDebugger::stepIntoById");
 #endif
@@ -252,6 +257,7 @@ bool XAbstractDebugger::stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo)
 bool XAbstractDebugger::stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo)
 {
     Q_UNUSED(hThread)
+    Q_UNUSED(bpInfo)
 #ifdef QT_DEBUG
     qDebug("TODO XAbstractDebugger::stepIntoByHandle");
 #endif
@@ -262,6 +268,7 @@ bool XAbstractDebugger::stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo)
 bool XAbstractDebugger::stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo)
 {
     Q_UNUSED(nThreadId)
+    Q_UNUSED(bpInfo)
 #ifdef QT_DEBUG
     qDebug("TODO XAbstractDebugger::stepIntoById");
 #endif
@@ -341,7 +348,7 @@ bool XAbstractDebugger::isDebugActive()
 void XAbstractDebugger::process()
 {
 #ifdef QT_DEBUG
-    qDebug("Current thread: %d", QThread::currentThreadId());
+    qDebug("Current thread: %lld", (qint64)QThread::currentThreadId());
 #endif
 
     load();
@@ -350,7 +357,7 @@ void XAbstractDebugger::process()
 void XAbstractDebugger::testSlot(X_ID nThreadId)
 {
 #ifdef QT_DEBUG
-    qDebug("testSlot: Current thread: %d", QThread::currentThreadId());
+    qDebug("testSlot: Current thread: %lld", (qint64)QThread::currentThreadId());
 #endif
 #ifdef Q_OS_LINUX
     user_regs_struct regs = {};
