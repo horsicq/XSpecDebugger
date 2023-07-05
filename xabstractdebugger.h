@@ -84,7 +84,7 @@ public:
     bool isUserCode(quint64 nAddress);     // TODO move to XInfoDB
     bool bIsSystemCode(quint64 nAddress);  // TODO move to XInfoDB
 
-    bool dumpToFile(QString sFileName);
+    bool dumpToFile(const QString &sFileName);
 
     char *allocateAnsiStringMemory(QString sFileName);  // TODO move to XInfoDB
 

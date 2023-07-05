@@ -215,7 +215,7 @@ bool XAbstractDebugger::bIsSystemCode(quint64 nAddress)
     return getXInfoDB()->findSharedInfoByAddress(nAddress).nImageBase;
 }
 
-bool XAbstractDebugger::dumpToFile(QString sFileName)
+bool XAbstractDebugger::dumpToFile(const QString &sFileName)
 {
     Q_UNUSED(sFileName)
     bool bResult = false;
