@@ -102,7 +102,7 @@ void XAbstractDebugger::_messageString(XAbstractDebugger::MT messageType, const 
     emit messageString(messageType, sText);
 }
 
-qint64 XAbstractDebugger::getFunctionAddress(QString sFunctionName)
+qint64 XAbstractDebugger::getFunctionAddress(const QString &sFunctionName)
 {
     qint64 nResult = -1;
 
