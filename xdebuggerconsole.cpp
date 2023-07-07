@@ -112,7 +112,7 @@ void XDebuggerConsole::run(XAbstractDebugger::OPTIONS options)
     delete g_pDebugger;
 }
 
-void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, QString sCommand, XAbstractDebugger *pDebugger)
+void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, const QString &sCommand, XAbstractDebugger *pDebugger)
 {
     QString sArg[3];
 

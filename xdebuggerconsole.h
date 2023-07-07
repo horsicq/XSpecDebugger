@@ -25,7 +25,7 @@ public:
         QList<QString> listErrors;
     };
 
-    static void commandControl(COMMAND_RESULT *pCommandResult, QString sCommand, XAbstractDebugger *pDebugger);  // TODO PDStruct
+    static void commandControl(COMMAND_RESULT *pCommandResult, const QString &sCommand, XAbstractDebugger *pDebugger);  // TODO PDStruct
     // TODO History TODO init for init commandControl
 
 private:
