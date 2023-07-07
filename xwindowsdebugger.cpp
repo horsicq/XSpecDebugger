@@ -193,6 +193,8 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
     quint32 nResult = DBG_EXCEPTION_NOT_HANDLED;
 
+//    getXInfoDB()->setThreadStatus(pDebugEvent->dwThreadId, XInfoDB::THREAD_STATUS_PAUSED);
+
     quint32 nExceptionCode = pDebugEvent->u.Exception.ExceptionRecord.ExceptionCode;
     quint64 nExceptionAddress = (qint64)(pDebugEvent->u.Exception.ExceptionRecord.ExceptionAddress);
 
@@ -367,6 +369,8 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     //        qDebug("ExceptionInformation %x: %x",i,pDebugEvent->u.Exception.ExceptionRecord.ExceptionInformation[i]);
     //    }
 
+//    getXInfoDB()->setThreadStatus(pDebugEvent->dwThreadId, XInfoDB::THREAD_STATUS_RUNNING); // TODO Check
+
     return nResult;
 }
 
@@ -377,6 +381,7 @@ quint32 XWindowsDebugger::on_CREATE_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     threadInfo.hThread = pDebugEvent->u.CreateThread.hThread;
     threadInfo.nStartAddress = (qint64)pDebugEvent->u.CreateThread.lpStartAddress;
     threadInfo.nThreadLocalBase = (qint64)pDebugEvent->u.CreateThread.lpThreadLocalBase;
+    threadInfo.threadStatus = XInfoDB::THREAD_STATUS_RUNNING;
     getXInfoDB()->addThreadInfo(&threadInfo);
 
     emit eventCreateThread(&threadInfo);
@@ -421,6 +426,7 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
     threadInfo.hThread = pDebugEvent->u.CreateProcessInfo.hThread;
     threadInfo.nStartAddress = (qint64)(pDebugEvent->u.CreateProcessInfo.lpStartAddress);
     threadInfo.nThreadLocalBase = (qint64)(pDebugEvent->u.CreateProcessInfo.lpThreadLocalBase);
+    threadInfo.threadStatus = XInfoDB::THREAD_STATUS_RUNNING;
     getXInfoDB()->addThreadInfo(&threadInfo);
 
     if (getOptions()->bBreakpointOnProgramEntryPoint) {

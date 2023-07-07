@@ -322,7 +322,7 @@ void XAbstractDebugger::_eventBreakPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointIn
     emit eventBreakPoint(pBreakPointInfo);
 }
 
-char *XAbstractDebugger::allocateAnsiStringMemory(QString sFileName)
+char *XAbstractDebugger::allocateAnsiStringMemory(const QString &sFileName)
 {
     char *pResult = nullptr;
 
