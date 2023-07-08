@@ -75,7 +75,7 @@ public:
     void _messageString(MT messageType, const QString &sText);
 
     qint64 getFunctionAddress(const QString &sFunctionName);  // TODO move to XInfoDB
-    QString getAddressSymbolString(quint64 nAddress);  // TODO move to XInfoDB
+    QString getAddressSymbolString(quint64 nAddress);         // TODO move to XInfoDB
 
     qint64 getRetAddress(XProcess::HANDLEID handleID);  // TODO move to XInfoDB
 

@@ -193,7 +193,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
     quint32 nResult = DBG_EXCEPTION_NOT_HANDLED;
 
-//    getXInfoDB()->setThreadStatus(pDebugEvent->dwThreadId, XInfoDB::THREAD_STATUS_PAUSED);
+    //    getXInfoDB()->setThreadStatus(pDebugEvent->dwThreadId, XInfoDB::THREAD_STATUS_PAUSED);
 
     quint32 nExceptionCode = pDebugEvent->u.Exception.ExceptionRecord.ExceptionCode;
     quint64 nExceptionAddress = (qint64)(pDebugEvent->u.Exception.ExceptionRecord.ExceptionAddress);
@@ -369,7 +369,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     //        qDebug("ExceptionInformation %x: %x",i,pDebugEvent->u.Exception.ExceptionRecord.ExceptionInformation[i]);
     //    }
 
-//    getXInfoDB()->setThreadStatus(pDebugEvent->dwThreadId, XInfoDB::THREAD_STATUS_RUNNING); // TODO Check
+    //    getXInfoDB()->setThreadStatus(pDebugEvent->dwThreadId, XInfoDB::THREAD_STATUS_RUNNING); // TODO Check
 
     return nResult;
 }
