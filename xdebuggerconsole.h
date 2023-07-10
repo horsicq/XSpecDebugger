@@ -29,7 +29,7 @@ public:
     // TODO History TODO init for init commandControl
 
 private:
-    static XADDR _getAddress(COMMAND_RESULT *pCommandResult, QString sString, XADDR nDefaultValue);
+    static XADDR _getAddress(COMMAND_RESULT *pCommandResult, const QString &sString, XADDR nDefaultValue);
     static qint32 _getNumber(COMMAND_RESULT *pCommandResult, QString sString, qint32 nDefaultValue);
 
 private slots:

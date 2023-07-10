@@ -244,7 +244,7 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, const QStr
     }
 }
 
-XADDR XDebuggerConsole::_getAddress(COMMAND_RESULT *pCommandResult, QString sString, XADDR nDefaultValue)
+XADDR XDebuggerConsole::_getAddress(COMMAND_RESULT *pCommandResult, const QString &sString, XADDR nDefaultValue)
 {
     XADDR nResult = nDefaultValue;
 
