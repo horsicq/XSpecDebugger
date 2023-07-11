@@ -262,7 +262,7 @@ XADDR XDebuggerConsole::_getAddress(COMMAND_RESULT *pCommandResult, const QStrin
     return nResult;
 }
 
-qint32 XDebuggerConsole::_getNumber(COMMAND_RESULT *pCommandResult, QString sString, qint32 nDefaultValue)
+qint32 XDebuggerConsole::_getNumber(COMMAND_RESULT *pCommandResult, const QString &sString, qint32 nDefaultValue)
 {
     qint32 nResult = nDefaultValue;
 

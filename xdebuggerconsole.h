@@ -30,7 +30,7 @@ public:
 
 private:
     static XADDR _getAddress(COMMAND_RESULT *pCommandResult, const QString &sString, XADDR nDefaultValue);
-    static qint32 _getNumber(COMMAND_RESULT *pCommandResult, QString sString, qint32 nDefaultValue);
+    static qint32 _getNumber(COMMAND_RESULT *pCommandResult, const QString &sString, qint32 nDefaultValue);
 
 private slots:
     void onEventCreateProcess(XInfoDB::PROCESS_INFO *pProcessInfo);
