@@ -76,7 +76,7 @@ void XUnixDebugger::cleanUp()
     g_mapThreadBPToRestore.clear();
 }
 
-XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(QString sFileName, QString sDirectory)
+XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(const QString &sFileName, QString sDirectory)
 {
     // TODO Working directory
     Q_UNUSED(sDirectory)
