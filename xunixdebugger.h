@@ -62,7 +62,7 @@ public:
     virtual bool stop();
     virtual void cleanUp();
 
-    EXECUTEPROCESS executeProcess(const QString &sFileName, QString sDirectory);  // TODO args, TODO sDirectory
+    EXECUTEPROCESS executeProcess(const QString &sFileName, const QString &sDirectory);  // TODO args, TODO sDirectory
     bool setPtraceOptions(qint64 nThreadID);
     STATE waitForSignal(qint64 nProcessID, qint32 nOptions);
     void continueThread(qint64 nThreadID);                  // TODO rename to resumeThread TODO remove
