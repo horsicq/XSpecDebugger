@@ -322,19 +322,6 @@ void XAbstractDebugger::_eventBreakPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointIn
     emit eventBreakPoint(pBreakPointInfo);
 }
 
-char *XAbstractDebugger::allocateAnsiStringMemory(const QString &sFileName)
-{
-    char *pResult = nullptr;
-
-    qint32 nSize = sFileName.length();
-
-    pResult = new char[nSize + 1];
-    XBinary::_zeroMemory(pResult, nSize + 1);
-    XBinary::_copyMemory(pResult, sFileName.toLatin1().data(), nSize);
-
-    return pResult;
-}
-
 void XAbstractDebugger::setDebugActive(bool bState)
 {
     g_bIsDebugActive = bState;

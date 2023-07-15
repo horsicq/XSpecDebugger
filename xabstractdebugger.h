@@ -86,8 +86,6 @@ public:
 
     bool dumpToFile(const QString &sFileName);
 
-    char *allocateAnsiStringMemory(const QString &sFileName);  // TODO move to XInfoDB
-
     void setDebugActive(bool bState);
     bool isDebugActive();
 

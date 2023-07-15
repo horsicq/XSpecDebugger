@@ -89,7 +89,7 @@ XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(const QString &sFile
     {
         char **ppArgv = new char *[2];
 
-        ppArgv[0] = allocateAnsiStringMemory(sFileName);
+        ppArgv[0] = XInfoDB::allocateStringMemory(sFileName);
 
 #ifdef QT_DEBUG
         qDebug("FileName %s", ppArgv[0]);
