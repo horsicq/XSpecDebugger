@@ -22,6 +22,7 @@
 
 XLinuxDebugger::XLinuxDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XUnixDebugger(pParent, pXInfoDB)
 {
+
 }
 
 bool XLinuxDebugger::load()
@@ -32,7 +33,7 @@ bool XLinuxDebugger::load()
     QString sDirectory = getOptions()->sDirectory;
 
     quint32 nMapSize = 0x1000;
-    char *pMapMemory = (char *)mmap(nullptr, nMapSize, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    char *pMapMemory = (char *)mmap(nullptr, nMapSize, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0); // TODO mb a function
 
     XBinary::_zeroMemory(pMapMemory, nMapSize);
 
@@ -148,6 +149,11 @@ QString XLinuxDebugger::getArch()
 
 XBinary::MODE XLinuxDebugger::getMode()
 {
-    // TODO
-    return XBinary::MODE_64;
+    XBinary::MODE result = XBinary::MODE_32;
+
+    if (sizeof(void *) == 8) {
+        result = XBinary::MODE_64;
+    }
+
+    return result;
 }

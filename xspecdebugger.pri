@@ -69,6 +69,11 @@ osx {
     include($$PWD/../XInfoDB/xinfodb.pri)
 }
 
+!contains(XCONFIG, xoptions) {
+    XCONFIG += xoptions
+    include($$PWD/../XOptions/xoptions.pri)
+}
+
 DISTFILES += \
     $$PWD/LICENSE \
     $$PWD/README.md

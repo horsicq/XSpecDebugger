@@ -27,6 +27,7 @@
 #include "xbinary.h"
 #include "xcapstone.h"
 #include "xinfodb.h"
+#include "xoptions.h"
 #include "xprocess.h"
 #include "xprocessdevice.h"
 
@@ -61,8 +62,8 @@ public:
     virtual bool run();
     virtual bool stop();
     virtual void cleanUp();
-    virtual QString getArch() = 0;
-    virtual XBinary::MODE getMode() = 0;
+    virtual QString getArch() = 0; // TODO move toXInfoDB
+    virtual XBinary::MODE getMode() = 0;// TODO move toXInfoDB
 
     void setDisasmMode(XBinary::DM disasmMode);
     void setTraceFileName(const QString &sTraceFileName);

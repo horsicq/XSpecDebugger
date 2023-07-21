@@ -22,6 +22,18 @@
 
 XAbstractDebugger::XAbstractDebugger(QObject *pParent, XInfoDB *pXInfoDB) : QObject(pParent)
 {
+    QString buildCpuArchitecture = QSysInfo::buildCpuArchitecture();
+    QString currentCpuArchitecture = QSysInfo::currentCpuArchitecture();
+    QString buildAbi = QSysInfo::buildAbi();
+    QString kernelType = QSysInfo::kernelType();
+    QString kernelVersion = QSysInfo::kernelVersion();
+    QString productType = QSysInfo::productType();
+    QString productVersion = QSysInfo::productVersion();
+    QString prettyProductName = QSysInfo::prettyProductName();
+    QString machineHostName = QSysInfo::machineHostName();
+
+    static XOptions::BUNDLE bundle = XOptions::getBundle();
+
     g_handle = 0;
     g_bIsDebugActive = false;
     g_pXInfoDB = pXInfoDB;
