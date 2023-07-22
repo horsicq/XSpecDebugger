@@ -62,8 +62,8 @@ public:
     virtual bool run();
     virtual bool stop();
     virtual void cleanUp();
-    virtual QString getArch() = 0; // TODO move toXInfoDB
-    virtual XBinary::MODE getMode() = 0;// TODO move toXInfoDB
+    virtual QString getArch() = 0;        // TODO move toXInfoDB
+    virtual XBinary::MODE getMode() = 0;  // TODO move toXInfoDB
 
     void setDisasmMode(XBinary::DM disasmMode);
     void setTraceFileName(const QString &sTraceFileName);
