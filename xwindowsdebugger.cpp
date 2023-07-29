@@ -70,42 +70,23 @@ bool XWindowsDebugger::load()
         if (ResumeThread(processInfo.hThread) != ((DWORD)-1)) {
             setDebugActive(true);
 
-            while (isDebugActive()) {
-                DEBUG_EVENT dbgEvent = {0};
-                WaitForDebugEvent(&dbgEvent, INFINITE);  // TODO Check return
-
-                quint32 nStatus = DBG_CONTINUE;
-
-                if (dbgEvent.dwProcessId == dwProcessID) {
-                    if (dbgEvent.dwDebugEventCode == EXCEPTION_DEBUG_EVENT) {
-                        nStatus = on_EXCEPTION_DEBUG_EVENT(&dbgEvent);
-                    } else if (dbgEvent.dwDebugEventCode == CREATE_THREAD_DEBUG_EVENT) {
-                        nStatus = on_CREATE_THREAD_DEBUG_EVENT(&dbgEvent);
-                    } else if (dbgEvent.dwDebugEventCode == CREATE_PROCESS_DEBUG_EVENT) {
-                        nStatus = on_CREATE_PROCESS_DEBUG_EVENT(&dbgEvent);
-                    } else if (dbgEvent.dwDebugEventCode == EXIT_THREAD_DEBUG_EVENT) {
-                        nStatus = on_EXIT_THREAD_DEBUG_EVENT(&dbgEvent);
-                    } else if (dbgEvent.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT) {
-                        nStatus = on_EXIT_PROCESS_DEBUG_EVENT(&dbgEvent);
-                    } else if (dbgEvent.dwDebugEventCode == LOAD_DLL_DEBUG_EVENT) {
-                        nStatus = on_LOAD_DLL_DEBUG_EVENT(&dbgEvent);
-                    } else if (dbgEvent.dwDebugEventCode == UNLOAD_DLL_DEBUG_EVENT) {
-                        nStatus = on_UNLOAD_DLL_DEBUG_EVENT(&dbgEvent);
-                    } else if (dbgEvent.dwDebugEventCode == OUTPUT_DEBUG_STRING_EVENT) {
-                        nStatus = on_OUTPUT_DEBUG_STRING_EVENT(&dbgEvent);
-                    } else if (dbgEvent.dwDebugEventCode == RIP_EVENT) {
-                        nStatus = on_RIP_EVENT(&dbgEvent);
-                    }
-                }
-
-                ContinueDebugEvent(dbgEvent.dwProcessId, dbgEvent.dwThreadId, nStatus);
-            }
+            _debugLoop(dwProcessID);
         }
     } else {
         _messageString(MT_ERROR, QString("%1: %2").arg(tr("Cannot load file"), getOptions()->sFileName));
     }
 
     return bResult;
+}
+
+bool XWindowsDebugger::attach()
+{
+    // https://www.codeproject.com/Articles/132742/Writing-Windows-Debugger-Part-2
+#ifdef QT_DEBUG
+    qDebug("XWindowsDebugger::attach()");
+#endif
+
+    return false; // TODO
 }
 
 bool XWindowsDebugger::stop()
@@ -187,6 +168,40 @@ bool XWindowsDebugger::stepInto()
 bool XWindowsDebugger::stepOver()
 {
     return stepOverByHandle(getXInfoDB()->getCurrentThreadHandle(), XInfoDB::BPI_STEPINTO);
+}
+
+void XWindowsDebugger::_debugLoop(DWORD dwProcessID)
+{
+    while (isDebugActive()) {
+        DEBUG_EVENT dbgEvent = {0};
+        WaitForDebugEvent(&dbgEvent, INFINITE);  // TODO Check return
+
+        quint32 nStatus = DBG_CONTINUE;
+
+        if (dbgEvent.dwProcessId == dwProcessID) {
+            if (dbgEvent.dwDebugEventCode == EXCEPTION_DEBUG_EVENT) {
+                nStatus = on_EXCEPTION_DEBUG_EVENT(&dbgEvent);
+            } else if (dbgEvent.dwDebugEventCode == CREATE_THREAD_DEBUG_EVENT) {
+                nStatus = on_CREATE_THREAD_DEBUG_EVENT(&dbgEvent);
+            } else if (dbgEvent.dwDebugEventCode == CREATE_PROCESS_DEBUG_EVENT) {
+                nStatus = on_CREATE_PROCESS_DEBUG_EVENT(&dbgEvent);
+            } else if (dbgEvent.dwDebugEventCode == EXIT_THREAD_DEBUG_EVENT) {
+                nStatus = on_EXIT_THREAD_DEBUG_EVENT(&dbgEvent);
+            } else if (dbgEvent.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT) {
+                nStatus = on_EXIT_PROCESS_DEBUG_EVENT(&dbgEvent);
+            } else if (dbgEvent.dwDebugEventCode == LOAD_DLL_DEBUG_EVENT) {
+                nStatus = on_LOAD_DLL_DEBUG_EVENT(&dbgEvent);
+            } else if (dbgEvent.dwDebugEventCode == UNLOAD_DLL_DEBUG_EVENT) {
+                nStatus = on_UNLOAD_DLL_DEBUG_EVENT(&dbgEvent);
+            } else if (dbgEvent.dwDebugEventCode == OUTPUT_DEBUG_STRING_EVENT) {
+                nStatus = on_OUTPUT_DEBUG_STRING_EVENT(&dbgEvent);
+            } else if (dbgEvent.dwDebugEventCode == RIP_EVENT) {
+                nStatus = on_RIP_EVENT(&dbgEvent);
+            }
+        }
+
+        ContinueDebugEvent(dbgEvent.dwProcessId, dbgEvent.dwThreadId, nStatus);
+    }
 }
 
 quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)

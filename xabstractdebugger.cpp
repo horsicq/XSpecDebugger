@@ -349,8 +349,11 @@ void XAbstractDebugger::process()
 #ifdef QT_DEBUG
     qDebug("Current thread: %lld", (qint64)QThread::currentThreadId());
 #endif
-
-    load();
+    if (g_options.sFileName != "") {
+        load();
+    } else if (g_options.nPID != 0) {
+        attach();
+    }
 }
 
 void XAbstractDebugger::testSlot(X_ID nThreadId)

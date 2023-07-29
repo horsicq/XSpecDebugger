@@ -31,6 +31,7 @@ public:
     explicit XWindowsDebugger(QObject *pParent, XInfoDB *pXInfoDB);
     virtual bool run();
     virtual bool load();
+    virtual bool attach();
     virtual bool stop();
     virtual void cleanUp();
     virtual QString getArch();
@@ -41,6 +42,7 @@ public:
     virtual bool stepOver();
 
 private:
+    void _debugLoop(DWORD dwProcessID);
     quint32 on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent);
     quint32 on_CREATE_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent);
     quint32 on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent);

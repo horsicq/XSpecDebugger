@@ -123,6 +123,11 @@ bool XOSXDebugger::load()
     return bResult;
 }
 
+bool XOSXDebugger::attach()
+{
+    // TODO
+}
+
 void XOSXDebugger::cleanUp()
 {
 }

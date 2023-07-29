@@ -41,6 +41,7 @@ public:
         QString sFileName;
         QString sDirectory;
         QString sArguments;
+        qint64 nPID; // Attach
         bool bShowConsole;
         bool bBreakpointOnSystem;
         bool bBreakpointOnProgramEntryPoint;
@@ -59,6 +60,7 @@ public:
     void setXInfoDB(XInfoDB *pXInfoDB);
     XInfoDB *getXInfoDB();
     virtual bool load() = 0;
+    virtual bool attach() = 0;
     virtual bool run();
     virtual bool stop();
     virtual void cleanUp();

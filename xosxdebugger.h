@@ -29,6 +29,7 @@ class XOSXDebugger : public XUnixDebugger {
 public:
     explicit XOSXDebugger(QObject *pParent, XInfoDB *pXInfoDB);
     virtual bool load();
+    virtual bool attach();
     virtual void cleanUp();
     virtual QString getArch();
     virtual XBinary::MODE getMode();
