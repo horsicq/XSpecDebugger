@@ -41,7 +41,7 @@ public:
         QString sFileName;
         QString sDirectory;
         QString sArguments;
-        qint64 nPID; // Attach
+        qint64 nPID;  // Attach
         bool bShowConsole;
         bool bBreakpointOnSystem;
         bool bBreakpointOnProgramEntryPoint;

@@ -86,7 +86,7 @@ bool XWindowsDebugger::attach()
     qDebug("XWindowsDebugger::attach()");
 #endif
 
-    return false; // TODO
+    return false;  // TODO
 }
 
 bool XWindowsDebugger::stop()
