@@ -80,7 +80,7 @@ public slots:
     void _debugEvent();
 
 private:
-    const int N_N_DEDELAY = 50;
+    const qint32 N_N_DEDELAY = 50;
     QTimer *g_pTimer;
     QMap<qint64, XInfoDB::BREAKPOINT> g_mapThreadBPToRestore;
     QMap<qint64, BPOVER> g_mapBpOver;
