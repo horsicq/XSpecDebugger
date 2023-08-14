@@ -163,7 +163,7 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, const QStr
 #endif
         }
 
-        for (int i = 0; i < nCount; i++) {
+        for (qint32 i = 0; i < nCount; i++) {
             XCapstone::DISASM_RESULT disasmResult = pInfoDB->disasm(nDisasmAddress);
 
             if (disasmResult.bIsValid) {
