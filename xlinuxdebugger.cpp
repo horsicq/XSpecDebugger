@@ -139,6 +139,7 @@ bool XLinuxDebugger::load()
 bool XLinuxDebugger::attach()
 {
     // TODO
+    return false;
 }
 
 void XLinuxDebugger::cleanUp()
