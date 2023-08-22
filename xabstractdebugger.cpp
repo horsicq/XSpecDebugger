@@ -32,7 +32,7 @@ XAbstractDebugger::XAbstractDebugger(QObject *pParent, XInfoDB *pXInfoDB) : QObj
     QString prettyProductName = QSysInfo::prettyProductName();
     QString machineHostName = QSysInfo::machineHostName();
 
-    static XOptions::BUNDLE bundle = XOptions::getBundle();
+    //static XOptions::BUNDLE bundle = XOptions::getBundle();
 
     g_handle = 0;
     g_bIsDebugActive = false;
