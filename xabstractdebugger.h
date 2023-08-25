@@ -72,7 +72,7 @@ public:
     void clearTraceFile();
     void writeToTraceFile(const QString &sString);
 
-    void setOptions(OPTIONS options);
+    void setOptions(const OPTIONS &options);
     OPTIONS *getOptions();
 
     void _messageString(MT messageType, const QString &sText);

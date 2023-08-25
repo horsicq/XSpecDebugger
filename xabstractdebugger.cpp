@@ -96,7 +96,7 @@ void XAbstractDebugger::writeToTraceFile(const QString &sString)
     }
 }
 
-void XAbstractDebugger::setOptions(XAbstractDebugger::OPTIONS options)
+void XAbstractDebugger::setOptions(const OPTIONS &options)
 {
     g_options = options;
 }
