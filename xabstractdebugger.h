@@ -43,9 +43,10 @@ public:
         QString sArguments;
         qint64 nPID;  // Attach
         bool bShowConsole;
-        bool bBreakpointOnSystem;
+        bool bUnicodeEnvironment; // For Windows
+        bool bBreakpointOnSystem; // TODO rename
         bool bBreakpointOnProgramEntryPoint;
-        bool bBreakPointOnDLLMain;
+        bool bBreakPointOnDLLMain; // TODO mb rename
         bool bBreakPointOnTLSFunction;  // For Windows TLS
     };
 
@@ -111,7 +112,7 @@ public slots:
 
 signals:
     void cannotLoadFile(const QString &sFileName);  // TODO send if cannot load file to debugger
-    void messageString(XAbstractDebugger::MT messageType, QString sText);
+    void messageString(XAbstractDebugger::MT messageType, const QString &sText);
 
     void eventCreateProcess(XInfoDB::PROCESS_INFO *pProcessInfo);
     void eventExitProcess(XInfoDB::EXITPROCESS_INFO *pExitProcessInfo);

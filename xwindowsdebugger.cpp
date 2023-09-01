@@ -36,8 +36,14 @@ bool XWindowsDebugger::load()
 
     qint32 nFlags = DEBUG_PROCESS | DEBUG_ONLY_THIS_PROCESS | CREATE_SUSPENDED;  // TODO check CREATE_UNICODE_ENVIRONMENT | CREATE_NEW_CONSOLE;
 
-    if (!(getOptions()->bShowConsole)) {
+    if (getOptions()->bShowConsole) {
+        nFlags |= CREATE_NEW_CONSOLE;
+    } else {
         nFlags |= CREATE_NO_WINDOW;  // NO Console
+    }
+
+    if (getOptions()->bUnicodeEnvironment) {
+        nFlags |= CREATE_UNICODE_ENVIRONMENT;
     }
     // TODO DLL
 
@@ -49,7 +55,8 @@ bool XWindowsDebugger::load()
 
     // mb TODO use only the second parameter! the first -> null cause length limitaion.
     QString sArguments = QString("\"%1\" \"%2\"").arg(getOptions()->sFileName, getOptions()->sArguments);
-    BOOL bCreateProcess = CreateProcessW((const wchar_t *)(getOptions()->sFileName.utf16()), (wchar_t *)sArguments.utf16(), nullptr, nullptr, 0, nFlags, nullptr, nullptr,
+    BOOL bCreateProcess = CreateProcessW((const wchar_t *)(getOptions()->sFileName.utf16()), (wchar_t *)sArguments.utf16(), nullptr, nullptr, 0, nFlags, nullptr,
+                                         (const wchar_t *)(getOptions()->sDirectory.utf16()),
                                          &sturtupInfo, &processInfo);
 
     if (bCreateProcess) {
