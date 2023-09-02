@@ -56,8 +56,7 @@ bool XWindowsDebugger::load()
     // mb TODO use only the second parameter! the first -> null cause length limitaion.
     QString sArguments = QString("\"%1\" \"%2\"").arg(getOptions()->sFileName, getOptions()->sArguments);
     BOOL bCreateProcess = CreateProcessW((const wchar_t *)(getOptions()->sFileName.utf16()), (wchar_t *)sArguments.utf16(), nullptr, nullptr, 0, nFlags, nullptr,
-                                         (const wchar_t *)(getOptions()->sDirectory.utf16()),
-                                         &sturtupInfo, &processInfo);
+                                         (const wchar_t *)(getOptions()->sDirectory.utf16()), &sturtupInfo, &processInfo);
 
     if (bCreateProcess) {
         cleanUp();

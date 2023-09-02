@@ -43,10 +43,10 @@ public:
         QString sArguments;
         qint64 nPID;  // Attach
         bool bShowConsole;
-        bool bUnicodeEnvironment; // For Windows
-        bool bBreakpointOnSystem; // TODO rename
+        bool bUnicodeEnvironment;  // For Windows
+        bool bBreakpointOnSystem;  // TODO rename
         bool bBreakpointOnProgramEntryPoint;
-        bool bBreakPointOnDLLMain; // TODO mb rename
+        bool bBreakPointOnDLLMain;      // TODO mb rename
         bool bBreakPointOnTLSFunction;  // For Windows TLS
     };
 
