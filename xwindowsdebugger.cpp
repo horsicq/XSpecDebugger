@@ -288,7 +288,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
             nResult = DBG_CONTINUE;
         } else {
-            if (getOptions()->bBreakpointOnSystem) {
+            if (getOptions()->bBreakpointSystem) {
                 //                bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
                 getXInfoDB()->suspendAllThreads();
 
@@ -357,7 +357,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             }
 
             nResult = DBG_CONTINUE;
-        } else if (getOptions()->bBreakpointOnSystem) {
+        } else if (getOptions()->bBreakpointSystem) {
             //            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
             getXInfoDB()->suspendAllThreads();
 
@@ -450,7 +450,7 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
     threadInfo.threadStatus = XInfoDB::THREAD_STATUS_RUNNING;
     getXInfoDB()->addThreadInfo(&threadInfo);
 
-    if (getOptions()->bBreakpointOnProgramEntryPoint) {
+    if (getOptions()->bBreakpointEntryPoint) {
         getXInfoDB()->addBreakPoint((qint64)(pDebugEvent->u.CreateProcessInfo.lpStartAddress), XInfoDB::BPT_CODE_SOFTWARE, XInfoDB::BPI_PROGRAMENTRYPOINT, 1);
     }
     // TODO DLLMain
