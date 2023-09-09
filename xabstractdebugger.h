@@ -44,7 +44,7 @@ public:
         qint64 nPID;  // Attach
         bool bShowConsole;
         bool bUnicodeEnvironment;  // For Windows
-        bool bBreakpointSystem;  // TODO rename
+        bool bBreakpointSystem;    // TODO rename
         bool bBreakpointEntryPoint;
         bool bBreakpointDLLMain;      // TODO mb rename
         bool bBreakpointTLSFunction;  // For Windows TLS
