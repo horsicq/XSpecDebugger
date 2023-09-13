@@ -334,6 +334,7 @@ void XDebuggerConsole::onEventBreakPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointIn
     regOptions.bGeneral = true;
     regOptions.bSegments = true;
     regOptions.bXMM = true;
+    regOptions.bYMM = true;
 
     g_pInfoDB->updateModulesList();
     g_pInfoDB->updateMemoryRegionsList();
