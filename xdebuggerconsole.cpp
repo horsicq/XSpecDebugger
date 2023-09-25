@@ -182,9 +182,27 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, const QStr
         pCommandResult->listTexts.append("EIP: " + XBinary::valueToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_EIP).var.v_uint32));
 #endif
 #ifdef Q_PROCESSOR_X86_64
-        pCommandResult->listTexts.append("RAX: " + XBinary::valueToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_RAX).var.v_uint64));
-        pCommandResult->listTexts.append("RCX: " + XBinary::valueToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_RCX).var.v_uint64));
-        pCommandResult->listTexts.append("RIP: " + XBinary::valueToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_RIP).var.v_uint64));
+        pCommandResult->listTexts.append("RAX: " + XBinary::xVariantToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_RAX)));
+        pCommandResult->listTexts.append("RCX: " + XBinary::xVariantToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_RCX)));
+        pCommandResult->listTexts.append("RIP: " + XBinary::xVariantToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_RIP)));
+        pCommandResult->listTexts.append("DR0: " + XBinary::xVariantToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_DR0)));
+        pCommandResult->listTexts.append("DR1: " + XBinary::xVariantToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_DR1)));
+        pCommandResult->listTexts.append("DR2: " + XBinary::xVariantToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_DR2)));
+        pCommandResult->listTexts.append("DR3: " + XBinary::xVariantToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_DR3)));
+        pCommandResult->listTexts.append("DR6: " + XBinary::xVariantToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_DR6)));
+        pCommandResult->listTexts.append("DR7: " + XBinary::xVariantToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_DR7)));
+
+        for (qint32 i = 0; i < 8; i++) {
+            pCommandResult->listTexts.append(QString("ST%1: ").arg(i) + XBinary::xVariantToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG(XInfoDB::XREG_ST0 + i))));
+        }
+
+        for (qint32 i = 0; i < 16; i++) {
+            pCommandResult->listTexts.append(QString("XMM%1: ").arg(i) + XBinary::xVariantToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG(XInfoDB::XREG_XMM0 + i))));
+        }
+
+        for (qint32 i = 0; i < 16; i++) {
+            pCommandResult->listTexts.append(QString("YMM%1: ").arg(i) + XBinary::xVariantToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG(XInfoDB::XREG_YMM0 + i))));
+        }
 #endif
     } else if (sArg[0] == "run") {
         pDebugger->run();
