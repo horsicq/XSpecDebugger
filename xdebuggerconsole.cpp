@@ -176,6 +176,7 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, const QStr
             nDisasmAddress += disasmResult.nSize;
         }
     } else if (sArg[0] == "regs") {
+
 #ifdef Q_PROCESSOR_X86_32
         pCommandResult->listTexts.append("EAX: " + XBinary::valueToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_EAX).var.v_uint32));
         pCommandResult->listTexts.append("ECX: " + XBinary::valueToHex(pInfoDB->getCurrentRegCache(XInfoDB::XREG_ECX).var.v_uint32));
