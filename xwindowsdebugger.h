@@ -57,6 +57,8 @@ private:
     QMap<qint64, XInfoDB::BREAKPOINT> g_mapThreadBPToRestore;
     QMap<QString, XInfoDB::FUNCTION_INFO> g_mapFunctionInfos;  // TODO move to XInfoDB
     //    QMap<qint64,XBinary::FUNCTION_ADDRESS> g_mapFunctionAddresses; // mb TODO move to Abstract
+    bool g_bBreakpointSystem;
+    bool g_bBreakpointEntryPoint;
 };
 
 #endif  // XWINDOWSDEBUGGER_H

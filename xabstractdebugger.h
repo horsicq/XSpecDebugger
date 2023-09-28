@@ -37,17 +37,27 @@ class XAbstractDebugger : public QObject {
     Q_OBJECT
 
 public:
+    enum OPTIONS_TYPE {
+        OPTIONS_TYPE_SHOWCONSOLE = 0,
+        OPTIONS_TYPE_UNICODEENVIRONMENT,
+        OPTIONS_TYPE_BREAKPOINTSYSTEM,
+        OPTIONS_TYPE_BREAKPOINTENTRYPOINT,
+        OPTIONS_TYPE_BREAKPOINTDLLMAIN,
+        OPTIONS_TYPE_BREAKPOINTTLSFUNCTION,
+        __OPTIONS_TYPE_SIZE
+    };
+
+    struct OPTIONS_RECORD {
+        bool bValid;
+        QVariant varValue;
+    };
+
     struct OPTIONS {
         QString sFileName;
         QString sDirectory;
         QString sArguments;
         qint64 nPID;  // Attach
-        bool bShowConsole;
-        bool bUnicodeEnvironment;  // For Windows
-        bool bBreakpointSystem;    // TODO rename
-        bool bBreakpointEntryPoint;
-        bool bBreakpointDLLMain;      // TODO mb rename
-        bool bBreakpointTLSFunction;  // For Windows TLS
+        OPTIONS_RECORD records[__OPTIONS_TYPE_SIZE];
     };
 
     enum MT {

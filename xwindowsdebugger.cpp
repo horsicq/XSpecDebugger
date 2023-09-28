@@ -22,6 +22,9 @@
 
 XWindowsDebugger::XWindowsDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent, pXInfoDB)
 {
+    g_bBreakpointSystem = false;
+    g_bBreakpointEntryPoint = false;
+
     XWindowsDebugger::cleanUp();
 }
 
@@ -36,15 +39,35 @@ bool XWindowsDebugger::load()
 
     qint32 nFlags = DEBUG_PROCESS | DEBUG_ONLY_THIS_PROCESS | CREATE_SUSPENDED;  // TODO check CREATE_UNICODE_ENVIRONMENT | CREATE_NEW_CONSOLE;
 
-    if (getOptions()->bShowConsole) {
-        nFlags |= CREATE_NEW_CONSOLE;
-    } else {
-        nFlags |= CREATE_NO_WINDOW;  // NO Console
+    if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_SHOWCONSOLE].bValid) {
+        if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_SHOWCONSOLE].varValue.toBool()) {
+            nFlags |= CREATE_NEW_CONSOLE;
+        } else {
+            nFlags |= CREATE_NO_WINDOW;  // NO Console
+        }
     }
 
-    if (getOptions()->bUnicodeEnvironment) {
-        nFlags |= CREATE_UNICODE_ENVIRONMENT;
+    if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_UNICODEENVIRONMENT].bValid) {
+        if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_UNICODEENVIRONMENT].varValue.toBool()) {
+            nFlags |= CREATE_UNICODE_ENVIRONMENT;
+        }
     }
+
+    g_bBreakpointSystem = false;
+    g_bBreakpointEntryPoint = false;
+
+    if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTSYSTEM].bValid) {
+        if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTSYSTEM].varValue.toBool()) {
+            g_bBreakpointSystem = true;
+        }
+    }
+
+    if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTENTRYPOINT].bValid) {
+        if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTENTRYPOINT].varValue.toBool()) {
+            g_bBreakpointEntryPoint = true;
+        }
+    }
+
     // TODO DLL
 
     PROCESS_INFORMATION processInfo = {};
@@ -288,7 +311,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
             nResult = DBG_CONTINUE;
         } else {
-            if (getOptions()->bBreakpointSystem) {
+            if (g_bBreakpointSystem) {
                 //                bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
                 getXInfoDB()->suspendAllThreads();
 
@@ -357,7 +380,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             }
 
             nResult = DBG_CONTINUE;
-        } else if (getOptions()->bBreakpointSystem) {
+        } else if (g_bBreakpointSystem) {
             //            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
             getXInfoDB()->suspendAllThreads();
 
@@ -450,7 +473,7 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
     threadInfo.threadStatus = XInfoDB::THREAD_STATUS_RUNNING;
     getXInfoDB()->addThreadInfo(&threadInfo);
 
-    if (getOptions()->bBreakpointEntryPoint) {
+    if (g_bBreakpointEntryPoint) {
         getXInfoDB()->addBreakPoint((qint64)(pDebugEvent->u.CreateProcessInfo.lpStartAddress), XInfoDB::BPT_CODE_SOFTWARE, XInfoDB::BPI_PROGRAMENTRYPOINT, 1);
     }
     // TODO DLLMain
