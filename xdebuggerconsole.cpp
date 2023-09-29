@@ -176,7 +176,6 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, const QStr
             nDisasmAddress += disasmResult.nSize;
         }
     } else if (sArg[0] == "regs") {
-
         QList<XInfoDB::REG_RECORD> listRegs = pInfoDB->getCurrentRegs();
 
         qint32 nNumberOfRecords = listRegs.count();
