@@ -181,7 +181,10 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID, qint32 nOpt
         if (sigInfo.si_code == TRAP_TRACE) {
             result.debuggerStatus = DEBUGGER_STATUS_STEP;
             result.nCode = WSTOPSIG(nResult);
-        } else if (sigInfo.si_code == SI_KERNEL) {
+        } else if (sigInfo.si_code == TRAP_BRKPT) {
+            result.debuggerStatus = DEBUGGER_STATUS_BREAKPOINT; // TODO // 0xF1 int1
+            result.nCode = WSTOPSIG(nResult);
+        } else if (sigInfo.si_code == SI_KERNEL) { // 0xCC int3 9xF4 hlt
             result.nAddress = result.nAddress - 1;  // BP
             result.debuggerStatus = DEBUGGER_STATUS_KERNEL;
             result.nCode = WSTOPSIG(nResult);
@@ -312,7 +315,7 @@ void XUnixDebugger::_debugEvent()
         if (state.bIsValid) {
             getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
 
-            if ((state.debuggerStatus == DEBUGGER_STATUS_STEP) || (state.debuggerStatus == DEBUGGER_STATUS_KERNEL)) {
+            if ((state.debuggerStatus == DEBUGGER_STATUS_STEP) || (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) || (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT)) {
                 XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
 
                 bool bBreakPoint = false;
@@ -340,9 +343,9 @@ void XUnixDebugger::_debugEvent()
                     }
                     // TODO not custom trace
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) {
-                    if (getXInfoDB()->isBreakPointPresent(state.nAddress, XInfoDB::BPT_CODE_SOFTWARE)) {
+                    if (getXInfoDB()->isBreakPointPresent(state.nAddress, XInfoDB::BPT_CODE_SOFTWARE_INT3)) {
                         // TODO Check suspend all threads
-                        XInfoDB::BREAKPOINT _currentBP = getXInfoDB()->findBreakPointByAddress(state.nAddress);
+                        XInfoDB::BREAKPOINT _currentBP = getXInfoDB()->findBreakPointByAddress(state.nAddress, XInfoDB::BPT_CODE_SOFTWARE_INT3);
                         breakPointInfo.bpType = _currentBP.bpType;
                         breakPointInfo.bpInfo = _currentBP.bpInfo;
 
@@ -362,7 +365,11 @@ void XUnixDebugger::_debugEvent()
                         // TODO restore !!!
 
                         bBreakPoint = true;
+                    } else if (getOptions()->records[OPTIONS_TYPE_BREAKPOINTSYSTEM].varValue.toBool()) {
+                        bBreakPoint = true;
                     }
+                } else if (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT) {
+                    bBreakPoint = true;
                 }
 
                 // TODO suspend all other threads

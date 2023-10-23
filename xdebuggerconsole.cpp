@@ -226,7 +226,7 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, const QStr
         XADDR nAddress = sCommand.section(" ", 1, 1).toULongLong(0, 16);
         QString sString = "BPX: " + XBinary::valueToHexEx(nAddress);
 
-        if (pInfoDB->addBreakPoint(nAddress, XInfoDB::BPT_CODE_SOFTWARE)) {
+        if (pInfoDB->addBreakPoint(nAddress, XInfoDB::BPT_CODE_SOFTWARE_INT3)) {
             pCommandResult->listTexts.append(sString);
         } else {
             pCommandResult->listTexts.append(tr("Cannot set") + sString);
