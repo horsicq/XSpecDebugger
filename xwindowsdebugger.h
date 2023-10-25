@@ -43,6 +43,7 @@ public:
 
 private:
     void _debugLoop(DWORD dwProcessID);
+    void _handleBreakpoint(XADDR nAddress, X_ID nThreadID);
     quint32 on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent);
     quint32 on_CREATE_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent);
     quint32 on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent);
@@ -54,7 +55,7 @@ private:
     quint32 on_RIP_EVENT(DEBUG_EVENT *pDebugEvent);
 
 private:
-    QMap<qint64, XInfoDB::BREAKPOINT> g_mapThreadBPToRestore;
+    QMap<qint64, QString> g_mapThreadBPToRestore;
     QMap<QString, XInfoDB::FUNCTION_INFO> g_mapFunctionInfos;  // TODO move to XInfoDB
     //    QMap<qint64,XBinary::FUNCTION_ADDRESS> g_mapFunctionAddresses; // mb TODO move to Abstract
     bool g_bBreakpointSystem;

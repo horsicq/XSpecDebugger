@@ -323,8 +323,8 @@ void XUnixDebugger::_debugEvent()
 
                 if (state.debuggerStatus == DEBUGGER_STATUS_STEP) {
                     if (g_mapThreadBPToRestore.contains(state.nThreadId)) {
-                        XInfoDB::BREAKPOINT _currentBP = g_mapThreadBPToRestore.value(state.nThreadId);
-                        getXInfoDB()->addBreakPoint(_currentBP.nAddress, _currentBP.bpType, _currentBP.bpInfo, _currentBP.nCount, _currentBP.sInfo);
+                        QString _sUUID = g_mapThreadBPToRestore.value(state.nThreadId);
+                        getXInfoDB()->enableBreakPoint(_sUUID);
                         g_mapThreadBPToRestore.remove(state.nThreadId);
 
                         g_mapBpOver[state.nThreadId] = BPOVER_RESTORE;
@@ -363,15 +363,17 @@ void XUnixDebugger::_debugEvent()
                             getXInfoDB()->setCurrentIntructionPointer_Id(state.nThreadId, nBreakpointAddress);  // go to prev instruction address
                         }
 
-                        getXInfoDB()->removeBreakPoint(nBreakpointAddress, _currentBP.bpType);
+                        getXInfoDB()->disableBreakPoint(_currentBP.sUUID);
 
                         if (_currentBP.nCount != -1) {
                             _currentBP.nCount--;
                         }
 
                         if (_currentBP.nCount) {
-                            g_mapThreadBPToRestore.insert(state.nThreadId, _currentBP);
+                            g_mapThreadBPToRestore.insert(state.nThreadId, _currentBP.sUUID);
                             g_mapBpOver.insert(state.nThreadId, BPOVER_STEP);
+                        } else {
+                            getXInfoDB()->removeBreakPoint(_currentBP.sUUID);
                         }
 
                         // TODO restore !!!
