@@ -252,11 +252,11 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
     if ((nExceptionCode == EXCEPTION_BREAKPOINT) || (nExceptionCode == 0x4000001f))  // 4000001f WOW64 breakpoint
     {
-        if (getXInfoDB()->isBreakPointPresent(nExceptionAddress, XInfoDB::BPT_CODE_SOFTWARE_INT3)) {
+        if (getXInfoDB()->isBreakPointPresent(nExceptionAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT)) {
             //            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
             getXInfoDB()->suspendAllThreads();
 
-            XInfoDB::BREAKPOINT _currentBP = getXInfoDB()->findBreakPointByAddress(nExceptionAddress);
+            XInfoDB::BREAKPOINT _currentBP = getXInfoDB()->findBreakPointByAddress(nExceptionAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT);
 
             getXInfoDB()->setCurrentIntructionPointer_Handle(breakPointInfo.hThread, nExceptionAddress);  // go to prev instruction address
 
@@ -273,7 +273,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
                     emit eventFunctionEnter(&functionInfo);
 
-                    getXInfoDB()->addBreakPoint(functionInfo.nRetAddress, XInfoDB::BPT_CODE_SOFTWARE_INT3, XInfoDB::BPI_FUNCTIONLEAVE, 1, _currentBP.sInfo, sUUID);
+                    getXInfoDB()->addBreakPoint(functionInfo.nRetAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT, XInfoDB::BPI_FUNCTIONLEAVE, 1, _currentBP.sInfo, sUUID);
                 } else if (_currentBP.bpInfo == XInfoDB::BPI_FUNCTIONLEAVE) {
                     XInfoDB::FUNCTION_INFO functionInfo = g_mapFunctionInfos.value(_currentBP.sGUID);
 
@@ -316,7 +316,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                 getXInfoDB()->suspendAllThreads();
 
                 qDebug("SYSTEM BP SOFTWARE");
-                breakPointInfo.bpType = XInfoDB::BPT_CODE_SOFTWARE_INT3;
+                breakPointInfo.bpType = XInfoDB::BPT_CODE_SOFTWARE_INT3; // TODO Check
                 breakPointInfo.bpInfo = XInfoDB::BPI_SYSTEM;
 
                 _eventBreakPoint(&breakPointInfo);
@@ -474,7 +474,7 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
     getXInfoDB()->addThreadInfo(&threadInfo);
 
     if (g_bBreakpointEntryPoint) {
-        getXInfoDB()->addBreakPoint((qint64)(pDebugEvent->u.CreateProcessInfo.lpStartAddress), XInfoDB::BPT_CODE_SOFTWARE_INT3, XInfoDB::BPI_PROGRAMENTRYPOINT, 1);
+        getXInfoDB()->addBreakPoint((qint64)(pDebugEvent->u.CreateProcessInfo.lpStartAddress), XInfoDB::BPT_CODE_SOFTWARE_DEFAULT, XInfoDB::BPI_PROGRAMENTRYPOINT, 1);
     }
     // TODO DLLMain
 

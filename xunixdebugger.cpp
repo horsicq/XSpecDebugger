@@ -138,31 +138,31 @@ bool XUnixDebugger::setPtraceOptions(qint64 nThreadID)
     return bResult;
 }
 
-XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID, qint32 nOptions)
+XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOptions)
 {
     STATE result = {};
 
-    pid_t nThreadId = 0;
+    pid_t nChildThreadId = 0;
     qint32 nResult = 0;
 
     // TODO a function
     // TODO Clone event
     do {
-        nThreadId = waitpid(nProcessID, &nResult, nOptions);
-    } while ((nThreadId == -1) && (errno == EINTR));
+        nChildThreadId = waitpid(nThreadID, &nResult, nOptions);
+    } while ((nChildThreadId == -1) && (errno == EINTR));
 
-    if (nThreadId < 0) {
+    if (nChildThreadId < 0) {
         qDebug("waitpid failed: %s", strerror(errno));
     }
 
-    if (nThreadId > 0) {
+    if (nChildThreadId > 0) {
         result.bIsValid = true;
-        result.nThreadId = nThreadId;
-        result.nAddress = getXInfoDB()->getCurrentInstructionPointer_Id(nThreadId);
+        result.nThreadId = nChildThreadId;
+        result.nAddress = getXInfoDB()->getCurrentInstructionPointer_Id(nChildThreadId);
 
         siginfo_t sigInfo = {};
 
-        if (ptrace(PTRACE_GETSIGINFO, nThreadId, 0, &sigInfo) < 0) {
+        if (ptrace(PTRACE_GETSIGINFO, nChildThreadId, 0, &sigInfo) < 0) {
             qDebug("Error: %s", strerror(errno));
         } else {
             qDebug("Parent: si_signo %X", sigInfo.si_signo);
@@ -185,7 +185,7 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nProcessID, qint32 nOpt
             result.debuggerStatus = DEBUGGER_STATUS_BREAKPOINT; // TODO // 0xF1 int1
             result.nCode = WSTOPSIG(nResult);
         } else if (sigInfo.si_code == SI_KERNEL) { // 0xCC int3 9xF4 hlt
-            result.nAddress = result.nAddress - 1;  // BP
+            //result.nAddress = result.nAddress - 1;  // BP
             result.debuggerStatus = DEBUGGER_STATUS_KERNEL;
             result.nCode = WSTOPSIG(nResult);
         } else if (WIFSTOPPED(nResult)) {
@@ -269,7 +269,8 @@ void XUnixDebugger::startDebugLoop()
 
     connect(g_pTimer, SIGNAL(timeout()), this, SLOT(_debugEvent()));
 
-    g_pTimer->start(N_N_DEDELAY);
+    //g_pTimer->start(N_N_DEDELAY);
+    g_pTimer->start(0);
 }
 
 void XUnixDebugger::stopDebugLoop()
@@ -342,16 +343,27 @@ void XUnixDebugger::_debugEvent()
                         }
                     }
                     // TODO not custom trace
-                } else if (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) {
-                    if (getXInfoDB()->isBreakPointPresent(state.nAddress, XInfoDB::BPT_CODE_SOFTWARE_INT3)) {
+                } else if ((state.debuggerStatus == DEBUGGER_STATUS_KERNEL) || (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT)) {
+
+                    qint64 nDelta = 0;
+
+                    if (true) { // TODO If XInfoDB::BPT_CODE_SOFTWARE_INT3 or XInfoDB::BPT_CODE_SOFTWARE_INT1
+                        nDelta = 1;
+                    }
+
+                    XADDR nBreakpointAddress = state.nAddress - nDelta;
+
+                    if (getXInfoDB()->isBreakPointPresent(nBreakpointAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT)) {
                         // TODO Check suspend all threads
-                        XInfoDB::BREAKPOINT _currentBP = getXInfoDB()->findBreakPointByAddress(state.nAddress, XInfoDB::BPT_CODE_SOFTWARE_INT3);
+                        XInfoDB::BREAKPOINT _currentBP = getXInfoDB()->findBreakPointByAddress(nBreakpointAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT);
                         breakPointInfo.bpType = _currentBP.bpType;
                         breakPointInfo.bpInfo = _currentBP.bpInfo;
 
-                        getXInfoDB()->setCurrentIntructionPointer_Id(state.nThreadId, state.nAddress);  // go to prev instruction address
+                        if (nDelta) {
+                            getXInfoDB()->setCurrentIntructionPointer_Id(state.nThreadId, nBreakpointAddress);  // go to prev instruction address
+                        }
 
-                        getXInfoDB()->removeBreakPoint(state.nAddress, _currentBP.bpType);
+                        getXInfoDB()->removeBreakPoint(nBreakpointAddress, _currentBP.bpType);
 
                         if (_currentBP.nCount != -1) {
                             _currentBP.nCount--;
@@ -367,9 +379,8 @@ void XUnixDebugger::_debugEvent()
                         bBreakPoint = true;
                     } else if (getOptions()->records[OPTIONS_TYPE_BREAKPOINTSYSTEM].varValue.toBool()) {
                         bBreakPoint = true;
+                        // TODO Send signal if not
                     }
-                } else if (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT) {
-                    bBreakPoint = true;
                 }
 
                 // TODO suspend all other threads
