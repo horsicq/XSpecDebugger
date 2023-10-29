@@ -182,10 +182,10 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
             result.debuggerStatus = DEBUGGER_STATUS_STEP;
             result.nCode = WSTOPSIG(nResult);
         } else if (sigInfo.si_code == TRAP_BRKPT) {
-            result.debuggerStatus = DEBUGGER_STATUS_BREAKPOINT; // TODO // 0xF1 int1
+            result.debuggerStatus = DEBUGGER_STATUS_BREAKPOINT;  // TODO // 0xF1 int1
             result.nCode = WSTOPSIG(nResult);
-        } else if (sigInfo.si_code == SI_KERNEL) { // 0xCC int3 9xF4 hlt
-            //result.nAddress = result.nAddress - 1;  // BP
+        } else if (sigInfo.si_code == SI_KERNEL) {  // 0xCC int3 9xF4 hlt
+            // result.nAddress = result.nAddress - 1;  // BP
             result.debuggerStatus = DEBUGGER_STATUS_KERNEL;
             result.nCode = WSTOPSIG(nResult);
         } else if (WIFSTOPPED(nResult)) {
@@ -269,7 +269,7 @@ void XUnixDebugger::startDebugLoop()
 
     connect(g_pTimer, SIGNAL(timeout()), this, SLOT(_debugEvent()));
 
-    //g_pTimer->start(N_N_DEDELAY);
+    // g_pTimer->start(N_N_DEDELAY);
     g_pTimer->start(0);
 }
 
@@ -316,7 +316,8 @@ void XUnixDebugger::_debugEvent()
         if (state.bIsValid) {
             getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
 
-            if ((state.debuggerStatus == DEBUGGER_STATUS_STEP) || (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) || (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT)) {
+            if ((state.debuggerStatus == DEBUGGER_STATUS_STEP) || (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) ||
+                (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT)) {
                 XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
 
                 bool bBreakPoint = false;
@@ -344,10 +345,9 @@ void XUnixDebugger::_debugEvent()
                     }
                     // TODO not custom trace
                 } else if ((state.debuggerStatus == DEBUGGER_STATUS_KERNEL) || (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT)) {
-
                     qint64 nDelta = 0;
 
-                    if (true) { // TODO If XInfoDB::BPT_CODE_SOFTWARE_INT3 or XInfoDB::BPT_CODE_SOFTWARE_INT1
+                    if (true) {  // TODO If XInfoDB::BPT_CODE_SOFTWARE_INT3 or XInfoDB::BPT_CODE_SOFTWARE_INT1
                         nDelta = 1;
                     }
 
