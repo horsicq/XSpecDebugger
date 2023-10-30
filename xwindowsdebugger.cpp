@@ -102,7 +102,7 @@ bool XWindowsDebugger::load()
             _debugLoop(dwProcessID);
         }
     } else {
-        _messageString(MT_ERROR, QString("%1: %2").arg(tr("Cannot load file"), getOptions()->sFileName));
+        _messageString(MT_ERROR, QString("%1: %2 (%3)").arg(tr("Cannot load file"), getOptions()->sFileName, XProcess::getLastErrorAsString()));
     }
 
     return bResult;

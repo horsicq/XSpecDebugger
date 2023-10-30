@@ -334,7 +334,7 @@ void XUnixDebugger::_debugEvent()
                     if (getXInfoDB()->getThreadBreakpoints()->contains(state.nThreadId)) {
                         getXInfoDB()->getThreadBreakpoints()->remove(state.nThreadId);
 
-                        breakPointInfo.bpType = XInfoDB::BPT_CODE_HARDWARE;
+                        breakPointInfo.bpType = XInfoDB::BPT_CODE_FLAG_STEP;
                         breakPointInfo.bpInfo = XInfoDB::BPI_STEPINTO;  // TODO STEPOVER
 
                         bBreakPoint = true;

@@ -334,6 +334,51 @@ void XAbstractDebugger::_eventBreakPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointIn
     emit eventBreakPoint(pBreakPointInfo);
 }
 
+XAbstractDebugger::OPTIONS XAbstractDebugger::getDefaultOptions(QString sFileName)
+{
+    OPTIONS result = {};
+    // TODO auto analyse
+    QSet<XBinary::FT> ftTypes = XFormats::getFileTypes(sFileName);
+
+    if (ftTypes.contains(XBinary::FT_PE)) {
+        QFile file;
+        file.setFileName(sFileName);
+
+        if (file.open(QIODevice::ReadOnly)) {
+            XPE pe(&file);
+
+            if (pe.isValid()) {
+                if (pe.isConsole()) {
+                    result.records[XAbstractDebugger::OPTIONS_TYPE_SHOWCONSOLE].bValid = true;
+                    result.records[XAbstractDebugger::OPTIONS_TYPE_SHOWCONSOLE].varValue = true;
+                }
+
+                if (pe.isDll()) {
+                    result.records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTDLLMAIN].bValid = true;
+                    result.records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTDLLMAIN].varValue = true;
+                } else {
+                    result.records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTENTRYPOINT].bValid = true;
+                    result.records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTENTRYPOINT].varValue = true;
+                }
+
+                if (pe.isTLSCallbacksPresent()) {
+                    result.records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTTLSFUNCTION].bValid = true;
+                    result.records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTTLSFUNCTION].varValue = true;
+                }
+            }
+
+            file.close();
+        }
+    }
+
+    result.records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTSYSTEM].bValid = true;
+    result.records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTSYSTEM].varValue = true;
+    result.sFileName = sFileName;
+    result.sDirectory = XBinary::getFileDirectory(sFileName);
+
+    return result;
+}
+
 void XAbstractDebugger::setDebugActive(bool bState)
 {
     g_bIsDebugActive = bState;

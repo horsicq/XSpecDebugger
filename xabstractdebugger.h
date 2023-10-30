@@ -116,6 +116,8 @@ public:
 
     void _eventBreakPoint(XInfoDB::BREAKPOINT_INFO *pBreakPointInfo);
 
+    static OPTIONS getDefaultOptions(QString sFileName);
+
 public slots:
     void process();
     void testSlot(X_ID nThreadId);  // TODO remove
