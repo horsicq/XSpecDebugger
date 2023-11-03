@@ -353,7 +353,7 @@ void XUnixDebugger::_debugEvent()
 
                     XADDR nBreakpointAddress = state.nAddress - nDelta;
 
-                    if (getXInfoDB()->isBreakPointPresent(nBreakpointAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT)) { // TODO
+                    if (getXInfoDB()->isBreakPointPresent(nBreakpointAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT)) {  // TODO
                         // TODO Check suspend all threads
                         XInfoDB::BREAKPOINT _currentBP = getXInfoDB()->findBreakPointByAddress(nBreakpointAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT);
                         breakPointInfo.bpType = _currentBP.bpType;
