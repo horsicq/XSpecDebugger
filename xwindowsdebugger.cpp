@@ -233,13 +233,13 @@ void XWindowsDebugger::_debugLoop(DWORD dwProcessID)
     }
 }
 
-void XWindowsDebugger::_handleBreakpoint(XADDR nAddress, X_ID nThreadID)
+void XWindowsDebugger::_handleBreakpoint(XADDR nAddress, X_ID nThreadID, XInfoDB::BPT bpType)
 {
     X_HANDLE hThread = getXInfoDB()->findThreadInfoByID(nThreadID).hThread;
     //            bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
     getXInfoDB()->suspendAllThreads();
 
-    XInfoDB::BREAKPOINT _currentBP = getXInfoDB()->findBreakPointByAddress(nAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT);
+    XInfoDB::BREAKPOINT _currentBP = getXInfoDB()->findBreakPointByAddress(nAddress, bpType);
 
     getXInfoDB()->setCurrentIntructionPointer_Handle(hThread, nAddress);  // go to prev instruction address
 
@@ -310,10 +310,10 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     quint32 nExceptionCode = pDebugEvent->u.Exception.ExceptionRecord.ExceptionCode;
     quint64 nExceptionAddress = (qint64)(pDebugEvent->u.Exception.ExceptionRecord.ExceptionAddress);
 
-    if ((nExceptionCode == EXCEPTION_BREAKPOINT) || (nExceptionCode == 0x4000001f))  // 4000001f WOW64 breakpoint
-    {
+    if ((nExceptionCode == EXCEPTION_BREAKPOINT) || (nExceptionCode == 0x4000001f)) {
+        // 4000001f WOW64 breakpoint
         if (getXInfoDB()->findBreakPointByAddress(nExceptionAddress, XInfoDB::BPT_CODE_SOFTWARE_INT3).nAddress == nExceptionAddress) {
-            _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId);
+            _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SOFTWARE_INT3);
 
             nResult = DBG_CONTINUE;
         } else {
@@ -342,8 +342,8 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
                 nResult = DBG_CONTINUE;
             }
         }
-    } else if ((nExceptionCode == EXCEPTION_SINGLE_STEP) || (nExceptionCode == 0x4000001e))  // 4000001e WOW64 single step exception
-    {
+    } else if ((nExceptionCode == EXCEPTION_SINGLE_STEP) || (nExceptionCode == 0x4000001e)) {
+        // 4000001e WOW64 single step exception
         // Single step
         if (g_mapThreadBPToRestore.contains(pDebugEvent->dwThreadId)) {
             QString sGUID = g_mapThreadBPToRestore.value(pDebugEvent->dwThreadId);
@@ -410,10 +410,21 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             XInfoDB::BREAKPOINT bp = getXInfoDB()->findBreakPointByExceptionAddress(nExceptionAddress, XInfoDB::BPT_CODE_SOFTWARE_INT1);
 
             if (bp.sUUID != "") {
-                _handleBreakpoint(bp.nAddress, pDebugEvent->dwThreadId);
+                _handleBreakpoint(bp.nAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SOFTWARE_INT1);
 
                 nResult = DBG_CONTINUE;
             }
+        }
+    } else if (nExceptionCode == EXCEPTION_PRIV_INSTRUCTION) {
+        if (getXInfoDB()->findBreakPointByAddress(nExceptionAddress, XInfoDB::BPT_CODE_SOFTWARE_HLT).nAddress == nExceptionAddress) {
+            _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SOFTWARE_HLT);
+            nResult = DBG_CONTINUE;
+        } else if (getXInfoDB()->findBreakPointByAddress(nExceptionAddress, XInfoDB::BPT_CODE_SOFTWARE_CLI).nAddress == nExceptionAddress) {
+            _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SOFTWARE_CLI);
+            nResult = DBG_CONTINUE;
+        } else if (getXInfoDB()->findBreakPointByAddress(nExceptionAddress, XInfoDB::BPT_CODE_SOFTWARE_STI).nAddress == nExceptionAddress) {
+            _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SOFTWARE_STI);
+            nResult = DBG_CONTINUE;
         }
     }
 
