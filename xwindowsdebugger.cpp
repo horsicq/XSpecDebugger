@@ -438,7 +438,16 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SOFTWARE_OUTSD);
             nResult = DBG_CONTINUE;
         }
+    } else if (nExceptionCode == EXCEPTION_ILLEGAL_INSTRUCTION) {
+        if (getXInfoDB()->findBreakPointByAddress(nExceptionAddress, XInfoDB::BPT_CODE_SOFTWARE_UD0).nAddress == nExceptionAddress) {
+            _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SOFTWARE_UD0);
+            nResult = DBG_CONTINUE;
+        } else if (getXInfoDB()->findBreakPointByAddress(nExceptionAddress, XInfoDB::BPT_CODE_SOFTWARE_UD2).nAddress == nExceptionAddress) {
+            _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SOFTWARE_UD2);
+            nResult = DBG_CONTINUE;
+        }
     }
+
 
     //    qDebug("on_EXCEPTION_DEBUG_EVENT");
     //    qDebug("dwFirstChance %x",pDebugEvent->u.Exception.dwFirstChance);
