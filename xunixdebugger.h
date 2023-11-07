@@ -66,6 +66,7 @@ public:
     EXECUTEPROCESS executeProcess(const QString &sFileName, const QString &sDirectory);  // TODO args, TODO sDirectory
     bool setPtraceOptions(qint64 nThreadID);
     STATE waitForSignal(qint64 nThreadID, qint32 nOptions);
+    bool waitForSigchild();
     void continueThread(qint64 nThreadID);                  // TODO rename to resumeThread TODO remove
     static bool resumeThread(XProcess::HANDLEID handleID);  // TODO remove
     virtual bool _setStep(XProcess::HANDLEID handleID);     // TODO remove
