@@ -365,7 +365,7 @@ void XUnixDebugger::_debugEvent()
                     } else if ((state.debuggerStatus == DEBUGGER_STATUS_KERNEL) || (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT)) {
                         qint64 nDelta = 0;
 
-                        if (true) {  // TODO If XInfoDB::BPT_CODE_SOFTWARE_INT3 or XInfoDB::BPT_CODE_SOFTWARE_INT1
+                        if (true) {  // TODO If XInfoDB::BPT_CODE_SOFTWARE_INT3 or XInfoDB::BPT_CODE_SOFTWARE_INT1 // TODO remove !!! Use find by exception
                             nDelta = 1;
                         }
 
