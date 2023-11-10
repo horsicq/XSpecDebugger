@@ -45,10 +45,11 @@ public:
 
     struct STATE {
         bool bIsValid;
-        pid_t nThreadId;
+        X_ID nThreadId;
         quint32 nCode;
         DEBUGGER_STATUS debuggerStatus;
         XADDR nAddress;
+        XADDR nExceptionAddress;
     };
 
     enum BPOVER {

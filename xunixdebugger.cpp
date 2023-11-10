@@ -174,6 +174,8 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
             qDebug("Parent: si_addr %lX", (uint64_t)sigInfo.si_addr);
             qDebug("Parent: si_status %X", sigInfo.si_status);
             qDebug("Parent: si_band %lX", sigInfo.si_band);
+
+            result.nExceptionAddress = (XADDR)sigInfo.si_addr;
         }
 
         // 80 = SI_KERNEL
@@ -332,112 +334,126 @@ void XUnixDebugger::_debugEvent()
             STATE state = waitForSignal(nId, __WALL | WNOHANG);
 
             if (state.bIsValid) {
-                getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
-
-                if ((state.debuggerStatus == DEBUGGER_STATUS_STEP) || (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) ||
-                    (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT)) {
-                    XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
-
-                    bool bBreakPoint = false;
-
-                    if (state.debuggerStatus == DEBUGGER_STATUS_STEP) {
-                        if (g_mapThreadBPToRestore.contains(state.nThreadId)) {
-                            QString _sUUID = g_mapThreadBPToRestore.value(state.nThreadId);
-                            getXInfoDB()->enableBreakPoint(_sUUID);
-                            g_mapThreadBPToRestore.remove(state.nThreadId);
-
-                            g_mapBpOver[state.nThreadId] = BPOVER_RESTORE;
-                        }
-
-                        if (getXInfoDB()->getThreadBreakpoints()->contains(state.nThreadId)) {
-                            getXInfoDB()->getThreadBreakpoints()->remove(state.nThreadId);
-
-                            breakPointInfo.bpType = XInfoDB::BPT_CODE_FLAG_STEP;
-                            breakPointInfo.bpInfo = XInfoDB::BPI_STEPINTO;  // TODO STEPOVER
-
-                            bBreakPoint = true;
-
-                            if (g_mapBpOver[state.nThreadId] == BPOVER_RESTORE) {
-                                g_mapBpOver[state.nThreadId] = BPOVER_NORMAL;
-                            }
-                        }
-                        // TODO not custom trace
-                    } else if ((state.debuggerStatus == DEBUGGER_STATUS_KERNEL) || (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT)) {
-                        qint64 nDelta = 0;
-
-                        if (true) {  // TODO If XInfoDB::BPT_CODE_SOFTWARE_INT3 or XInfoDB::BPT_CODE_SOFTWARE_INT1 // TODO remove !!! Use find by exception
-                            nDelta = 1;
-                        }
-
-                        XADDR nBreakpointAddress = state.nAddress - nDelta;
-
-                        if (getXInfoDB()->isBreakPointPresent(nBreakpointAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT)) {  // TODO
-                            // TODO Check suspend all threads
-                            XInfoDB::BREAKPOINT _currentBP = getXInfoDB()->findBreakPointByAddress(nBreakpointAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT);
-                            breakPointInfo.bpType = _currentBP.bpType;
-                            breakPointInfo.bpInfo = _currentBP.bpInfo;
-
-                            if (nDelta) {
-                                getXInfoDB()->setCurrentIntructionPointer_Id(state.nThreadId, nBreakpointAddress);  // go to prev instruction address
-                            }
-
-                            getXInfoDB()->disableBreakPoint(_currentBP.sUUID);
-
-                            if (_currentBP.nCount != -1) {
-                                _currentBP.nCount--;
-                            }
-
-                            if (_currentBP.nCount) {
-                                g_mapThreadBPToRestore.insert(state.nThreadId, _currentBP.sUUID);
-                                g_mapBpOver.insert(state.nThreadId, BPOVER_STEP);
-                            } else {
-                                getXInfoDB()->removeBreakPoint(_currentBP.sUUID);
-                            }
-
-                            // TODO restore !!!
-
-                            bBreakPoint = true;
-                        } else if (getOptions()->records[OPTIONS_TYPE_BREAKPOINTSYSTEM].varValue.toBool()) {
-                            bBreakPoint = true;
-                            // TODO Send signal if not
-                        }
-                    }
-
-                    // TODO suspend all other threads
-                    if (bBreakPoint) {
-                        breakPointInfo.nAddress = state.nAddress;
-                        breakPointInfo.pHProcessMemoryIO = getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
-                        breakPointInfo.pHProcessMemoryQuery = getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
-                        breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
-                        breakPointInfo.nThreadID = getXInfoDB()->getProcessInfo()->nMainThreadID;  // TODO Check !!!
-
-                        _eventBreakPoint(&breakPointInfo);
-                    }
+                if (state.debuggerStatus == DEBUGGER_STATUS_SIGNAL) {
+                    qDebug("DEBUGGER_STATUS_SIGNAL");
+                } else if (state.debuggerStatus == DEBUGGER_STATUS_STOP) {
+                    qDebug("DEBUGGER_STATUS_STOP");
+                } else if (state.debuggerStatus == DEBUGGER_STATUS_STEP) {
+                    qDebug("DEBUGGER_STATUS_STEP");
+                } else if (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) {
+                    qDebug("DEBUGGER_STATUS_KERNEL");
+                } else if (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT) {
+                    qDebug("DEBUGGER_STATUS_BREAKPOINT");
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_EXIT) {
-                    // TODO STOP
-                    // mb TODO exitThread
-                    g_pTimer->stop();
-
-                    XInfoDB::EXITPROCESS_INFO exitProcessInfo = {};
-                    exitProcessInfo.nProcessID = state.nThreadId;
-                    exitProcessInfo.nThreadID = state.nThreadId;
-                    exitProcessInfo.nExitCode = state.nCode;
-
-                    getXInfoDB()->removeThreadInfo(state.nThreadId);
-
-                    emit eventExitProcess(&exitProcessInfo);
-
-                    setDebugActive(false);
+                    qDebug("DEBUGGER_STATUS_EXIT");
                 }
+//
+//                getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
 
-                if (g_mapBpOver[state.nThreadId] == BPOVER_RESTORE) {
-                    getXInfoDB()->resumeThread_Id(state.nThreadId);
-                    g_mapBpOver.remove(state.nThreadId);
-                }
+//                if ((state.debuggerStatus == DEBUGGER_STATUS_STEP) || (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) ||
+//                    (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT)) {
+//                    XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
 
-                if (g_mapBpOver[state.nThreadId] == BPOVER_NORMAL) {
-                    g_mapBpOver.remove(state.nThreadId);
-                }
+//                    bool bBreakPoint = false;
+
+//                    if (state.debuggerStatus == DEBUGGER_STATUS_STEP) {
+//                        if (g_mapThreadBPToRestore.contains(state.nThreadId)) {
+//                            QString _sUUID = g_mapThreadBPToRestore.value(state.nThreadId);
+//                            getXInfoDB()->enableBreakPoint(_sUUID);
+//                            g_mapThreadBPToRestore.remove(state.nThreadId);
+
+//                            g_mapBpOver[state.nThreadId] = BPOVER_RESTORE;
+//                        }
+
+//                        if (getXInfoDB()->getThreadBreakpoints()->contains(state.nThreadId)) {
+//                            getXInfoDB()->getThreadBreakpoints()->remove(state.nThreadId);
+
+//                            breakPointInfo.bpType = XInfoDB::BPT_CODE_STEP_FLAG;
+//                            breakPointInfo.bpInfo = XInfoDB::BPI_STEPINTO;  // TODO STEPOVER
+
+//                            bBreakPoint = true;
+
+//                            if (g_mapBpOver[state.nThreadId] == BPOVER_RESTORE) {
+//                                g_mapBpOver[state.nThreadId] = BPOVER_NORMAL;
+//                            }
+//                        }
+//                        // TODO not custom trace
+//                    } else if ((state.debuggerStatus == DEBUGGER_STATUS_KERNEL) || (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT)) {
+//                        qint64 nDelta = 0;
+
+//                        if (true) {  // TODO If XInfoDB::BPT_CODE_SOFTWARE_INT3 or XInfoDB::BPT_CODE_SOFTWARE_INT1 // TODO remove !!! Use find by exception
+//                            nDelta = 1;
+//                        }
+
+//                        XADDR nBreakpointAddress = state.nAddress - nDelta;
+
+//                        if (getXInfoDB()->isBreakPointPresent(nBreakpointAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT)) {  // TODO
+//                            // TODO Check suspend all threads
+//                            XInfoDB::BREAKPOINT _currentBP = getXInfoDB()->findBreakPointByAddress(nBreakpointAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT);
+//                            breakPointInfo.bpType = _currentBP.bpType;
+//                            breakPointInfo.bpInfo = _currentBP.bpInfo;
+
+//                            if (nDelta) {
+//                                getXInfoDB()->setCurrentIntructionPointer_Id(state.nThreadId, nBreakpointAddress);  // go to prev instruction address
+//                            }
+
+//                            getXInfoDB()->disableBreakPoint(_currentBP.sUUID);
+
+//                            if (_currentBP.nCount != -1) {
+//                                _currentBP.nCount--;
+//                            }
+
+//                            if (_currentBP.nCount) {
+//                                g_mapThreadBPToRestore.insert(state.nThreadId, _currentBP.sUUID);
+//                                g_mapBpOver.insert(state.nThreadId, BPOVER_STEP);
+//                            } else {
+//                                getXInfoDB()->removeBreakPoint(_currentBP.sUUID);
+//                            }
+
+//                            // TODO restore !!!
+
+//                            bBreakPoint = true;
+//                        } else if (getOptions()->records[OPTIONS_TYPE_BREAKPOINTSYSTEM].varValue.toBool()) {
+//                            bBreakPoint = true;
+//                            // TODO Send signal if not
+//                        }
+//                    }
+
+//                    // TODO suspend all other threads
+//                    if (bBreakPoint) {
+//                        breakPointInfo.nExceptionAddress = state.nAddress;
+//                        breakPointInfo.pHProcessMemoryIO = getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
+//                        breakPointInfo.pHProcessMemoryQuery = getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
+//                        breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
+//                        breakPointInfo.nThreadID = getXInfoDB()->getProcessInfo()->nMainThreadID;  // TODO Check !!!
+
+//                        _eventBreakPoint(&breakPointInfo);
+//                    }
+//                } else if (state.debuggerStatus == DEBUGGER_STATUS_EXIT) {
+//                    // TODO STOP
+//                    // mb TODO exitThread
+//                    g_pTimer->stop();
+
+//                    XInfoDB::EXITPROCESS_INFO exitProcessInfo = {};
+//                    exitProcessInfo.nProcessID = state.nThreadId;
+//                    exitProcessInfo.nThreadID = state.nThreadId;
+//                    exitProcessInfo.nExitCode = state.nCode;
+
+//                    getXInfoDB()->removeThreadInfo(state.nThreadId);
+
+//                    emit eventExitProcess(&exitProcessInfo);
+
+//                    setDebugActive(false);
+//                }
+
+//                if (g_mapBpOver[state.nThreadId] == BPOVER_RESTORE) {
+//                    getXInfoDB()->resumeThread_Id(state.nThreadId);
+//                    g_mapBpOver.remove(state.nThreadId);
+//                }
+
+//                if (g_mapBpOver[state.nThreadId] == BPOVER_NORMAL) {
+//                    g_mapBpOver.remove(state.nThreadId);
+//                }
             }
         }
     }
