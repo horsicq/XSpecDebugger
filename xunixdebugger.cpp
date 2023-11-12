@@ -221,7 +221,7 @@ bool XUnixDebugger::waitForSigchild()
     sigset_t mask = {};
     siginfo_t info = {};
     timespec ts = {};
-    ts.tv_nsec = 10000000; // 10 ms
+    ts.tv_nsec = 10000000;  // 10 ms
     sigemptyset(&mask);
     sigaddset(&mask, SIGCHLD);
 
@@ -329,7 +329,7 @@ void XUnixDebugger::_debugEvent()
         // bool bContinue = false;
 
         if (!waitForSigchild()) {
-            qint64 nId = getXInfoDB()->getProcessInfo()->nProcessID; // TODO all threads
+            qint64 nId = getXInfoDB()->getProcessInfo()->nProcessID;  // TODO all threads
 
             STATE state = waitForSignal(nId, __WALL | WNOHANG);
 
@@ -347,113 +347,113 @@ void XUnixDebugger::_debugEvent()
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_EXIT) {
                     qDebug("DEBUGGER_STATUS_EXIT");
                 }
-//
-//                getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
+                //
+                //                getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
 
-//                if ((state.debuggerStatus == DEBUGGER_STATUS_STEP) || (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) ||
-//                    (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT)) {
-//                    XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
+                //                if ((state.debuggerStatus == DEBUGGER_STATUS_STEP) || (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) ||
+                //                    (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT)) {
+                //                    XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
 
-//                    bool bBreakPoint = false;
+                //                    bool bBreakPoint = false;
 
-//                    if (state.debuggerStatus == DEBUGGER_STATUS_STEP) {
-//                        if (g_mapThreadBPToRestore.contains(state.nThreadId)) {
-//                            QString _sUUID = g_mapThreadBPToRestore.value(state.nThreadId);
-//                            getXInfoDB()->enableBreakPoint(_sUUID);
-//                            g_mapThreadBPToRestore.remove(state.nThreadId);
+                //                    if (state.debuggerStatus == DEBUGGER_STATUS_STEP) {
+                //                        if (g_mapThreadBPToRestore.contains(state.nThreadId)) {
+                //                            QString _sUUID = g_mapThreadBPToRestore.value(state.nThreadId);
+                //                            getXInfoDB()->enableBreakPoint(_sUUID);
+                //                            g_mapThreadBPToRestore.remove(state.nThreadId);
 
-//                            g_mapBpOver[state.nThreadId] = BPOVER_RESTORE;
-//                        }
+                //                            g_mapBpOver[state.nThreadId] = BPOVER_RESTORE;
+                //                        }
 
-//                        if (getXInfoDB()->getThreadBreakpoints()->contains(state.nThreadId)) {
-//                            getXInfoDB()->getThreadBreakpoints()->remove(state.nThreadId);
+                //                        if (getXInfoDB()->getThreadBreakpoints()->contains(state.nThreadId)) {
+                //                            getXInfoDB()->getThreadBreakpoints()->remove(state.nThreadId);
 
-//                            breakPointInfo.bpType = XInfoDB::BPT_CODE_STEP_FLAG;
-//                            breakPointInfo.bpInfo = XInfoDB::BPI_STEPINTO;  // TODO STEPOVER
+                //                            breakPointInfo.bpType = XInfoDB::BPT_CODE_STEP_FLAG;
+                //                            breakPointInfo.bpInfo = XInfoDB::BPI_STEPINTO;  // TODO STEPOVER
 
-//                            bBreakPoint = true;
+                //                            bBreakPoint = true;
 
-//                            if (g_mapBpOver[state.nThreadId] == BPOVER_RESTORE) {
-//                                g_mapBpOver[state.nThreadId] = BPOVER_NORMAL;
-//                            }
-//                        }
-//                        // TODO not custom trace
-//                    } else if ((state.debuggerStatus == DEBUGGER_STATUS_KERNEL) || (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT)) {
-//                        qint64 nDelta = 0;
+                //                            if (g_mapBpOver[state.nThreadId] == BPOVER_RESTORE) {
+                //                                g_mapBpOver[state.nThreadId] = BPOVER_NORMAL;
+                //                            }
+                //                        }
+                //                        // TODO not custom trace
+                //                    } else if ((state.debuggerStatus == DEBUGGER_STATUS_KERNEL) || (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT)) {
+                //                        qint64 nDelta = 0;
 
-//                        if (true) {  // TODO If XInfoDB::BPT_CODE_SOFTWARE_INT3 or XInfoDB::BPT_CODE_SOFTWARE_INT1 // TODO remove !!! Use find by exception
-//                            nDelta = 1;
-//                        }
+                //                        if (true) {  // TODO If XInfoDB::BPT_CODE_SOFTWARE_INT3 or XInfoDB::BPT_CODE_SOFTWARE_INT1 // TODO remove !!! Use find by
+                //                        exception
+                //                            nDelta = 1;
+                //                        }
 
-//                        XADDR nBreakpointAddress = state.nAddress - nDelta;
+                //                        XADDR nBreakpointAddress = state.nAddress - nDelta;
 
-//                        if (getXInfoDB()->isBreakPointPresent(nBreakpointAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT)) {  // TODO
-//                            // TODO Check suspend all threads
-//                            XInfoDB::BREAKPOINT _currentBP = getXInfoDB()->findBreakPointByAddress(nBreakpointAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT);
-//                            breakPointInfo.bpType = _currentBP.bpType;
-//                            breakPointInfo.bpInfo = _currentBP.bpInfo;
+                //                        if (getXInfoDB()->isBreakPointPresent(nBreakpointAddress, XInfoDB::BPT_CODE_SOFTWARE_DEFAULT)) {  // TODO
+                //                            // TODO Check suspend all threads
+                //                            XInfoDB::BREAKPOINT _currentBP = getXInfoDB()->findBreakPointByAddress(nBreakpointAddress,
+                //                            XInfoDB::BPT_CODE_SOFTWARE_DEFAULT); breakPointInfo.bpType = _currentBP.bpType; breakPointInfo.bpInfo = _currentBP.bpInfo;
 
-//                            if (nDelta) {
-//                                getXInfoDB()->setCurrentIntructionPointer_Id(state.nThreadId, nBreakpointAddress);  // go to prev instruction address
-//                            }
+                //                            if (nDelta) {
+                //                                getXInfoDB()->setCurrentIntructionPointer_Id(state.nThreadId, nBreakpointAddress);  // go to prev instruction address
+                //                            }
 
-//                            getXInfoDB()->disableBreakPoint(_currentBP.sUUID);
+                //                            getXInfoDB()->disableBreakPoint(_currentBP.sUUID);
 
-//                            if (_currentBP.nCount != -1) {
-//                                _currentBP.nCount--;
-//                            }
+                //                            if (_currentBP.nCount != -1) {
+                //                                _currentBP.nCount--;
+                //                            }
 
-//                            if (_currentBP.nCount) {
-//                                g_mapThreadBPToRestore.insert(state.nThreadId, _currentBP.sUUID);
-//                                g_mapBpOver.insert(state.nThreadId, BPOVER_STEP);
-//                            } else {
-//                                getXInfoDB()->removeBreakPoint(_currentBP.sUUID);
-//                            }
+                //                            if (_currentBP.nCount) {
+                //                                g_mapThreadBPToRestore.insert(state.nThreadId, _currentBP.sUUID);
+                //                                g_mapBpOver.insert(state.nThreadId, BPOVER_STEP);
+                //                            } else {
+                //                                getXInfoDB()->removeBreakPoint(_currentBP.sUUID);
+                //                            }
 
-//                            // TODO restore !!!
+                //                            // TODO restore !!!
 
-//                            bBreakPoint = true;
-//                        } else if (getOptions()->records[OPTIONS_TYPE_BREAKPOINTSYSTEM].varValue.toBool()) {
-//                            bBreakPoint = true;
-//                            // TODO Send signal if not
-//                        }
-//                    }
+                //                            bBreakPoint = true;
+                //                        } else if (getOptions()->records[OPTIONS_TYPE_BREAKPOINTSYSTEM].varValue.toBool()) {
+                //                            bBreakPoint = true;
+                //                            // TODO Send signal if not
+                //                        }
+                //                    }
 
-//                    // TODO suspend all other threads
-//                    if (bBreakPoint) {
-//                        breakPointInfo.nExceptionAddress = state.nAddress;
-//                        breakPointInfo.pHProcessMemoryIO = getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
-//                        breakPointInfo.pHProcessMemoryQuery = getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
-//                        breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
-//                        breakPointInfo.nThreadID = getXInfoDB()->getProcessInfo()->nMainThreadID;  // TODO Check !!!
+                //                    // TODO suspend all other threads
+                //                    if (bBreakPoint) {
+                //                        breakPointInfo.nExceptionAddress = state.nAddress;
+                //                        breakPointInfo.pHProcessMemoryIO = getXInfoDB()->getProcessInfo()->hProcessMemoryIO;
+                //                        breakPointInfo.pHProcessMemoryQuery = getXInfoDB()->getProcessInfo()->hProcessMemoryQuery;
+                //                        breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
+                //                        breakPointInfo.nThreadID = getXInfoDB()->getProcessInfo()->nMainThreadID;  // TODO Check !!!
 
-//                        _eventBreakPoint(&breakPointInfo);
-//                    }
-//                } else if (state.debuggerStatus == DEBUGGER_STATUS_EXIT) {
-//                    // TODO STOP
-//                    // mb TODO exitThread
-//                    g_pTimer->stop();
+                //                        _eventBreakPoint(&breakPointInfo);
+                //                    }
+                //                } else if (state.debuggerStatus == DEBUGGER_STATUS_EXIT) {
+                //                    // TODO STOP
+                //                    // mb TODO exitThread
+                //                    g_pTimer->stop();
 
-//                    XInfoDB::EXITPROCESS_INFO exitProcessInfo = {};
-//                    exitProcessInfo.nProcessID = state.nThreadId;
-//                    exitProcessInfo.nThreadID = state.nThreadId;
-//                    exitProcessInfo.nExitCode = state.nCode;
+                //                    XInfoDB::EXITPROCESS_INFO exitProcessInfo = {};
+                //                    exitProcessInfo.nProcessID = state.nThreadId;
+                //                    exitProcessInfo.nThreadID = state.nThreadId;
+                //                    exitProcessInfo.nExitCode = state.nCode;
 
-//                    getXInfoDB()->removeThreadInfo(state.nThreadId);
+                //                    getXInfoDB()->removeThreadInfo(state.nThreadId);
 
-//                    emit eventExitProcess(&exitProcessInfo);
+                //                    emit eventExitProcess(&exitProcessInfo);
 
-//                    setDebugActive(false);
-//                }
+                //                    setDebugActive(false);
+                //                }
 
-//                if (g_mapBpOver[state.nThreadId] == BPOVER_RESTORE) {
-//                    getXInfoDB()->resumeThread_Id(state.nThreadId);
-//                    g_mapBpOver.remove(state.nThreadId);
-//                }
+                //                if (g_mapBpOver[state.nThreadId] == BPOVER_RESTORE) {
+                //                    getXInfoDB()->resumeThread_Id(state.nThreadId);
+                //                    g_mapBpOver.remove(state.nThreadId);
+                //                }
 
-//                if (g_mapBpOver[state.nThreadId] == BPOVER_NORMAL) {
-//                    g_mapBpOver.remove(state.nThreadId);
-//                }
+                //                if (g_mapBpOver[state.nThreadId] == BPOVER_NORMAL) {
+                //                    g_mapBpOver.remove(state.nThreadId);
+                //                }
             }
         }
     }
