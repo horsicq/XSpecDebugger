@@ -167,7 +167,7 @@ bool XWindowsDebugger::stepIntoByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo)
 {
     bool bResult = false;
 
-    bResult = getXInfoDB()->stepInto_Handle(hThread, bpInfo, true);
+    bResult = getXInfoDB()->stepInto_Handle(hThread, bpInfo);
 
     if (bResult) {
         bResult = getXInfoDB()->resumeAllThreads();
@@ -241,53 +241,71 @@ quint32 XWindowsDebugger::_handleBreakpoint(XADDR nExceptionAddress, X_ID nThrea
 
     if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG)) {
         _currentBP = getXInfoDB()->findBreakPointByAddress(nExceptionAddress, bpType);
+    } else if ((bpType == XInfoDB::BPT_CODE_STEP_FLAG) || (bpType == XInfoDB::BPT_CODE_STEP_TO_RESTORE)) {
+        _currentBP = getXInfoDB()->findBreakPointByThreadID(nThreadID, bpType);
     }
 
     if (_currentBP.sUUID != "") {
         X_HANDLE hThread = getXInfoDB()->findThreadInfoByID(nThreadID).hThread;
-        XADDR nCurrentAddress = 0;
 
         if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG)) {
-            nCurrentAddress = nExceptionAddress;
+
+            XADDR nCurrentAddress = nExceptionAddress;
             getXInfoDB()->setCurrentIntructionPointer_Handle(hThread, nExceptionAddress);  // go to prev instruction address
-        }
 
-        getXInfoDB()->disableBreakPoint(_currentBP.sUUID);
-        getXInfoDB()->suspendAllThreads();
+            getXInfoDB()->disableBreakPoint(_currentBP.sUUID);
 
-        XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
-        breakPointInfo.nAddress = nCurrentAddress;
-        breakPointInfo.nExceptionAddress = nExceptionAddress;
-        breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
-        breakPointInfo.nThreadID = nThreadID;
-        breakPointInfo.hThread = hThread;
-        breakPointInfo.hProcess = getXInfoDB()->getProcessInfo()->hProcess;
-        breakPointInfo.bpType = _currentBP.bpType;
-        breakPointInfo.bpInfo = _currentBP.bpInfo;
-        breakPointInfo.sInfo = _currentBP.sInfo;
+            XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
+            breakPointInfo.nAddress = nCurrentAddress;
+            breakPointInfo.nExceptionAddress = nExceptionAddress;
+            breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
+            breakPointInfo.nThreadID = nThreadID;
+            breakPointInfo.hThread = hThread;
+            breakPointInfo.hProcess = getXInfoDB()->getProcessInfo()->hProcess;
+            breakPointInfo.bpType = _currentBP.bpType;
+            breakPointInfo.bpInfo = _currentBP.bpInfo;
+            breakPointInfo.sInfo = _currentBP.sInfo;
 
-        _eventBreakPoint(&breakPointInfo);
+            _eventBreakPoint(&breakPointInfo);
 
-        if (_currentBP.nCount != -1) {
-            _currentBP.nCount--;
-            // TODO Set decrement
-        }
+            if (_currentBP.nCount != -1) {
+                _currentBP.nCount--;
+                // TODO Set decrement
+            }
 
-        if (_currentBP.nCount) {
-            XInfoDB::BREAKPOINT bp = {};
-            bp.nAddress = nCurrentAddress;
-            bp.nThreadID = nThreadID;
-            bp.bpType = XInfoDB::BPT_CODE_STEP_TO_RESTORE;
-            bp.nCount = 1;
-            bp.sInfo = _currentBP.sUUID;
-            getXInfoDB()->addBreakPoint(bp);
-            //            g_mapThreadBPToRestore.insert(nThreadID, _currentBP.sUUID); // TODO Create BP
-            //            getXInfoDB()->_setStep_Handle(hThread); // TODO Check if not another step present
-        } else {
+            if (_currentBP.nCount) {
+                XInfoDB::BREAKPOINT bp = {};
+                bp.nAddress = nCurrentAddress;
+                bp.nThreadID = nThreadID;
+                bp.bpType = XInfoDB::BPT_CODE_STEP_TO_RESTORE;
+                bp.nCount = 1;
+                bp.sInfo = _currentBP.sUUID;
+                getXInfoDB()->addBreakPoint(bp);
+                //            g_mapThreadBPToRestore.insert(nThreadID, _currentBP.sUUID); // TODO Create BP
+                //            getXInfoDB()->_setStep_Handle(hThread); // TODO Check if not another step present
+            } else {
+                getXInfoDB()->removeBreakPoint(_currentBP.sUUID);
+            }
+
+            nResult = DBG_CONTINUE;  // TODO CHECK HANDLED
+        } else if (bpType == XInfoDB::BPT_CODE_STEP_FLAG) {
             getXInfoDB()->removeBreakPoint(_currentBP.sUUID);
-        }
 
-        nResult = DBG_CONTINUE;  // TODO CHECK HANDLED
+            XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
+            breakPointInfo.nAddress = getXInfoDB()->getCurrentInstructionPointer_Handle(hThread);
+            breakPointInfo.nExceptionAddress = nExceptionAddress;
+            breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
+            breakPointInfo.nThreadID = nThreadID;
+            breakPointInfo.hThread = hThread;
+            breakPointInfo.hProcess = getXInfoDB()->getProcessInfo()->hProcess;
+            breakPointInfo.bpType = _currentBP.bpType;
+            breakPointInfo.bpInfo = _currentBP.bpInfo;
+            breakPointInfo.sInfo = _currentBP.sInfo;
+
+            _eventBreakPoint(&breakPointInfo);
+
+            nResult = DBG_CONTINUE;  // TODO CHECK HANDLED
+        }
     }
 
     //    // TODO return status
@@ -327,8 +345,6 @@ quint32 XWindowsDebugger::_handleBreakpoint(XADDR nExceptionAddress, X_ID nThrea
 quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 {
     quint32 nResult = DBG_EXCEPTION_NOT_HANDLED;
-
-    //    getXInfoDB()->setThreadStatus(pDebugEvent->dwThreadId, XInfoDB::THREAD_STATUS_PAUSED);
 
     quint32 nExceptionCode = pDebugEvent->u.Exception.ExceptionRecord.ExceptionCode;
     quint64 nExceptionAddress = (qint64)(pDebugEvent->u.Exception.ExceptionRecord.ExceptionAddress);
@@ -387,9 +403,10 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
         quint32 nStepToRestoreResult = _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_STEP_TO_RESTORE);
         quint32 nStepFlagResult = _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_STEP_FLAG);
 
-        if ((nStepToRestoreResult != DBG_CONTINUE) && (nStepFlagResult != DBG_CONTINUE)) {
+        if ((nStepToRestoreResult == DBG_CONTINUE) || (nStepFlagResult == DBG_CONTINUE)) {
+            nResult = DBG_CONTINUE;
+        } else {
             nResult = _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SOFTWARE_SYSTEM);
-            ;
         }
 
         //        X_HANDLE hThread = getXInfoDB()->findThreadInfoByID(pDebugEvent->dwThreadId).hThread;
@@ -504,7 +521,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     //        qDebug("ExceptionInformation %x: %x",i,pDebugEvent->u.Exception.ExceptionRecord.ExceptionInformation[i]);
     //    }
 
-    //    getXInfoDB()->setThreadStatus(pDebugEvent->dwThreadId, XInfoDB::THREAD_STATUS_RUNNING); // TODO Check
+//    getXInfoDB()->setThreadStatus(pDebugEvent->dwThreadId, XInfoDB::THREAD_STATUS_RUNNING);
 
     return nResult;
 }
