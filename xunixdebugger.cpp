@@ -305,7 +305,15 @@ void XUnixDebugger::stopDebugLoop()
 
 bool XUnixDebugger::stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo)
 {
-    return getXInfoDB()->stepInto_Id(nThreadId, bpInfo, true);
+    bool bResult = false;
+
+    bResult = getXInfoDB()->stepInto_Id(nThreadId, bpInfo);
+
+    if (bResult) {
+        bResult = getXInfoDB()->resumeAllThreads();
+    }
+
+    return bResult;
 }
 
 bool XUnixDebugger::stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo)
@@ -334,6 +342,8 @@ void XUnixDebugger::_debugEvent()
             STATE state = waitForSignal(nId, __WALL | WNOHANG);
 
             if (state.bIsValid) {
+                getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
+
                 if (state.debuggerStatus == DEBUGGER_STATUS_SIGNAL) {
                     qDebug("DEBUGGER_STATUS_SIGNAL");
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_STOP) {
