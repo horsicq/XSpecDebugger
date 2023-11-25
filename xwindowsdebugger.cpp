@@ -180,7 +180,7 @@ bool XWindowsDebugger::stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo)
 {
     bool bResult = false;
 
-    bResult = getXInfoDB()->stepOver_Handle(hThread, bpInfo, true);
+    bResult = getXInfoDB()->stepOver_Handle(hThread, bpInfo);
 
     if (bResult) {
         getXInfoDB()->resumeAllThreads();
@@ -273,7 +273,11 @@ quint32 XWindowsDebugger::_handleBreakpoint(XADDR nExceptionAddress, X_ID nThrea
                 getXInfoDB()->setCurrentIntructionPointer_Handle(hThread, _currentBP.nAddress);  // go to prev instruction address
             }
 
-            getXInfoDB()->disableBreakPoint(_currentBP.sUUID);
+            if (_currentBP.bOneShot) {
+                getXInfoDB()->removeBreakPoint(_currentBP.sUUID);
+            } else {
+                getXInfoDB()->disableBreakPoint(_currentBP.sUUID);
+            }
 
             XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
             breakPointInfo.nAddress = nCurrentAddress;
