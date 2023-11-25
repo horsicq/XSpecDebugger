@@ -255,18 +255,17 @@ quint32 XWindowsDebugger::_handleBreakpoint(XADDR nExceptionAddress, X_ID nThrea
         bSuccess = true;
     }
 
-//    if (bSoftwareBP) {
-//        if (getXInfoDB()->findBreakPointByThreadID(nThreadID, XInfoDB::BPT_CODE_STEP_FLAG).sUUID != "") {
-//            // If There is already a step
-//            bSuccess = false;
-//        }
-//    }
+    //    if (bSoftwareBP) {
+    //        if (getXInfoDB()->findBreakPointByThreadID(nThreadID, XInfoDB::BPT_CODE_STEP_FLAG).sUUID != "") {
+    //            // If There is already a step
+    //            bSuccess = false;
+    //        }
+    //    }
 
     if (bSuccess) {
         X_HANDLE hThread = getXInfoDB()->findThreadInfoByID(nThreadID).hThread;
 
         if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_UD2)) {
-
             XADDR nCurrentAddress = nExceptionAddress;
 
             if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG)) {
@@ -577,7 +576,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     //        qDebug("ExceptionInformation %x: %x",i,pDebugEvent->u.Exception.ExceptionRecord.ExceptionInformation[i]);
     //    }
 
-//    getXInfoDB()->setThreadStatus(pDebugEvent->dwThreadId, XInfoDB::THREAD_STATUS_RUNNING);
+    //    getXInfoDB()->setThreadStatus(pDebugEvent->dwThreadId, XInfoDB::THREAD_STATUS_RUNNING);
 
     return nResult;
 }
