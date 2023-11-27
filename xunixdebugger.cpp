@@ -27,18 +27,7 @@ XUnixDebugger::XUnixDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDeb
 
 bool XUnixDebugger::run()
 {
-    bool bResult = false;
-    // TODO
-    // TODO resumeAllSuspendedThreads
-
-    qint64 nCurrentThreadId = getXInfoDB()->getCurrentThreadId();
-
-    if (g_mapBpOver[nCurrentThreadId] == BPOVER_STEP) {
-        bResult = getXInfoDB()->stepInto_Id(nCurrentThreadId, XInfoDB::BPI_STEPINTO_RESTOREBP, false);  // TODO Check
-    } else {
-        bResult = getXInfoDB()->resumeAllThreads();
-    }
-    return bResult;
+    return getXInfoDB()->resumeAllThreads();
 }
 
 bool XUnixDebugger::stop()
@@ -72,8 +61,6 @@ void XUnixDebugger::cleanUp()
         getXInfoDB()->getProcessInfo()->hProcessMemoryQuery = 0;
     }
 #endif
-    g_mapBpOver.clear();
-    g_mapThreadBPToRestore.clear();
 }
 
 XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(const QString &sFileName, const QString &sDirectory)

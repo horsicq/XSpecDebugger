@@ -52,12 +52,6 @@ public:
         XADDR nExceptionAddress;
     };
 
-    enum BPOVER {
-        BPOVER_NORMAL = 0,
-        BPOVER_STEP,
-        BPOVER_RESTORE
-    };
-
     explicit XUnixDebugger(QObject *pParent, XInfoDB *pXInfoDB);
 
     virtual bool run();
@@ -85,8 +79,6 @@ public slots:
 private:
     const qint32 N_N_DEDELAY = 50;
     QTimer *g_pTimer;
-    QMap<qint64, QString> g_mapThreadBPToRestore;
-    QMap<qint64, BPOVER> g_mapBpOver;
 };
 
 #endif  // XUNIXDEBUGGER_H
