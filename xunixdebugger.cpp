@@ -139,6 +139,7 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
     } while ((nChildThreadId == -1) && (errno == EINTR));
 
     if (nChildThreadId < 0) {
+        qDebug("errno: %x", errno);
         qDebug("waitpid failed: %s", strerror(errno));
     }
 
@@ -198,6 +199,9 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
         // TODO fast events
 
         qDebug("STATUS: %x", nResult);
+    } else if ((nChildThreadId < 0) && (errno == 10)){
+        // No child processes
+        // TODO
     }
 
     return result;
