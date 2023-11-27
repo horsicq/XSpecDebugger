@@ -72,7 +72,7 @@ bool XLinuxDebugger::load()
 
             STATE _stateStart = waitForSignal(nProcessID, __WALL);  // TODO result
 
-            if (_stateStart.debuggerStatus == DEBUGGER_STATUS_STOP) {
+            if (_stateStart.debuggerStatus == DEBUGGER_STATUS_SIGTRAP) {
                 setPtraceOptions(nProcessID);  // Set options
 
                 // TODO load symbols
@@ -105,6 +105,8 @@ bool XLinuxDebugger::load()
                 emit eventCreateThread(&threadInfo);
 
                 // TODO if BP on system
+
+                getXInfoDB()->setThreadStatus(_stateStart.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
 
                 XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
 

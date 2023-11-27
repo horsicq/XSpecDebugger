@@ -22,7 +22,7 @@
 
 XWindowsDebugger::XWindowsDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent, pXInfoDB)
 {
-    g_bBreakpointSystem = false;
+    g_bShowSystemException = false;
     g_bBreakpointEntryPoint = false;
 
     XWindowsDebugger::cleanUp();
@@ -53,12 +53,12 @@ bool XWindowsDebugger::load()
         }
     }
 
-    g_bBreakpointSystem = false;
+    g_bShowSystemException = false;
     g_bBreakpointEntryPoint = false;
 
-    if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTSYSTEM].bValid) {
-        if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTSYSTEM].varValue.toBool()) {
-            g_bBreakpointSystem = true;
+    if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_SHOWSYSTEMEXCEPTIONS].bValid) {
+        if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_SHOWSYSTEMEXCEPTIONS].varValue.toBool()) {
+            g_bShowSystemException = true;
         }
     }
 
@@ -247,6 +247,8 @@ quint32 XWindowsDebugger::_handleBreakpoint(XADDR nExceptionAddress, X_ID nThrea
         _currentBP = getXInfoDB()->findBreakPointByAddress(nExceptionAddress, bpType);
     } else if (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG) {
         _currentBP = getXInfoDB()->findBreakPointByAddress(nExceptionAddress - 1, bpType);
+    } else if (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) {
+        _currentBP = getXInfoDB()->findBreakPointByExceptionAddress(nExceptionAddress , bpType);
     } else if ((bpType == XInfoDB::BPT_CODE_STEP_FLAG) || (bpType == XInfoDB::BPT_CODE_STEP_TO_RESTORE)) {
         _currentBP = getXInfoDB()->findBreakPointByThreadID(nThreadID, bpType);
     }
@@ -254,6 +256,8 @@ quint32 XWindowsDebugger::_handleBreakpoint(XADDR nExceptionAddress, X_ID nThrea
     if (_currentBP.sUUID != "") {
         bSuccess = true;
     }
+
+    // TODO
 
     //    if (bSoftwareBP) {
     //        if (getXInfoDB()->findBreakPointByThreadID(nThreadID, XInfoDB::BPT_CODE_STEP_FLAG).sUUID != "") {
@@ -265,10 +269,10 @@ quint32 XWindowsDebugger::_handleBreakpoint(XADDR nExceptionAddress, X_ID nThrea
     if (bSuccess) {
         X_HANDLE hThread = getXInfoDB()->findThreadInfoByID(nThreadID).hThread;
 
-        if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_UD2)) {
+        if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_UD2)) {
             XADDR nCurrentAddress = nExceptionAddress;
 
-            if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG)) {
+            if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG)) {
                 getXInfoDB()->setCurrentIntructionPointer_Handle(hThread, _currentBP.nAddress);  // go to prev instruction address
             }
 
@@ -341,8 +345,8 @@ quint32 XWindowsDebugger::_handleBreakpoint(XADDR nExceptionAddress, X_ID nThrea
                 }
             }
         }
-    } else if (bpType == XInfoDB::BPT_CODE_SYSTEM) {
-        if (g_bBreakpointSystem) {
+    } else if (bpType == XInfoDB::BPT_CODE_SYSTEM_EXCEPTION) {
+        if (g_bShowSystemException) {
             qDebug("SYSTEM BP SOFTWARE");
             XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
             breakPointInfo.nAddress = nExceptionAddress;
@@ -350,7 +354,7 @@ quint32 XWindowsDebugger::_handleBreakpoint(XADDR nExceptionAddress, X_ID nThrea
             breakPointInfo.nThreadID = nThreadID;
             breakPointInfo.hThread = getXInfoDB()->findThreadInfoByID(nThreadID).hThread;
             breakPointInfo.hProcess = getXInfoDB()->getProcessInfo()->hProcess;
-            breakPointInfo.bpType = XInfoDB::BPT_CODE_SYSTEM;
+            breakPointInfo.bpType = XInfoDB::BPT_CODE_SYSTEM_EXCEPTION;
             breakPointInfo.bpInfo = XInfoDB::BPI_SYSTEM;
 
             _eventBreakPoint(&breakPointInfo);
@@ -408,7 +412,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
         // 4000001f WOW64 breakpoint
         if (nResult != DBG_CONTINUE) nResult = _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SOFTWARE_INT3);
         if (nResult != DBG_CONTINUE) nResult = _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SOFTWARE_INT3LONG);
-        if (nResult != DBG_CONTINUE) nResult = _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SYSTEM);
+        if (nResult != DBG_CONTINUE) nResult = _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SYSTEM_EXCEPTION);
 
         //        if (getXInfoDB()->findBreakPointByAddress(nExceptionAddress, XInfoDB::BPT_CODE_SOFTWARE_INT3).nAddress == nExceptionAddress) {
         //            _handleBreakpoint();
@@ -457,11 +461,12 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
         quint32 nStepToRestoreResult = _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_STEP_TO_RESTORE);
         quint32 nStepFlagResult = _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_STEP_FLAG);
+        quint32 nBreakpointResult = _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SOFTWARE_INT1);
 
-        if ((nStepToRestoreResult == DBG_CONTINUE) || (nStepFlagResult == DBG_CONTINUE)) {
+        if ((nStepToRestoreResult == DBG_CONTINUE) || (nStepFlagResult == DBG_CONTINUE) || (nBreakpointResult == DBG_CONTINUE)) {
             nResult = DBG_CONTINUE;
         } else {
-            nResult = _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SYSTEM);
+            nResult = _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SYSTEM_EXCEPTION);
         }
 
         //        X_HANDLE hThread = getXInfoDB()->findThreadInfoByID(pDebugEvent->dwThreadId).hThread;

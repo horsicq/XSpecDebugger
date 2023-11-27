@@ -170,21 +170,30 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
 
         if (sigInfo.si_code == TRAP_TRACE) {
             result.debuggerStatus = DEBUGGER_STATUS_STEP;
-            result.nCode = WSTOPSIG(nResult);
         } else if (sigInfo.si_code == TRAP_BRKPT) {
             result.debuggerStatus = DEBUGGER_STATUS_BREAKPOINT;  // TODO // 0xF1 int1
-            result.nCode = WSTOPSIG(nResult);
         } else if (sigInfo.si_code == SI_KERNEL) {  // 0xCC int3 9xF4 hlt
             // result.nAddress = result.nAddress - 1;  // BP
             result.debuggerStatus = DEBUGGER_STATUS_KERNEL;
-            result.nCode = WSTOPSIG(nResult);
         } else if (WIFSTOPPED(nResult)) {
-            result.debuggerStatus = DEBUGGER_STATUS_STOP;
             result.nCode = WSTOPSIG(nResult);
+
+            if (WSTOPSIG(nResult) == SIGTRAP) {
+                result.debuggerStatus = DEBUGGER_STATUS_SIGTRAP;
+            } else if (WSTOPSIG(nResult) == SIGABRT) {
+                result.debuggerStatus = DEBUGGER_STATUS_STOP;
+            } else {
+                result.debuggerStatus = DEBUGGER_STATUS_EXCEPTION;
+            }
 
             if (WSTOPSIG(nResult) == SIGABRT) {
                 qDebug("process unexpectedly aborted");
+            } else if (WSTOPSIG(nResult) == SIGPIPE) {
+                qDebug("SIGPIPE"); // TODO Check IN/OUT HANDLES
+            } else if (WSTOPSIG(nResult) == SIGTRAP) {
+                qDebug("SIGTRAP");
             } else {
+
             }
             qDebug("!!!WSTOPSIG %x", WSTOPSIG(nResult));
         } else if (WIFEXITED(nResult)) {
@@ -202,6 +211,7 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
     } else if ((nChildThreadId < 0) && (errno == 10)){
         // No child processes
         // TODO
+        stopDebugLoop();
     }
 
     return result;
@@ -222,36 +232,6 @@ bool XUnixDebugger::waitForSigchild()
     } while (nRet == -1 && errno == EINTR);
 
     return (nRet == SIGCHLD);
-}
-
-void XUnixDebugger::continueThread(qint64 nThreadID)
-{
-    // TODO
-#if defined(Q_OS_LINUX)
-    if (ptrace(PTRACE_CONT, nThreadID, 0, 0)) {
-        int wait_status;
-        waitpid(nThreadID, &wait_status, 0);
-    }
-#endif
-#if defined(Q_OS_OSX)
-    ptrace(PT_CONTINUE, nThreadID, 0, 0);
-#endif
-
-    //    int wait_status;
-    //    waitpid(nThreadID,&wait_status,0);
-    // TODO result
-}
-
-bool XUnixDebugger::resumeThread(XProcess::HANDLEID handleID)
-{
-    bool bResult = false;
-#if defined(Q_OS_LINUX)
-    if (ptrace(PTRACE_CONT, handleID.nID, 0, 0)) {
-        int wait_status;
-        waitpid(handleID.nID, &wait_status, 0);
-    }
-#endif
-    return bResult;
 }
 
 bool XUnixDebugger::_setStep(XProcess::HANDLEID handleID)
@@ -309,7 +289,7 @@ bool XUnixDebugger::stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo)
 
 bool XUnixDebugger::stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo)
 {
-    return getXInfoDB()->stepOver_Id(nThreadId, bpInfo, true);
+    return getXInfoDB()->stepOver_Id(nThreadId, bpInfo);
 }
 
 bool XUnixDebugger::stepInto()
@@ -333,6 +313,8 @@ void XUnixDebugger::_debugEvent()
             STATE state = waitForSignal(nId, __WALL | WNOHANG);
 
             if (state.bIsValid) {
+                quint32 nStatus = DEVENT_NOTHANDLED;
+
                 getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
 
                 if (state.debuggerStatus == DEBUGGER_STATUS_SIGNAL) {
@@ -341,10 +323,12 @@ void XUnixDebugger::_debugEvent()
                     qDebug("DEBUGGER_STATUS_STOP");
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_STEP) {
                     qDebug("DEBUGGER_STATUS_STEP");
+                    nStatus = _handleBreakpoint(state, XInfoDB::BPT_CODE_STEP_FLAG);
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) {
                     qDebug("DEBUGGER_STATUS_KERNEL");
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT) {
                     qDebug("DEBUGGER_STATUS_BREAKPOINT");
+                    nStatus = _handleBreakpoint(state, XInfoDB::BPT_CODE_SOFTWARE_INT3);
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_EXIT) {
                     qDebug("DEBUGGER_STATUS_EXIT");
                 }
@@ -455,7 +439,58 @@ void XUnixDebugger::_debugEvent()
                 //                if (g_mapBpOver[state.nThreadId] == BPOVER_NORMAL) {
                 //                    g_mapBpOver.remove(state.nThreadId);
                 //                }
+
+                if (nStatus == DEVENT_NOTHANDLED) {
+                    getXInfoDB()->resumeThread_Id(state.nThreadId);
+                }
             }
         }
     }
+}
+
+quint32 XUnixDebugger::_handleBreakpoint(STATE state, XInfoDB::BPT bpType)
+{
+    quint32 nResult = DEVENT_NOTHANDLED;
+
+    XInfoDB::BREAKPOINT _currentBP = {};
+
+    bool bSuccess = false;
+
+    if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_UD2)) {
+        _currentBP = getXInfoDB()->findBreakPointByAddress(state.nAddress, bpType);
+    } else if (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG) {
+        _currentBP = getXInfoDB()->findBreakPointByAddress(state.nAddress - 1, bpType);
+    } else if (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) {
+        _currentBP = getXInfoDB()->findBreakPointByExceptionAddress(state.nAddress , bpType);
+    } else if ((bpType == XInfoDB::BPT_CODE_STEP_FLAG) || (bpType == XInfoDB::BPT_CODE_STEP_TO_RESTORE)) {
+        _currentBP = getXInfoDB()->findBreakPointByThreadID(state.nThreadId, bpType);
+    }
+
+    if (_currentBP.sUUID != "") {
+        bSuccess = true;
+    }
+
+    // TODO
+
+    if (bSuccess) {
+        if (bpType == XInfoDB::BPT_CODE_STEP_FLAG) {
+            // mb TODO count
+            getXInfoDB()->removeBreakPoint(_currentBP.sUUID);
+
+            XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
+            breakPointInfo.nAddress = state.nAddress;
+            breakPointInfo.nExceptionAddress = state.nExceptionAddress;
+            breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
+            breakPointInfo.nThreadID = state.nThreadId;
+            breakPointInfo.bpType = _currentBP.bpType;
+            breakPointInfo.bpInfo = _currentBP.bpInfo;
+            breakPointInfo.sInfo = _currentBP.sNote;
+
+            _eventBreakPoint(&breakPointInfo);
+
+            nResult = DEVENT_HANDLED;
+        }
+    }
+
+    return nResult;
 }

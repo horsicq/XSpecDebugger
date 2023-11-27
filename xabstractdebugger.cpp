@@ -373,8 +373,8 @@ XAbstractDebugger::OPTIONS XAbstractDebugger::getDefaultOptions(QString sFileNam
         }
     }
 
-    result.records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTSYSTEM].bValid = true;
-    result.records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTSYSTEM].varValue = true;
+    result.records[XAbstractDebugger::OPTIONS_TYPE_SHOWSYSTEMEXCEPTIONS].bValid = true;
+    result.records[XAbstractDebugger::OPTIONS_TYPE_SHOWSYSTEMEXCEPTIONS].varValue = true;
     result.sFileName = sFileName;
     result.sDirectory = XBinary::getFileDirectory(sFileName);
 

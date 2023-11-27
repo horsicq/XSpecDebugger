@@ -40,7 +40,15 @@ public:
         DEBUGGER_STATUS_STEP,
         DEBUGGER_STATUS_KERNEL,
         DEBUGGER_STATUS_BREAKPOINT,
+        DEBUGGER_STATUS_SIGTRAP,
+        DEBUGGER_STATUS_EXCEPTION,
         DEBUGGER_STATUS_EXIT
+    };
+
+    enum DEVENT {
+        DEVENT_NOTHANDLED,
+        DEVENT_HANDLED,
+        DEVENT_CONTINUE
     };
 
     struct STATE {
@@ -62,8 +70,6 @@ public:
     bool setPtraceOptions(qint64 nThreadID);
     STATE waitForSignal(qint64 nThreadID, qint32 nOptions);
     bool waitForSigchild();
-    void continueThread(qint64 nThreadID);                  // TODO rename to resumeThread TODO remove
-    static bool resumeThread(XProcess::HANDLEID handleID);  // TODO remove
     virtual bool _setStep(XProcess::HANDLEID handleID);     // TODO remove
     void startDebugLoop();
     void stopDebugLoop();
@@ -75,6 +81,9 @@ public:
 
 public slots:
     void _debugEvent();
+
+private:
+    quint32 _handleBreakpoint(STATE state, XInfoDB::BPT bpType);
 
 private:
     const qint32 N_N_DEDELAY = 50;
