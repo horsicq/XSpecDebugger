@@ -266,14 +266,7 @@ quint32 XWindowsDebugger::_handleBreakpoint(XADDR nExceptionAddress, X_ID nThrea
         bSuccess = true;
     }
 
-    // TODO
-
-    //    if (bSoftwareBP) {
-    //        if (getXInfoDB()->findBreakPointByThreadID(nThreadID, XInfoDB::BPT_CODE_STEP_FLAG).sUUID != "") {
-    //            // If There is already a step
-    //            bSuccess = false;
-    //        }
-    //    }
+    // TODO conditions
 
     if (bSuccess) {
         X_HANDLE hThread = getXInfoDB()->findThreadInfoByID(nThreadID).hThread;
