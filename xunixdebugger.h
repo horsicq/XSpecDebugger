@@ -45,12 +45,6 @@ public:
         DEBUGGER_STATUS_EXIT
     };
 
-    enum DEVENT {
-        DEVENT_NOTHANDLED,
-        DEVENT_HANDLED,
-        DEVENT_CONTINUE
-    };
-
     struct STATE {
         bool bIsValid;
         X_ID nThreadId;
@@ -83,7 +77,7 @@ public slots:
     void _debugEvent();
 
 private:
-    quint32 _handleBreakpoint(STATE state, XInfoDB::BPT bpType);
+    BPSTATUS _handleBreakpoint(STATE state, XInfoDB::BPT bpType);
 
 private:
     const qint32 N_N_DEDELAY = 50;

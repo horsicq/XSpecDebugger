@@ -321,7 +321,7 @@ void XUnixDebugger::_debugEvent()
             STATE state = waitForSignal(nId, __WALL | WNOHANG);
 
             if (state.bIsValid) {
-                quint32 nStatus = DEVENT_NOTHANDLED;
+                BPSTATUS result = BPSTATUS_UNKNOWN;
 
                 getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
 
@@ -331,23 +331,22 @@ void XUnixDebugger::_debugEvent()
                     qDebug("DEBUGGER_STATUS_STOP");
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_STEP) {
                     qDebug("DEBUGGER_STATUS_STEP");
-                    nStatus = _handleBreakpoint(state, XInfoDB::BPT_CODE_STEP_FLAG);
 
-                    quint32 nStepToRestoreResult = _handleBreakpoint(state, XInfoDB::BPT_CODE_STEP_TO_RESTORE);
-                    quint32 nStepFlagResult = _handleBreakpoint(state, XInfoDB::BPT_CODE_STEP_FLAG);
-                    quint32 nBreakpointResult = _handleBreakpoint(state, XInfoDB::BPT_CODE_SOFTWARE_INT1);
+                    BPSTATUS nStepToRestoreResult = _handleBreakpoint(state, XInfoDB::BPT_CODE_STEP_TO_RESTORE);
+                    BPSTATUS nStepFlagResult = _handleBreakpoint(state, XInfoDB::BPT_CODE_STEP_FLAG);
+                    BPSTATUS nBreakpointResult = _handleBreakpoint(state, XInfoDB::BPT_CODE_SOFTWARE_INT1);
 
-                    if ((nStepToRestoreResult == DEVENT_NOTHANDLED) || (nStepFlagResult == DEVENT_NOTHANDLED) || (nBreakpointResult == DEVENT_NOTHANDLED)) {
-                        nStatus = DEVENT_HANDLED;
-                    } else {
-                        nStatus = _handleBreakpoint(state, XInfoDB::BPT_CODE_SYSTEM_EXCEPTION);
+                    if ((nStepFlagResult == BPSTATUS_CALLBACK) || (nBreakpointResult == BPSTATUS_CALLBACK)) {
+                        result = BPSTATUS_CALLBACK;
+                    } else if (nStepToRestoreResult == BPSTATUS_HANDLED) {
+                        result = BPSTATUS_HANDLED;
                     }
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) {
                     qDebug("DEBUGGER_STATUS_KERNEL");
-                    nStatus = _handleBreakpoint(state, XInfoDB::BPT_CODE_SOFTWARE_INT3);
+                    result = _handleBreakpoint(state, XInfoDB::BPT_CODE_SOFTWARE_INT3);
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT) {
                     qDebug("DEBUGGER_STATUS_BREAKPOINT");
-                    nStatus = _handleBreakpoint(state, XInfoDB::BPT_CODE_SOFTWARE_INT3);
+                    result = _handleBreakpoint(state, XInfoDB::BPT_CODE_SOFTWARE_INT3);
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_EXIT) {
                     qDebug("DEBUGGER_STATUS_EXIT");
                 }
@@ -459,17 +458,19 @@ void XUnixDebugger::_debugEvent()
                 //                    g_mapBpOver.remove(state.nThreadId);
                 //                }
 
-                if (nStatus == DEVENT_NOTHANDLED) {
+                if (result == BPSTATUS_UNKNOWN) {
                     getXInfoDB()->resumeThread_Id(state.nThreadId);
+                } else if (result == BPSTATUS_HANDLED) {
+                    getXInfoDB()->resumeAllThreads();
                 }
             }
         }
     }
 }
 
-quint32 XUnixDebugger::_handleBreakpoint(STATE state, XInfoDB::BPT bpType)
+XAbstractDebugger::BPSTATUS XUnixDebugger::_handleBreakpoint(STATE state, XInfoDB::BPT bpType)
 {
-    quint32 nResult = DEVENT_NOTHANDLED;
+    BPSTATUS result = BPSTATUS_UNKNOWN;
 
     XInfoDB::BREAKPOINT _currentBP = {};
 
@@ -489,6 +490,8 @@ quint32 XUnixDebugger::_handleBreakpoint(STATE state, XInfoDB::BPT bpType)
     // TODO
 
     if (bSuccess) {
+        getXInfoDB()->suspendAllThreads();
+
         if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) ||
             (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) ||
             (bpType == XInfoDB::BPT_CODE_SOFTWARE_UD2) ||
@@ -518,20 +521,21 @@ quint32 XUnixDebugger::_handleBreakpoint(STATE state, XInfoDB::BPT bpType)
             breakPointInfo.nThreadID = state.nThreadId;
             breakPointInfo.bpType = _currentBP.bpType;
             breakPointInfo.bpInfo = _currentBP.bpInfo;
-            breakPointInfo.sInfo = _currentBP.sNote;
+            breakPointInfo.vInfo = _currentBP.vInfo;
 
             _eventBreakPoint(&breakPointInfo);
 
+            // mb TODO add it later
             if (!_currentBP.bOneShot) {
                 XInfoDB::BREAKPOINT bp = {};
                 bp.nAddress = state.nAddress;
                 bp.nThreadID = state.nThreadId;
                 bp.bpType = XInfoDB::BPT_CODE_STEP_TO_RESTORE;
-                bp.sNote = _currentBP.sUUID;
+                bp.vInfo = _currentBP.sUUID;
                 getXInfoDB()->addBreakPoint(bp);
             }
 
-            nResult = DEVENT_HANDLED;  // TODO CHECK HANDLED
+            result = BPSTATUS_CALLBACK;
         } else if (bpType == XInfoDB::BPT_CODE_STEP_FLAG) {
             // mb TODO count
             getXInfoDB()->removeBreakPoint(_currentBP.sUUID);
@@ -543,15 +547,15 @@ quint32 XUnixDebugger::_handleBreakpoint(STATE state, XInfoDB::BPT bpType)
             breakPointInfo.nThreadID = state.nThreadId;
             breakPointInfo.bpType = _currentBP.bpType;
             breakPointInfo.bpInfo = _currentBP.bpInfo;
-            breakPointInfo.sInfo = _currentBP.sNote;
+            breakPointInfo.vInfo = _currentBP.vInfo;
 
             _eventBreakPoint(&breakPointInfo);
 
-            nResult = DEVENT_HANDLED;
+            result = BPSTATUS_CALLBACK;
         }  else if (bpType == XInfoDB::BPT_CODE_STEP_TO_RESTORE) {
             getXInfoDB()->removeBreakPoint(_currentBP.sUUID);
 
-            XInfoDB::BREAKPOINT _subBP = getXInfoDB()->findBreakPointByUUID(_currentBP.sNote);
+            XInfoDB::BREAKPOINT _subBP = getXInfoDB()->findBreakPointByUUID(_currentBP.vInfo.toString());
 
             if (_subBP.sUUID != "") {
                 XADDR nCurrentAddress = getXInfoDB()->getCurrentInstructionPointer_Id(state.nThreadId);
@@ -561,14 +565,16 @@ quint32 XUnixDebugger::_handleBreakpoint(STATE state, XInfoDB::BPT bpType)
                     bp.nAddress = nCurrentAddress;
                     bp.nThreadID = state.nThreadId;
                     bp.bpType = XInfoDB::BPT_CODE_STEP_TO_RESTORE;
-                    bp.sNote = _subBP.sUUID;
+                    bp.vInfo = _subBP.sUUID;
                     getXInfoDB()->addBreakPoint(bp);
                 } else {
                     getXInfoDB()->enableBreakPoint(_subBP.sUUID);
                 }
             }
+
+            result = BPSTATUS_HANDLED;
         }
     }
 
-    return nResult;
+    return result;
 }

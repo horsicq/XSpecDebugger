@@ -67,6 +67,12 @@ public:
         MT_ERROR
     };
 
+    enum BPSTATUS {
+        BPSTATUS_UNKNOWN = 0,
+        BPSTATUS_CALLBACK,
+        BPSTATUS_HANDLED
+    };
+
     explicit XAbstractDebugger(QObject *pParent, XInfoDB *pXInfoDB);
     void setXInfoDB(XInfoDB *pXInfoDB);
     XInfoDB *getXInfoDB();

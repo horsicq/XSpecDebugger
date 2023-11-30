@@ -43,7 +43,7 @@ public:
 
 private:
     void _debugLoop(DWORD dwProcessID);
-    quint32 _handleBreakpoint(XADDR nExceptionAddress, X_ID nThreadID, XInfoDB::BPT bpType);
+    BPSTATUS _handleBreakpoint(DEBUG_EVENT *pDebugEvent, XInfoDB::BPT bpType);
     quint32 on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent);
     quint32 on_CREATE_THREAD_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent);
     quint32 on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent);
