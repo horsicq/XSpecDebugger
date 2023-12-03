@@ -236,7 +236,7 @@ void XWindowsDebugger::_debugLoop(DWORD dwProcessID)
 XAbstractDebugger::BPSTATUS XWindowsDebugger::_handleBreakpoint(DEBUG_EVENT *pDebugEvent, XInfoDB::BPT bpType)
 {
     BPSTATUS result = BPSTATUS_UNKNOWN;
-//    quint32 nResult = DBG_EXCEPTION_NOT_HANDLED;
+    //    quint32 nResult = DBG_EXCEPTION_NOT_HANDLED;
 
     XADDR _nTest = getXInfoDB()->getCurrentInstructionPointer_Handle(getXInfoDB()->findThreadInfoByID(pDebugEvent->dwThreadId).hThread);
     XADDR nExceptionAddress = (XADDR)(pDebugEvent->u.Exception.ExceptionRecord.ExceptionAddress);
@@ -245,23 +245,16 @@ XAbstractDebugger::BPSTATUS XWindowsDebugger::_handleBreakpoint(DEBUG_EVENT *pDe
 
     bool bSuccess = false;
 
-    if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) ||
-        (bpType == XInfoDB::BPT_CODE_SOFTWARE_UD2) ||
-        (bpType == XInfoDB::BPT_CODE_SOFTWARE_HLT) ||
-        (bpType == XInfoDB::BPT_CODE_SOFTWARE_CLI) ||
-        (bpType == XInfoDB::BPT_CODE_SOFTWARE_STI) ||
-        (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSB) ||
-        (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSD) ||
-        (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSB) ||
-        (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSD) ||
+    if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_UD2) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_HLT) ||
+        (bpType == XInfoDB::BPT_CODE_SOFTWARE_CLI) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_STI) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSB) ||
+        (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSD) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSB) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSD) ||
         (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1LONG)) {
         _currentBP = getXInfoDB()->findBreakPointByAddress(nExceptionAddress, bpType);
     } else if (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG) {
         _currentBP = getXInfoDB()->findBreakPointByAddress(nExceptionAddress - 1, bpType);
     } else if (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) {
-        _currentBP = getXInfoDB()->findBreakPointByExceptionAddress(nExceptionAddress , bpType);
-    } else if ((bpType == XInfoDB::BPT_CODE_STEP_FLAG) ||
-               (bpType == XInfoDB::BPT_CODE_STEP_TO_RESTORE)) {
+        _currentBP = getXInfoDB()->findBreakPointByExceptionAddress(nExceptionAddress, bpType);
+    } else if ((bpType == XInfoDB::BPT_CODE_STEP_FLAG) || (bpType == XInfoDB::BPT_CODE_STEP_TO_RESTORE)) {
         _currentBP = getXInfoDB()->findBreakPointByThreadID(pDebugEvent->dwThreadId, bpType);
     }
 
@@ -280,18 +273,10 @@ XAbstractDebugger::BPSTATUS XWindowsDebugger::_handleBreakpoint(DEBUG_EVENT *pDe
             getXInfoDB()->suspendAllThreads();
         }
 
-        if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_UD2) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_HLT) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_CLI) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_STI) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSB) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSD) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSB) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSD) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1LONG) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG)) {
+        if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_UD2) ||
+            (bpType == XInfoDB::BPT_CODE_SOFTWARE_HLT) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_CLI) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_STI) ||
+            (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSB) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSD) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSB) ||
+            (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSD) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1LONG) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG)) {
             XADDR nCurrentAddress = nExceptionAddress;
 
             if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG)) {

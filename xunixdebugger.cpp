@@ -172,7 +172,7 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
             result.debuggerStatus = DEBUGGER_STATUS_STEP;
         } else if (sigInfo.si_code == TRAP_BRKPT) {
             result.debuggerStatus = DEBUGGER_STATUS_BREAKPOINT;  // TODO // 0xF1 int1
-        } else if (sigInfo.si_code == SI_KERNEL) {  // 0xCC int3 9xF4 hlt
+        } else if (sigInfo.si_code == SI_KERNEL) {               // 0xCC int3 9xF4 hlt
             // result.nAddress = result.nAddress - 1;  // BP
             result.debuggerStatus = DEBUGGER_STATUS_KERNEL;
         } else if (WIFSTOPPED(nResult)) {
@@ -189,11 +189,10 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
             if (WSTOPSIG(nResult) == SIGABRT) {
                 qDebug("process unexpectedly aborted");
             } else if (WSTOPSIG(nResult) == SIGPIPE) {
-                qDebug("SIGPIPE"); // TODO Check IN/OUT HANDLES
+                qDebug("SIGPIPE");  // TODO Check IN/OUT HANDLES
             } else if (WSTOPSIG(nResult) == SIGTRAP) {
                 qDebug("SIGTRAP");
             } else {
-
             }
             qDebug("!!!WSTOPSIG %x", WSTOPSIG(nResult));
         } else if (WIFEXITED(nResult)) {
@@ -208,7 +207,7 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
         // TODO fast events
 
         qDebug("STATUS: %x", nResult);
-    } else if ((nChildThreadId < 0) && (errno == 10)){
+    } else if ((nChildThreadId < 0) && (errno == 10)) {
         // No child processes
         // TODO
         stopDebugLoop();
@@ -478,8 +477,7 @@ XAbstractDebugger::BPSTATUS XUnixDebugger::_handleBreakpoint(STATE state, XInfoD
 
     if (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) {
         _currentBP = getXInfoDB()->findBreakPointByExceptionAddress(state.nAddress, bpType);
-    } else if ((bpType == XInfoDB::BPT_CODE_STEP_FLAG) ||
-               (bpType == XInfoDB::BPT_CODE_STEP_TO_RESTORE)) {
+    } else if ((bpType == XInfoDB::BPT_CODE_STEP_FLAG) || (bpType == XInfoDB::BPT_CODE_STEP_TO_RESTORE)) {
         _currentBP = getXInfoDB()->findBreakPointByThreadID(state.nThreadId, bpType);
     }
 
@@ -492,18 +490,10 @@ XAbstractDebugger::BPSTATUS XUnixDebugger::_handleBreakpoint(STATE state, XInfoD
     if (bSuccess) {
         getXInfoDB()->suspendAllThreads();
 
-        if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_UD2) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_HLT) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_CLI) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_STI) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSB) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSD) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSB) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSD) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG)) {
-
+        if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_UD2) ||
+            (bpType == XInfoDB::BPT_CODE_SOFTWARE_HLT) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_CLI) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_STI) ||
+            (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSB) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSD) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSB) ||
+            (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSD) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG)) {
             if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG)) {
                 getXInfoDB()->setCurrentIntructionPointer_Id(state.nThreadId, _currentBP.nAddress);  // go to prev instruction address
             }
@@ -552,7 +542,7 @@ XAbstractDebugger::BPSTATUS XUnixDebugger::_handleBreakpoint(STATE state, XInfoD
             _eventBreakPoint(&breakPointInfo);
 
             result = BPSTATUS_CALLBACK;
-        }  else if (bpType == XInfoDB::BPT_CODE_STEP_TO_RESTORE) {
+        } else if (bpType == XInfoDB::BPT_CODE_STEP_TO_RESTORE) {
             getXInfoDB()->removeBreakPoint(_currentBP.sUUID);
 
             XInfoDB::BREAKPOINT _subBP = getXInfoDB()->findBreakPointByUUID(_currentBP.vInfo.toString());

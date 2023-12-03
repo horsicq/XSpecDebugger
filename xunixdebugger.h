@@ -64,7 +64,7 @@ public:
     bool setPtraceOptions(qint64 nThreadID);
     STATE waitForSignal(qint64 nThreadID, qint32 nOptions);
     bool waitForSigchild();
-    virtual bool _setStep(XProcess::HANDLEID handleID);     // TODO remove
+    virtual bool _setStep(XProcess::HANDLEID handleID);  // TODO remove
     void startDebugLoop();
     void stopDebugLoop();
 
