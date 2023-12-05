@@ -458,6 +458,27 @@ void XUnixDebugger::_debugEvent()
                 //                }
 
                 if (result == BPSTATUS_UNKNOWN) {
+//                    if (true) {
+//                        qDebug("SYSTEM BP SOFTWARE");
+
+//                        getXInfoDB()->suspendAllThreads();
+
+//                        XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
+//                        breakPointInfo.vInfo = state.nCode;
+//                        breakPointInfo.nAddress = state.nAddress;
+//                        breakPointInfo.nExceptionAddress = state.nExceptionAddress;
+//                        breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
+//                        breakPointInfo.nThreadID = state.nThreadId;
+//                        breakPointInfo.bpType = XInfoDB::BPT_CODE_SYSTEM_EXCEPTION;
+//                        breakPointInfo.bpInfo = XInfoDB::BPI_SYSTEM;
+
+//                        _eventBreakPoint(&breakPointInfo);
+
+//                        result = BPSTATUS_CALLBACK;
+//                    }
+                }
+
+                if (result == BPSTATUS_UNKNOWN) {
                     getXInfoDB()->resumeThread_Id(state.nThreadId);
                 } else if (result == BPSTATUS_HANDLED) {
                     getXInfoDB()->resumeAllThreads();

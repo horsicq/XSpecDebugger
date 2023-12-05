@@ -22,8 +22,9 @@
 
 XWindowsDebugger::XWindowsDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent, pXInfoDB)
 {
-    g_bShowSystemException = false;
+    g_bBreakpointExceptions = false;
     g_bBreakpointEntryPoint = false;
+    g_bBreakpointSystem = false;
 
     XWindowsDebugger::cleanUp();
 }
@@ -53,12 +54,19 @@ bool XWindowsDebugger::load()
         }
     }
 
-    g_bShowSystemException = false;
+    g_bBreakpointExceptions = false;
     g_bBreakpointEntryPoint = false;
+    g_bBreakpointSystem = false;
 
-    if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_SHOWSYSTEMEXCEPTIONS].bValid) {
-        if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_SHOWSYSTEMEXCEPTIONS].varValue.toBool()) {
-            g_bShowSystemException = true;
+    if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_BREAKPONTEXCEPTIONS].bValid) {
+        if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_BREAKPONTEXCEPTIONS].varValue.toBool()) {
+            g_bBreakpointExceptions = true;
+        }
+    }
+
+    if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_BREAKPONTSYSTEM].bValid) {
+        if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_BREAKPONTSYSTEM].varValue.toBool()) {
+            g_bBreakpointSystem = true;
         }
     }
 
@@ -550,9 +558,18 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     }
 
     if (result == BPSTATUS_UNKNOWN) {
-        if (g_bShowSystemException) {
-            qDebug("SYSTEM BP SOFTWARE");
+        bool bSuccess = false;
 
+        if (g_bBreakpointExceptions) {
+            bSuccess = true;
+        }
+
+        if ((g_bBreakpointSystem) && ((nExceptionCode == EXCEPTION_BREAKPOINT) || (nExceptionCode == 0x4000001f))) {
+            qDebug("SYSTEM BP SOFTWARE");
+            bSuccess = true;
+        }
+
+        if (bSuccess) {
             X_HANDLE hThread = getXInfoDB()->findThreadInfoByID(pDebugEvent->dwThreadId).hThread;
 
             if (getXInfoDB()->getThreadStatus(pDebugEvent->dwThreadId) != XInfoDB::THREAD_STATUS_PAUSED) {
@@ -564,6 +581,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
             breakPointInfo.vInfo = nExceptionCode;
             breakPointInfo.nAddress = (XADDR)(pDebugEvent->u.Exception.ExceptionRecord.ExceptionAddress);
+            //breakPointInfo.nExceptionAddress = pDebugEvent->
             breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
             breakPointInfo.nThreadID = pDebugEvent->dwThreadId;
             breakPointInfo.hThread = hThread;
