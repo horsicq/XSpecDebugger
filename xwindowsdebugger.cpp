@@ -661,7 +661,6 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
 
     //        file.close();
     //    }
-
     getXInfoDB()->setProcessInfo(processInfo);
 
     XInfoDB::THREAD_INFO threadInfo = {};
@@ -676,6 +675,7 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
         XInfoDB::BREAKPOINT breakPoint = {};
         breakPoint.nAddress = (XADDR)(pDebugEvent->u.CreateProcessInfo.lpStartAddress);
         breakPoint.bpType = XInfoDB::BPT_CODE_SOFTWARE_DEFAULT;
+        breakPoint.bpInfo = XInfoDB::BPI_PROGRAMENTRYPOINT;
         breakPoint.bOneShot = true;
 
         getXInfoDB()->addBreakPoint(breakPoint);
@@ -707,6 +707,7 @@ quint32 XWindowsDebugger::on_EXIT_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     exitProcessInfo.nProcessID = pDebugEvent->dwProcessId;
     exitProcessInfo.nThreadID = pDebugEvent->dwThreadId;
     exitProcessInfo.nExitCode = pDebugEvent->u.ExitProcess.dwExitCode;
+    exitProcessInfo.sFileName = getXInfoDB()->getProcessInfo()->sFileName;
 
     XInfoDB::THREAD_INFO threadInfo = getXInfoDB()->findThreadInfoByID((qint64)(pDebugEvent->dwThreadId));
     getXInfoDB()->removeThreadInfo(threadInfo.nThreadID);
