@@ -581,7 +581,7 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
             XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
             breakPointInfo.vInfo = nExceptionCode;
             breakPointInfo.nAddress = (XADDR)(pDebugEvent->u.Exception.ExceptionRecord.ExceptionAddress);
-            //breakPointInfo.nExceptionAddress = pDebugEvent->
+            // breakPointInfo.nExceptionAddress = pDebugEvent->
             breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
             breakPointInfo.nThreadID = pDebugEvent->dwThreadId;
             breakPointInfo.hThread = hThread;
