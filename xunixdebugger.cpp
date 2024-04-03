@@ -34,12 +34,14 @@ bool XUnixDebugger::stop()
 {
     bool bResult = false;
 
-    if (kill(getXInfoDB()->getProcessInfo()->nProcessID, SIGKILL) != -1) {
-        stopDebugLoop();
+    if (getXInfoDB()->getThreadInfos()->count()) {
+        if (kill(getXInfoDB()->getProcessInfo()->nProcessID, SIGKILL) != -1) {
+            stopDebugLoop();
 
-        setDebugActive(false);
+            setDebugActive(false);
 
-        bResult = true;
+            bResult = true;
+        }
     }
 
     return bResult;
@@ -50,17 +52,6 @@ void XUnixDebugger::cleanUp()
     XUnixDebugger::stop();
     XUnixDebugger::wait();
     // TODO stopDebugEvent
-#ifdef Q_OS_LINUX
-    if (getXInfoDB()->getProcessInfo()->hProcessMemoryIO) {
-        XProcess::closeMemoryIO(getXInfoDB()->getProcessInfo()->hProcessMemoryIO);
-        getXInfoDB()->getProcessInfo()->hProcessMemoryIO = 0;
-    }
-
-    if (getXInfoDB()->getProcessInfo()->hProcessMemoryQuery) {
-        XProcess::closeMemoryQuery(getXInfoDB()->getProcessInfo()->hProcessMemoryQuery);
-        getXInfoDB()->getProcessInfo()->hProcessMemoryQuery = 0;
-    }
-#endif
 }
 
 XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(const QString &sFileName, const QString &sDirectory)
@@ -69,27 +60,24 @@ XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(const QString &sFile
     Q_UNUSED(sDirectory)
     EXECUTEPROCESS result = {};
 
-    result.sStatus = "Error";
+    bool bSuccess = true;
+
+    result.sErrorString = "Error";
 #ifdef Q_OS_MAC
-    if (::chdir(qPrintable(sDirectory)) == 0)
+    bSuccess = false;
+    if (::chdir(qPrintable(sDirectory)) == 0) {
+        bSuccess = true;
+    }
 #endif
-    {
+    if (bSuccess) {
         char **ppArgv = new char *[2];
 
         ppArgv[0] = XInfoDB::allocateStringMemory(sFileName);
 
-#ifdef QT_DEBUG
-        qDebug("FileName %s", ppArgv[0]);
-#endif
-
         qint32 nRet = execv(ppArgv[0], ppArgv);  // TODO Unicode
 
         if (nRet == -1) {
-            result.sStatus = QString("execv() failed: %1").arg(strerror(errno));
-
-#ifdef QT_DEBUG
-            qDebug("Status %s", result.sStatus.toLatin1().data());
-#endif
+            result.sErrorString = QString("%1: execv() failed: %2").arg(sFileName, strerror(errno));
         }
 
         for (qint32 i = 0; i < 2; i++) {

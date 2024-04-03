@@ -30,7 +30,7 @@ class XUnixDebugger : public XAbstractDebugger {
 
 public:
     struct EXECUTEPROCESS {
-        QString sStatus;
+        QString sErrorString;
     };
 
     enum DEBUGGER_STATUS {

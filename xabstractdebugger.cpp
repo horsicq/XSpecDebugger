@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2023 hors<horsicq@gmail.com>
+/* Copyright (c) 2020-2024 hors<horsicq@gmail.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -104,14 +104,6 @@ void XAbstractDebugger::setOptions(const OPTIONS &options)
 XAbstractDebugger::OPTIONS *XAbstractDebugger::getOptions()
 {
     return &g_options;
-}
-
-void XAbstractDebugger::_messageString(XAbstractDebugger::MT messageType, const QString &sText)
-{
-#ifdef QT_DEBUG
-    qDebug("%s", sText.toLatin1().data());
-#endif
-    emit messageString(messageType, sText);
 }
 
 qint64 XAbstractDebugger::getFunctionAddress(const QString &sFunctionName)
@@ -367,6 +359,26 @@ XAbstractDebugger::OPTIONS XAbstractDebugger::getDefaultOptions(QString sFileNam
                     result.records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTTLSFUNCTION].bValid = true;
                     result.records[XAbstractDebugger::OPTIONS_TYPE_BREAKPOINTTLSFUNCTION].varValue = true;
                 }
+            }
+
+            file.close();
+        }
+    } else if (ftTypes.contains(XBinary::FT_ELF)) {
+        QFile file;
+        file.setFileName(sFileName);
+
+        if (file.open(QIODevice::ReadOnly)) {
+            result.origPermissions = file.permissions();
+
+            if (!((result.origPermissions) & QFile::ExeOther)) {
+                result.records[XAbstractDebugger::OPTIONS_TYPE_CHANGEPERMISSIONS].bValid = true;
+                result.records[XAbstractDebugger::OPTIONS_TYPE_CHANGEPERMISSIONS].varValue = true;
+            }
+
+            XELF elf(&file);
+
+            if (elf.isValid()) {
+
             }
 
             file.close();

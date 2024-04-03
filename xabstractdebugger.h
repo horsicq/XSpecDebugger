@@ -45,6 +45,7 @@ public:
         OPTIONS_TYPE_BREAKPOINTENTRYPOINT,
         OPTIONS_TYPE_BREAKPOINTDLLMAIN,
         OPTIONS_TYPE_BREAKPOINTTLSFUNCTION,
+        OPTIONS_TYPE_CHANGEPERMISSIONS,
         __OPTIONS_TYPE_SIZE
     };
 
@@ -59,13 +60,7 @@ public:
         QString sArguments;
         qint64 nPID;  // Attach
         OPTIONS_RECORD records[__OPTIONS_TYPE_SIZE];
-    };
-
-    enum MT {
-        MT_UNKNOWN = 0,
-        MT_INFO,
-        MT_WARNING,
-        MT_ERROR
+        QFile::Permissions origPermissions;
     };
 
     enum BPSTATUS {
@@ -92,8 +87,6 @@ public:
 
     void setOptions(const OPTIONS &options);
     OPTIONS *getOptions();
-
-    void _messageString(MT messageType, const QString &sText);
 
     qint64 getFunctionAddress(const QString &sFunctionName);  // TODO move to XInfoDB
     QString getAddressSymbolString(quint64 nAddress);         // TODO move to XInfoDB
@@ -131,7 +124,9 @@ public slots:
 
 signals:
     void cannotLoadFile(const QString &sFileName);  // TODO send if cannot load file to debugger
-    void messageString(XAbstractDebugger::MT messageType, const QString &sText);
+    void errorMessage(const QString &sErrorMessage);
+    void infoMessage(const QString &sInfoMessage);
+    void warningMessage(const QString &sWarningMessage);
 
     void eventCreateProcess(XInfoDB::PROCESS_INFO *pProcessInfo);
     void eventExitProcess(XInfoDB::EXITPROCESS_INFO *pExitProcessInfo);

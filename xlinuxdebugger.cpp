@@ -47,7 +47,7 @@ bool XLinuxDebugger::load()
 
             EXECUTEPROCESS ep = executeProcess(sFileName, sDirectory);
 
-            XBinary::_copyMemory(pMapMemory, ep.sStatus.toLatin1().data(), ep.sStatus.toLatin1().size());
+            XBinary::_copyMemory(pMapMemory, ep.sErrorString.toUtf8().data(), ep.sErrorString.toUtf8().size());
 
             abort();
         } else if (nProcessID > 0) {
@@ -59,14 +59,12 @@ bool XLinuxDebugger::load()
             qDebug("nProcessID: %d", nProcessID);
 #endif
 
-            QString sStatusString = pMapMemory;
+            QString sErrorString = pMapMemory;
             munmap(pMapMemory, nMapSize);
 
-#ifdef QT_DEBUG
-            if (sStatusString != "") {
-                qDebug("Status %s", sStatusString.toLatin1().data());
+            if (sErrorString != "") {
+                emit errorMessage(sErrorString);
             }
-#endif
 
             setDebugActive(true);
 
@@ -146,6 +144,22 @@ bool XLinuxDebugger::attach()
 
 void XLinuxDebugger::cleanUp()
 {
+#ifdef Q_OS_LINUX
+    // TODO Check
+    if (getXInfoDB()->getProcessInfo()->hProcessMemoryIO) {
+        XProcess::closeMemoryIO(getXInfoDB()->getProcessInfo()->hProcessMemoryIO);
+        getXInfoDB()->getProcessInfo()->hProcessMemoryIO = 0;
+    }
+
+    if (getXInfoDB()->getProcessInfo()->hProcessMemoryQuery) {
+        XProcess::closeMemoryQuery(getXInfoDB()->getProcessInfo()->hProcessMemoryQuery);
+        getXInfoDB()->getProcessInfo()->hProcessMemoryQuery = 0;
+    }
+#endif
+
+    stop();
+    wait();
+    // TODO stopDebugEvent
 }
 
 QString XLinuxDebugger::getArch()
