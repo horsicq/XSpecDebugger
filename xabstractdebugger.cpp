@@ -370,8 +370,9 @@ XAbstractDebugger::OPTIONS XAbstractDebugger::getDefaultOptions(QString sFileNam
         if (file.open(QIODevice::ReadOnly)) {
             result.origPermissions = file.permissions();
 
+            result.records[XAbstractDebugger::OPTIONS_TYPE_CHANGEPERMISSIONS].bValid = true;
+
             if (!((result.origPermissions) & QFile::ExeOther)) {
-                result.records[XAbstractDebugger::OPTIONS_TYPE_CHANGEPERMISSIONS].bValid = true;
                 result.records[XAbstractDebugger::OPTIONS_TYPE_CHANGEPERMISSIONS].varValue = true;
             }
 
