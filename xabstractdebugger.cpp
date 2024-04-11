@@ -379,7 +379,6 @@ XAbstractDebugger::OPTIONS XAbstractDebugger::getDefaultOptions(QString sFileNam
             XELF elf(&file);
 
             if (elf.isValid()) {
-
             }
 
             file.close();
