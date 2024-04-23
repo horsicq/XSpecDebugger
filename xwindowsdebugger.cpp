@@ -210,34 +210,38 @@ bool XWindowsDebugger::stepOver()
 void XWindowsDebugger::_debugLoop(DWORD dwProcessID)
 {
     while (isDebugActive()) {
-        DEBUG_EVENT dbgEvent = {0};
-        WaitForDebugEvent(&dbgEvent, INFINITE);  // TODO Check return
+        if (!isTraceActive()) {
+            DEBUG_EVENT dbgEvent = {0};
+            if (WaitForDebugEvent(&dbgEvent, INFINITE)) { // TODO Const
+                quint32 nStatus = DBG_CONTINUE;
 
-        quint32 nStatus = DBG_CONTINUE;
+                if (dbgEvent.dwProcessId == dwProcessID) {
+                    if (dbgEvent.dwDebugEventCode == EXCEPTION_DEBUG_EVENT) {
+                        nStatus = on_EXCEPTION_DEBUG_EVENT(&dbgEvent);
+                    } else if (dbgEvent.dwDebugEventCode == CREATE_THREAD_DEBUG_EVENT) {
+                        nStatus = on_CREATE_THREAD_DEBUG_EVENT(&dbgEvent);
+                    } else if (dbgEvent.dwDebugEventCode == CREATE_PROCESS_DEBUG_EVENT) {
+                        nStatus = on_CREATE_PROCESS_DEBUG_EVENT(&dbgEvent);
+                    } else if (dbgEvent.dwDebugEventCode == EXIT_THREAD_DEBUG_EVENT) {
+                        nStatus = on_EXIT_THREAD_DEBUG_EVENT(&dbgEvent);
+                    } else if (dbgEvent.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT) {
+                        nStatus = on_EXIT_PROCESS_DEBUG_EVENT(&dbgEvent);
+                    } else if (dbgEvent.dwDebugEventCode == LOAD_DLL_DEBUG_EVENT) {
+                        nStatus = on_LOAD_DLL_DEBUG_EVENT(&dbgEvent);
+                    } else if (dbgEvent.dwDebugEventCode == UNLOAD_DLL_DEBUG_EVENT) {
+                        nStatus = on_UNLOAD_DLL_DEBUG_EVENT(&dbgEvent);
+                    } else if (dbgEvent.dwDebugEventCode == OUTPUT_DEBUG_STRING_EVENT) {
+                        nStatus = on_OUTPUT_DEBUG_STRING_EVENT(&dbgEvent);
+                    } else if (dbgEvent.dwDebugEventCode == RIP_EVENT) {
+                        nStatus = on_RIP_EVENT(&dbgEvent);
+                    }
+                }
 
-        if (dbgEvent.dwProcessId == dwProcessID) {
-            if (dbgEvent.dwDebugEventCode == EXCEPTION_DEBUG_EVENT) {
-                nStatus = on_EXCEPTION_DEBUG_EVENT(&dbgEvent);
-            } else if (dbgEvent.dwDebugEventCode == CREATE_THREAD_DEBUG_EVENT) {
-                nStatus = on_CREATE_THREAD_DEBUG_EVENT(&dbgEvent);
-            } else if (dbgEvent.dwDebugEventCode == CREATE_PROCESS_DEBUG_EVENT) {
-                nStatus = on_CREATE_PROCESS_DEBUG_EVENT(&dbgEvent);
-            } else if (dbgEvent.dwDebugEventCode == EXIT_THREAD_DEBUG_EVENT) {
-                nStatus = on_EXIT_THREAD_DEBUG_EVENT(&dbgEvent);
-            } else if (dbgEvent.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT) {
-                nStatus = on_EXIT_PROCESS_DEBUG_EVENT(&dbgEvent);
-            } else if (dbgEvent.dwDebugEventCode == LOAD_DLL_DEBUG_EVENT) {
-                nStatus = on_LOAD_DLL_DEBUG_EVENT(&dbgEvent);
-            } else if (dbgEvent.dwDebugEventCode == UNLOAD_DLL_DEBUG_EVENT) {
-                nStatus = on_UNLOAD_DLL_DEBUG_EVENT(&dbgEvent);
-            } else if (dbgEvent.dwDebugEventCode == OUTPUT_DEBUG_STRING_EVENT) {
-                nStatus = on_OUTPUT_DEBUG_STRING_EVENT(&dbgEvent);
-            } else if (dbgEvent.dwDebugEventCode == RIP_EVENT) {
-                nStatus = on_RIP_EVENT(&dbgEvent);
+                ContinueDebugEvent(dbgEvent.dwProcessId, dbgEvent.dwThreadId, nStatus);
             }
+        } else {
+            QThread::msleep(100);
         }
-
-        ContinueDebugEvent(dbgEvent.dwProcessId, dbgEvent.dwThreadId, nStatus);
     }
 }
 
@@ -415,51 +419,9 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
         // 4000001f WOW64 breakpoint
         if (result == BPSTATUS_UNKNOWN) result = _handleBreakpoint(pDebugEvent, XInfoDB::BPT_CODE_SOFTWARE_INT3);
         if (result == BPSTATUS_UNKNOWN) result = _handleBreakpoint(pDebugEvent, XInfoDB::BPT_CODE_SOFTWARE_INT3LONG);
-
-        //        if (getXInfoDB()->findBreakPointByAddress(nExceptionAddress, XInfoDB::BPT_CODE_SOFTWARE_INT3).nAddress == nExceptionAddress) {
-        //            _handleBreakpoint();
-        //            nResult = DBG_CONTINUE;
-        //        } else if (getXInfoDB()->findBreakPointByAddress(nExceptionAddress, XInfoDB::BPT_CODE_SOFTWARE_INT3LONG).nAddress == nExceptionAddress) {
-        //            _handleBreakpoint(nExceptionAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SOFTWARE_INT3LONG);
-        //            nResult = DBG_CONTINUE;
-        //        } else {
-        //            // TODO move
-        //            if (g_bBreakpointSystem) {
-        //                //                bool bThreadsSuspended=getXInfoDB()->suspendOtherThreads(breakPointInfo.nThreadID);
-        //                getXInfoDB()->suspendAllThreads();
-
-        //                qDebug("SYSTEM BP SOFTWARE");
-        //                XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
-        //                breakPointInfo.nAddress = nExceptionAddress;
-        //                breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
-        //                breakPointInfo.nThreadID = pDebugEvent->dwThreadId;
-        //                breakPointInfo.hThread = getXInfoDB()->findThreadInfoByID(pDebugEvent->dwThreadId).hThread;
-        //                breakPointInfo.hProcess = getXInfoDB()->getProcessInfo()->hProcess;
-        //                breakPointInfo.bpType = XInfoDB::BPT_CODE_SOFTWARE_SYSTEM;
-        //                breakPointInfo.bpInfo = XInfoDB::BPI_SYSTEM;
-
-        //                _eventBreakPoint(&breakPointInfo);
-
-        //                //                if(bThreadsSuspended)
-        //                //                {
-        //                //                    getXInfoDB()->resumeOtherThreads(breakPointInfo.nThreadID);
-        //                //                }
-
-        //                //                nResult=DBG_EXCEPTION_NOT_HANDLED; // TODO change the Value
-        //                //nResult = DBG_CONTINUE;
-        //                nResult = DBG_EXCEPTION_NOT_HANDLED;
-        //            }
-        //        }
     } else if ((nExceptionCode == EXCEPTION_SINGLE_STEP) || (nExceptionCode == 0x4000001e)) {
         // 4000001e WOW64 single step exception
         // Single step
-        //        if (g_mapThreadBPToRestore.contains(pDebugEvent->dwThreadId)) {
-        //            QString sGUID = g_mapThreadBPToRestore.value(pDebugEvent->dwThreadId);
-        //            getXInfoDB()->enableBreakPoint(sGUID);
-        //            g_mapThreadBPToRestore.remove(pDebugEvent->dwThreadId);  // mb TODO multi values
-
-        //            nResult = DBG_CONTINUE;
-        //        }
         BPSTATUS nStepToRestoreResult = _handleBreakpoint(pDebugEvent, XInfoDB::BPT_CODE_STEP_TO_RESTORE);
         BPSTATUS nStepFlagResult = _handleBreakpoint(pDebugEvent, XInfoDB::BPT_CODE_STEP_FLAG);
         BPSTATUS nBreakpointResult = _handleBreakpoint(pDebugEvent, XInfoDB::BPT_CODE_SOFTWARE_INT1);
@@ -469,73 +431,6 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
         } else if (nStepToRestoreResult == BPSTATUS_HANDLED) {
             result = BPSTATUS_HANDLED;
         }
-
-        //        X_HANDLE hThread = getXInfoDB()->findThreadInfoByID(pDebugEvent->dwThreadId).hThread;
-
-        //        if (getXInfoDB()->getThreadBreakpoints()->contains(hThread)) {
-        //            XInfoDB::BREAKPOINT stepBP = getXInfoDB()->getThreadBreakpoints()->value(hThread);
-
-        //            if ((stepBP.bpInfo == XInfoDB::BPI_STEPINTO) || (stepBP.bpInfo == XInfoDB::BPI_STEPOVER)) {
-        //                getXInfoDB()->getThreadBreakpoints()->remove(hThread);
-
-        //                getXInfoDB()->suspendAllThreads();
-
-        //                XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
-        //                breakPointInfo.nExceptionAddress = nExceptionAddress;
-        //                breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
-        //                breakPointInfo.nThreadID = pDebugEvent->dwThreadId;
-        //                breakPointInfo.hThread = hThread;
-        //                breakPointInfo.hProcess = getXInfoDB()->getProcessInfo()->hProcess;
-        //                breakPointInfo.bpType = stepBP.bpType;
-        //                breakPointInfo.bpInfo = stepBP.bpInfo;
-        //                breakPointInfo.sInfo = stepBP.sInfo;
-
-        //                _eventBreakPoint(&breakPointInfo);
-        //            } else if ((stepBP.bpInfo == XInfoDB::BPI_TRACEINTO) || (stepBP.bpInfo == XInfoDB::BPI_TRACEOVER)) {
-        //                // TODO
-        //                // Check suspend threads
-        //                getXInfoDB()->suspendAllThreads();
-
-        //                if (false)  // TODO Check trace conditions
-        //                {
-        //                    if (stepBP.bpInfo == XInfoDB::BPI_TRACEINTO) {
-        //                        getXInfoDB()->stepInto_Handle(hThread, stepBP.bpInfo, false);
-        //                    } else if (stepBP.bpInfo == XInfoDB::BPI_TRACEOVER) {
-        //                        getXInfoDB()->stepOver_Handle(hThread, stepBP.bpInfo, false);
-        //                    }
-
-        //                    getXInfoDB()->resumeAllThreads();
-        //                } else {
-        //                    getXInfoDB()->getThreadBreakpoints()->remove(hThread);
-
-        //                    XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
-        //                    breakPointInfo.nExceptionAddress = nExceptionAddress;
-        //                    breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
-        //                    breakPointInfo.nThreadID = pDebugEvent->dwThreadId;
-        //                    breakPointInfo.hThread = hThread;
-        //                    breakPointInfo.hProcess = getXInfoDB()->getProcessInfo()->hProcess;
-        //                    breakPointInfo.bpType = stepBP.bpType;
-        //                    breakPointInfo.bpInfo = stepBP.bpInfo;
-        //                    breakPointInfo.sInfo = stepBP.sInfo;
-
-        //                    _eventBreakPoint(&breakPointInfo);
-        //                }
-        //            }
-
-        //            nResult = DBG_CONTINUE;
-        //        } else {
-        //            // TODO optimize
-        //            XInfoDB::BREAKPOINT bp = getXInfoDB()->findBreakPointByExceptionAddress(nExceptionAddress, XInfoDB::BPT_CODE_SOFTWARE_INT1);
-        //            XInfoDB::BREAKPOINT bp_long = getXInfoDB()->findBreakPointByExceptionAddress(nExceptionAddress, XInfoDB::BPT_CODE_SOFTWARE_INT1LONG);
-
-        //            if (bp.sUUID != "") {
-        //                _handleBreakpoint(bp.nAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SOFTWARE_INT1);
-        //                nResult = DBG_CONTINUE;
-        //            } else if (bp_long.sUUID != "") {
-        //                _handleBreakpoint(bp_long.nAddress, pDebugEvent->dwThreadId, XInfoDB::BPT_CODE_SOFTWARE_INT1LONG);
-        //                nResult = DBG_CONTINUE;
-        //            }
-        //        }
     } else if (nExceptionCode == EXCEPTION_PRIV_INSTRUCTION) {
         if (result == BPSTATUS_UNKNOWN) result = _handleBreakpoint(pDebugEvent, XInfoDB::BPT_CODE_SOFTWARE_HLT);
         if (result == BPSTATUS_UNKNOWN) result = _handleBreakpoint(pDebugEvent, XInfoDB::BPT_CODE_SOFTWARE_CLI);

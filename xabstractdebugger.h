@@ -103,6 +103,9 @@ public:
     void setDebugActive(bool bState);
     bool isDebugActive();
 
+    void setTraceActive(bool bState);
+    bool isTraceActive();
+
     virtual bool stepIntoByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo);
     virtual bool stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo);
     virtual bool stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo);
@@ -145,6 +148,7 @@ private:
     csh g_handle;
     QString g_sTraceFileName;
     bool g_bIsDebugActive;
+    bool g_bIsTraceActive;
 };
 
 #endif  // XABSTRACTDEBUGGER_H

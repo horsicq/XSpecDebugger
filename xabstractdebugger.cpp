@@ -36,6 +36,7 @@ XAbstractDebugger::XAbstractDebugger(QObject *pParent, XInfoDB *pXInfoDB) : QObj
 
     g_handle = 0;
     g_bIsDebugActive = false;
+    g_bIsTraceActive = false;
     g_pXInfoDB = pXInfoDB;
 }
 
@@ -403,6 +404,16 @@ void XAbstractDebugger::setDebugActive(bool bState)
 bool XAbstractDebugger::isDebugActive()
 {
     return g_bIsDebugActive;
+}
+
+void XAbstractDebugger::setTraceActive(bool bState)
+{
+    g_bIsTraceActive = bState;
+}
+
+bool XAbstractDebugger::isTraceActive()
+{
+    return g_bIsTraceActive;
 }
 
 void XAbstractDebugger::process()
