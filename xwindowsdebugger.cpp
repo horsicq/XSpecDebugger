@@ -142,7 +142,7 @@ void XWindowsDebugger::cleanUp()
     XWindowsDebugger::stop();
 
     XAbstractDebugger::cleanUp();
-    setDebugActive(false);
+    // setDebugActive(false);
     // g_mapThreadBPToRestore.clear();
 }
 
@@ -212,7 +212,7 @@ void XWindowsDebugger::_debugLoop(DWORD dwProcessID)
     while (isDebugActive()) {
         if (!isTraceActive()) {
             DEBUG_EVENT dbgEvent = {0};
-            if (WaitForDebugEvent(&dbgEvent, INFINITE)) {  // TODO Const
+            if (WaitForDebugEvent(&dbgEvent, 1000)) {  // TODO Const
                 quint32 nStatus = DBG_CONTINUE;
 
                 if (dbgEvent.dwProcessId == dwProcessID) {
