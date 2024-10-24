@@ -15,7 +15,7 @@ win32 {
 
     !contains(XCONFIG, xpe) {
         XCONFIG += xpe
-        include($$PWD/../Formats/xpe.pri)
+        include($$PWD/../Formats/exec/xpe.pri)
     }
 }
 
@@ -30,7 +30,7 @@ linux {
 
     !contains(XCONFIG, xelf) {
         XCONFIG += xelf
-        include($$PWD/../Formats/xelf.pri)
+        include($$PWD/../Formats/exec/xelf.pri)
     }
 }
 
@@ -45,7 +45,7 @@ osx {
 
     !contains(XCONFIG, xmach) {
         XCONFIG += xmach
-        include($$PWD/../Formats/xmach.pri)
+        include($$PWD/../Formats/exec/xmach.pri)
     }
 }
 
