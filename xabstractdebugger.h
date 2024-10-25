@@ -66,7 +66,8 @@ public:
     enum BPSTATUS {
         BPSTATUS_UNKNOWN = 0,
         BPSTATUS_CALLBACK,
-        BPSTATUS_HANDLED
+        BPSTATUS_HANDLED,
+        BPSTATUS_EXIT
     };
 
     explicit XAbstractDebugger(QObject *pParent, XInfoDB *pXInfoDB);

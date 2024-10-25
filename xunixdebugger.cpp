@@ -336,6 +336,7 @@ void XUnixDebugger::_debugEvent()
                     result = _handleBreakpoint(state, XInfoDB::BPT_CODE_SOFTWARE_INT3);
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_EXIT) {
                     qDebug("DEBUGGER_STATUS_EXIT");
+                    result = BPSTATUS_EXIT;
                 }
                 //
                 //                getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
@@ -470,6 +471,8 @@ void XUnixDebugger::_debugEvent()
                     getXInfoDB()->resumeThread_Id(state.nThreadId);
                 } else if (result == BPSTATUS_HANDLED) {
                     getXInfoDB()->resumeAllThreads();
+                } else if (result == BPSTATUS_EXIT) {
+                    setDebugActive(false);
                 }
             }
         }
