@@ -180,6 +180,8 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
                 qDebug("SIGPIPE");  // TODO Check IN/OUT HANDLES
             } else if (WSTOPSIG(nResult) == SIGTRAP) {
                 qDebug("SIGTRAP");
+            } else if (WSTOPSIG(nResult) == SIGSTOP) {
+                qDebug("SIGSTOP");
             } else {
             }
             qDebug("!!!WSTOPSIG %x", WSTOPSIG(nResult));
