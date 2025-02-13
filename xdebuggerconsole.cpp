@@ -164,16 +164,16 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, const QStr
         }
 
         for (qint32 i = 0; i < nCount; i++) {
-            XCapstone::DISASM_RESULT disasmResult = pInfoDB->disasm(nDisasmAddress);
+            // XCapstone::DISASM_RESULT disasmResult = pInfoDB->disasm(nDisasmAddress);
 
-            if (disasmResult.bIsValid) {
-                QString sString = QString("%1: %2 %3").arg(XBinary::valueToHexEx(nDisasmAddress), disasmResult.sMnemonic, disasmResult.sString);
-                pCommandResult->listTexts.append(sString);
-            } else {
-                break;
-            }
+            // if (disasmResult.bIsValid) {
+            //     QString sString = QString("%1: %2 %3").arg(XBinary::valueToHexEx(nDisasmAddress), disasmResult.sMnemonic, disasmResult.sString);
+            //     pCommandResult->listTexts.append(sString);
+            // } else {
+            //     break;
+            // }
 
-            nDisasmAddress += disasmResult.nSize;
+            // nDisasmAddress += disasmResult.nSize;
         }
     } else if (sArg[0] == "regs") {
         QList<XInfoDB::REG_RECORD> listRegs = pInfoDB->getCurrentRegs();

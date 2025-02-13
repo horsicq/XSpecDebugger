@@ -196,12 +196,12 @@ qint64 XAbstractDebugger::getRetAddress(XProcess::HANDLEID handleID)
     return nResult;
 }
 
-XCapstone::DISASM_STRUCT XAbstractDebugger::disasm(quint64 nAddress)
-{
-    QByteArray baData = getXInfoDB()->read_array(nAddress, 15);
+// XCapstone::DISASM_STRUCT XAbstractDebugger::disasm(quint64 nAddress)
+// {
+//     QByteArray baData = getXInfoDB()->read_array(nAddress, 15);
 
-    return XCapstone::disasm(g_handle, nAddress, baData.data(), baData.size());
-}
+//     return XCapstone::disasm(g_handle, nAddress, baData.data(), baData.size());
+// }
 
 bool XAbstractDebugger::isUserCode(quint64 nAddress)
 {

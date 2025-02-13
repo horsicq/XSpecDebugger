@@ -94,7 +94,7 @@ public:
 
     qint64 getRetAddress(XProcess::HANDLEID handleID);  // TODO move to XInfoDB
 
-    XCapstone::DISASM_STRUCT disasm(quint64 nAddress);  // TODO move to XInfoDB
+    // XCapstone::DISASM_STRUCT disasm(quint64 nAddress);  // TODO move to XInfoDB
 
     bool isUserCode(quint64 nAddress);     // TODO move to XInfoDB
     bool bIsSystemCode(quint64 nAddress);  // TODO move to XInfoDB
