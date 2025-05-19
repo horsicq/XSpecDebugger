@@ -159,7 +159,7 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, const QStr
             nDisasmAddress = pInfoDB->getCurrentRegCache(XInfoDB::XREG_EIP).var.v_uint32;
 #endif
 #ifdef Q_PROCESSOR_X86_64
-            nDisasmAddress = pInfoDB->getCurrentRegCache(XInfoDB::XREG_RIP).var.v_uint64;
+            nDisasmAddress = pInfoDB->getCurrentRegCache(XInfoDB::XREG_RIP).var.toULongLong();
 #endif
         }
 
