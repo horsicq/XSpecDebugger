@@ -20,6 +20,8 @@
  */
 #include "xdebuggerconsole.h"
 
+#include <QFile>
+
 XDebuggerConsole::XDebuggerConsole(QObject *pParent) : QObject(pParent)
 {
     g_pInfoDB = nullptr;
@@ -138,6 +140,7 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, const QStr
         pCommandResult->listTexts.append("threads");
         pCommandResult->listTexts.append("breakpoints");
         pCommandResult->listTexts.append("bpx <ADDRESS>");
+        pCommandResult->listTexts.append("dump [ADDRESS] [SIZE] [FILENAME]");
         pCommandResult->listTexts.append("quit");
     } else if (sArg[0] == "step") {
         qint32 nCount = _getNumber(pCommandResult, sArg[1], 1);
@@ -231,6 +234,39 @@ void XDebuggerConsole::commandControl(COMMAND_RESULT *pCommandResult, const QStr
             pCommandResult->listTexts.append(sString);
         } else {
             pCommandResult->listTexts.append(tr("Cannot set") + sString);
+        }
+    } else if (sArg[0] == "dump") {
+        // dump [ADDRESS] [SIZE] [FILENAME] - write a live process-memory region to a file.
+        // With no arguments, dumps the whole main-module image.
+        XADDR nAddress = 0;
+        qint64 nSize = 0;
+
+        if (sArg[1] == "") {
+            nAddress = pInfoDB->getProcessInfo()->nImageBase;
+            nSize = (qint64)pInfoDB->getProcessInfo()->nImageSize;
+        } else {
+            nAddress = _getAddress(pCommandResult, sArg[1], 0);
+            nSize = _getNumber(pCommandResult, sArg[2], 0x1000);
+        }
+
+        QString sFileName = sCommand.section(" ", 3, 3);
+
+        if (sFileName == "") {
+            sFileName = "dump.bin";
+        }
+
+        QByteArray baData = pInfoDB->read_array(nAddress, (quint64)nSize);
+
+        QFile file(sFileName);
+
+        if (file.open(QIODevice::WriteOnly)) {
+            file.write(baData);
+            file.close();
+
+            pCommandResult->listTexts.append(
+                QString("DUMP: %1 %2 -> %3").arg(XBinary::valueToHexEx(nAddress), XBinary::valueToHexEx((quint64)baData.size()), sFileName));
+        } else {
+            pCommandResult->listErrors.append(QString("%1: %2").arg(tr("Cannot write file"), sFileName));
         }
     } else if (sArg[0] == "quit") {
         printf("STOP\n");
