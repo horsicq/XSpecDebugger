@@ -20,6 +20,8 @@
  */
 #include "xunixdebugger.h"
 
+#include <QProcess>
+
 XUnixDebugger::XUnixDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent, pXInfoDB)
 {
     g_pTimer = nullptr;
@@ -56,23 +58,42 @@ void XUnixDebugger::cleanUp()
 
 XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(const QString &sFileName, const QString &sDirectory)
 {
-    // TODO Working directory
-    Q_UNUSED(sDirectory)
+    // Runs in the forked child, after PTRACE_TRACEME. Technique from edb: honor the working
+    // directory, then exec the target with a full argv (program + parsed arguments).
     EXECUTEPROCESS result = {};
 
     bool bSuccess = true;
 
     result.sErrorString = "Error";
-#ifdef Q_OS_MAC
-    bSuccess = false;
-    if (::chdir(qPrintable(sDirectory)) == 0) {
-        bSuccess = true;
-    }
-#endif
-    if (bSuccess) {
-        char **ppArgv = new char *[2];
 
-        ppArgv[0] = XInfoDB::allocateStringMemory(sFileName);
+    if (!sDirectory.isEmpty()) {
+        if (::chdir(sDirectory.toUtf8().constData()) != 0) {
+            bSuccess = false;
+            result.sErrorString = QString("chdir() failed: %1").arg(strerror(errno));
+        }
+    }
+
+    if (bSuccess) {
+        QStringList listArguments;
+        listArguments.append(sFileName);
+
+        QString sArguments = getOptions()->sArguments;
+        if (!sArguments.isEmpty()) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+            listArguments.append(QProcess::splitCommand(sArguments));
+#else
+            listArguments.append(sArguments.split(QRegExp("\\s+"), QString::SkipEmptyParts));
+#endif
+        }
+
+        qint32 nCount = listArguments.count();
+
+        char **ppArgv = new char *[nCount + 1];  // +1 for the terminating nullptr
+
+        for (qint32 i = 0; i < nCount; i++) {
+            ppArgv[i] = XInfoDB::allocateStringMemory(listArguments.at(i));
+        }
+        ppArgv[nCount] = nullptr;
 
         qint32 nRet = execv(ppArgv[0], ppArgv);  // TODO Unicode
 
@@ -80,7 +101,8 @@ XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(const QString &sFile
             result.sErrorString = QString("%1: execv() failed: %2").arg(sFileName, strerror(errno));
         }
 
-        for (qint32 i = 0; i < 2; i++) {
+        // Only reached if execv failed (on success the image is replaced).
+        for (qint32 i = 0; i < nCount; i++) {
             delete[] ppArgv[i];
         }
 
@@ -93,23 +115,25 @@ XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(const QString &sFile
 bool XUnixDebugger::setPtraceOptions(qint64 nThreadID)
 {
     bool bResult = false;
-    // TODO getOptions !!!
-    // TODO result bool
-//    long options=PTRACE_O_TRACECLONE;
-//    long options=PTRACE_O_EXITKILL|PTRACE_O_TRACESYSGOOD|PTRACE_O_TRACEFORK;
 #if defined(Q_OS_LINUX)
-    long options = PTRACE_O_EXITKILL | PTRACE_O_TRACECLONE;
-    // PTRACE_O_TRACECLONE create thread
+    // Technique from edb:
+    //   PTRACE_O_TRACECLONE - deliver an event when the target creates a thread (essential for
+    //                         multithreaded debugging; decoded via status>>8 in waitForSignal)
+    //   PTRACE_O_EXITKILL   - kill the debuggee if the debugger dies
+    //   PTRACE_O_TRACEEXIT  - stop just before a thread/process exits so the exit code is
+    //                         retrievable via PTRACE_GETEVENTMSG
+    long options = PTRACE_O_EXITKILL | PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXIT;
 
     if (ptrace(PTRACE_SETOPTIONS, nThreadID, 0, options) != -1) {
         bResult = true;
     } else {
 #ifdef QT_DEBUG
-        qDebug("Cannot PTRACE_SETOPTIONS");
+        qDebug("Cannot PTRACE_SETOPTIONS: %s", strerror(errno));
 #endif
     }
+#else
+    Q_UNUSED(nThreadID)
 #endif
-    // mb TODO
     return bResult;
 }
 
@@ -135,6 +159,30 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
         result.bIsValid = true;
         result.nThreadId = nChildThreadId;
         result.nAddress = getXInfoDB()->getCurrentInstructionPointer_Id(nChildThreadId);
+
+#if defined(Q_OS_LINUX)
+        // ptrace-event stops (clone/exit) are encoded in the high byte of the wait status and
+        // arrive as SIGTRAP stops. Decode them before the signal analysis below, otherwise a
+        // thread-create would be misinterpreted as a breakpoint/single-step.
+        if (WIFSTOPPED(nResult)) {
+            const qint32 nEvent = (nResult >> 8);
+
+            if (nEvent == (SIGTRAP | (PTRACE_EVENT_CLONE << 8))) {
+                unsigned long nNewThreadId = 0;
+                if (ptrace(PTRACE_GETEVENTMSG, nChildThreadId, 0, &nNewThreadId) != -1) {
+                    result.nNewThreadId = (X_ID)nNewThreadId;
+                }
+                result.debuggerStatus = DEBUGGER_STATUS_THREADCREATE;
+                return result;
+            } else if (nEvent == (SIGTRAP | (PTRACE_EVENT_EXIT << 8))) {
+                unsigned long nExitStatus = 0;
+                ptrace(PTRACE_GETEVENTMSG, nChildThreadId, 0, &nExitStatus);
+                result.nCode = (quint32)nExitStatus;
+                result.debuggerStatus = DEBUGGER_STATUS_THREADEXIT;
+                return result;
+            }
+        }
+#endif
 
         siginfo_t sigInfo = {};
 
@@ -305,12 +353,41 @@ void XUnixDebugger::_debugEvent()
         // bool bContinue = false;
 
         if (!waitForSigchild()) {
-            qint64 nId = getXInfoDB()->getProcessInfo()->nProcessID;  // TODO all threads
-
-            STATE state = waitForSignal(nId, __WALL | WNOHANG);
+            // Wait for an event on ANY traced thread (-1), not only the main thread, so events on
+            // sibling threads of a multithreaded target are reaped. __WALL also covers threads.
+            STATE state = waitForSignal(-1, __WALL | WNOHANG);
 
             if (state.bIsValid) {
                 BPSTATUS result = BPSTATUS_UNKNOWN;
+
+                // Thread-lifecycle events (from PTRACE_O_TRACECLONE / PTRACE_O_TRACEEXIT). NOTE:
+                // robust group-stop handling of the freshly cloned thread needs on-Linux validation.
+                if (state.debuggerStatus == DEBUGGER_STATUS_THREADCREATE) {
+                    if (state.nNewThreadId) {
+                        XInfoDB::THREAD_INFO threadInfo = {};
+                        threadInfo.nThreadID = state.nNewThreadId;
+                        threadInfo.threadStatus = XInfoDB::THREAD_STATUS_RUNNING;
+                        getXInfoDB()->addThreadInfo(&threadInfo);
+
+                        // Debug registers are per-thread: copy the parent thread's hardware
+                        // breakpoints onto the new thread (technique from edb).
+                        XInfoDB::XHARDWAREBP hardwareBP = getXInfoDB()->getHardwareBP_Id(state.nThreadId);
+                        getXInfoDB()->setHardwareBP_Id(state.nNewThreadId, hardwareBP);
+
+                        emit eventCreateThread(&threadInfo);
+                    }
+                    // The new thread's initial (SIGSTOP) stop is reaped by a later wait(-1) pass.
+                    getXInfoDB()->resumeThread_Id(state.nThreadId);
+                    return;
+                } else if (state.debuggerStatus == DEBUGGER_STATUS_THREADEXIT) {
+                    XInfoDB::EXITTHREAD_INFO exitThreadInfo = {};
+                    exitThreadInfo.nThreadID = state.nThreadId;
+                    exitThreadInfo.nExitCode = state.nCode;
+                    emit eventExitThread(&exitThreadInfo);
+
+                    getXInfoDB()->resumeThread_Id(state.nThreadId);
+                    return;
+                }
 
                 getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
 

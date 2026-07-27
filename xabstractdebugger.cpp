@@ -50,6 +50,15 @@ XInfoDB *XAbstractDebugger::getXInfoDB()
     return g_pXInfoDB;
 }
 
+bool XAbstractDebugger::detach()
+{
+#ifdef QT_DEBUG
+    qDebug("TODO XAbstractDebugger::detach");
+#endif
+
+    return false;
+}
+
 bool XAbstractDebugger::run()
 {
 #ifdef QT_DEBUG
@@ -425,6 +434,23 @@ void XAbstractDebugger::process()
         load();
     } else if (g_options.nPID != 0) {
         attach();
+    }
+}
+
+void XAbstractDebugger::onDebuggerCommand(qint32 nCommand)
+{
+    // Executes on the debugger's worker thread (queued from the GUI). On Linux this is mandatory:
+    // every ptrace() request must be issued from the same thread that attached/traced the target.
+#ifdef QT_DEBUG
+    qDebug("onDebuggerCommand %d on thread %lld", nCommand, (qint64)QThread::currentThreadId());
+#endif
+    switch (nCommand) {
+        case DBGCOMMAND_RUN: run(); break;
+        case DBGCOMMAND_STEPINTO: stepInto(); break;
+        case DBGCOMMAND_STEPOVER: stepOver(); break;
+        case DBGCOMMAND_TRACEINTO: stepInto(); break;  // TODO preserve BPI_TRACEINTO semantics
+        case DBGCOMMAND_TRACEOVER: stepOver(); break;  // TODO preserve BPI_TRACEOVER semantics
+        case DBGCOMMAND_STOP: stop(); break;
     }
 }
 

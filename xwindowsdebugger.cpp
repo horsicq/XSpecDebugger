@@ -118,12 +118,75 @@ bool XWindowsDebugger::load()
 
 bool XWindowsDebugger::attach()
 {
-    // https://www.codeproject.com/Articles/132742/Writing-Windows-Debugger-Part-2
-#ifdef QT_DEBUG
-    qDebug("XWindowsDebugger::attach()");
+    // Technique (reimplemented, not copied): x64dbg attaches with DebugActiveProcess and
+    // clears kill-on-exit so a later detach leaves the target running. The kernel then
+    // synthesizes CREATE_PROCESS/CREATE_THREAD/LOAD_DLL events for the already-running state,
+    // so the existing _debugLoop() and on_*_DEBUG_EVENT() handlers work unchanged.
+    bool bResult = false;
+
+    qint64 nProcessID = getOptions()->nPID;
+
+    if (nProcessID) {
+        XProcess::setDebugPrivilege(true);  // needs SeDebugPrivilege
+
+        // Do not plant an entry-point breakpoint: the target is already past its entry point.
+        g_bBreakpointEntryPoint = false;
+        g_bBreakpointExceptions = false;
+        g_bBreakpointSystem = false;
+
+        if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_BREAKPONTEXCEPTIONS].bValid) {
+            g_bBreakpointExceptions = getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_BREAKPONTEXCEPTIONS].varValue.toBool();
+        }
+
+        if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_BREAKPONTSYSTEM].bValid) {
+            g_bBreakpointSystem = getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_BREAKPONTSYSTEM].varValue.toBool();
+        }
+
+        if (DebugActiveProcess((DWORD)nProcessID)) {
+            DebugSetProcessKillOnExit(FALSE);  // detach must not kill the target
+
+#ifdef Q_PROCESSOR_X86_32
+            setDisasmMode(XBinary::DM_X86_32);
+#endif
+#ifdef Q_PROCESSOR_X86_64
+            setDisasmMode(XBinary::DM_X86_64);
 #endif
 
-    return false;  // TODO
+            setDebugActive(true);
+
+            bResult = true;
+
+            _debugLoop((DWORD)nProcessID);
+        } else {
+            emit errorMessage(QString("%1: %2 (%3)").arg(tr("Cannot attach to process"), QString::number(nProcessID), XProcess::getLastErrorAsString()));
+        }
+    }
+
+    return bResult;
+}
+
+bool XWindowsDebugger::detach()
+{
+    // Technique: x64dbg detaches by clearing kill-on-exit and calling DebugActiveProcessStop.
+    // NOTE: DebugActiveProcessStop must run on the same thread that called DebugActiveProcess
+    // (the debug-loop thread). setDebugActive(false) breaks the loop; the actual stop call
+    // should be issued from that loop thread.
+    bool bResult = false;
+
+    qint64 nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
+
+    if (nProcessID) {
+        // TODO remove all software breakpoints (restore original bytes) and clear DR0-DR7 first
+
+        DebugSetProcessKillOnExit(FALSE);
+
+        if (DebugActiveProcessStop((DWORD)nProcessID)) {
+            setDebugActive(false);
+            bResult = true;
+        }
+    }
+
+    return bResult;
 }
 
 bool XWindowsDebugger::stop()

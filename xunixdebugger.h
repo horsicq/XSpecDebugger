@@ -42,12 +42,15 @@ public:
         DEBUGGER_STATUS_BREAKPOINT,
         DEBUGGER_STATUS_SIGTRAP,
         DEBUGGER_STATUS_EXCEPTION,
+        DEBUGGER_STATUS_THREADCREATE,  // PTRACE_EVENT_CLONE: a new thread was created
+        DEBUGGER_STATUS_THREADEXIT,    // PTRACE_EVENT_EXIT: a thread is about to exit
         DEBUGGER_STATUS_EXIT
     };
 
     struct STATE {
         bool bIsValid;
         X_ID nThreadId;
+        X_ID nNewThreadId;  // clone/thread-create: TID from PTRACE_GETEVENTMSG
         quint32 nCode;
         DEBUGGER_STATUS debuggerStatus;
         XADDR nAddress;

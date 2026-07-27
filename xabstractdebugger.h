@@ -70,11 +70,23 @@ public:
         BPSTATUS_EXIT
     };
 
+    // GUI -> debugger commands, delivered to onDebuggerCommand() via a queued connection so they
+    // execute on the debugger's worker thread (required on Linux: ptrace must run on the tracer).
+    enum DBGCOMMAND {
+        DBGCOMMAND_RUN = 0,
+        DBGCOMMAND_STEPINTO,
+        DBGCOMMAND_STEPOVER,
+        DBGCOMMAND_TRACEINTO,
+        DBGCOMMAND_TRACEOVER,
+        DBGCOMMAND_STOP
+    };
+
     explicit XAbstractDebugger(QObject *pParent, XInfoDB *pXInfoDB);
     void setXInfoDB(XInfoDB *pXInfoDB);
     XInfoDB *getXInfoDB();
     virtual bool load() = 0;
     virtual bool attach() = 0;
+    virtual bool detach();
     virtual bool run();
     virtual bool stop();
     virtual void cleanUp();
@@ -124,6 +136,7 @@ public:
 
 public slots:
     void process();
+    void onDebuggerCommand(qint32 nCommand);  // runs on the worker thread (see DBGCOMMAND)
     void testSlot(X_ID nThreadId);  // TODO remove
 
 signals:

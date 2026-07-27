@@ -32,6 +32,7 @@ public:
     virtual bool run();
     virtual bool load();
     virtual bool attach();
+    virtual bool detach();
     virtual bool stop();
     virtual void cleanUp();
     virtual QString getArch();

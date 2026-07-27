@@ -20,6 +20,10 @@
  */
 #include "xlinuxdebugger.h"
 
+#include <QDir>
+
+#include <sys/personality.h>
+
 XLinuxDebugger::XLinuxDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XUnixDebugger(pParent, pXInfoDB)
 {
 }
@@ -42,8 +46,11 @@ bool XLinuxDebugger::load()
         if (nProcessID == 0) {
             // Child process
             ptrace(PTRACE_TRACEME, 0, nullptr, nullptr);  // TODO errors
-            // TODO redirect I/O
-            // TODO personality(ADDR_NO_RANDOMIZE);
+
+            // Technique from edb: make the debugged run reproducible and self-contained.
+            personality(ADDR_NO_RANDOMIZE);  // disable ASLR so addresses are stable
+            setenv("LD_BIND_NOW", "1", 1);   // resolve all imports eagerly (no lazy PLT stubs)
+            // TODO redirect I/O (dup2 stdin/stdout/stderr) when running with a console
 
             EXECUTEPROCESS ep = executeProcess(sFileName, sDirectory);
 
@@ -138,8 +145,80 @@ bool XLinuxDebugger::load()
 
 bool XLinuxDebugger::attach()
 {
-    // TODO
-    return false;
+    // Technique from edb: enumerate the target's threads via /proc/<pid>/task, PTRACE_ATTACH each
+    // TID, synchronize with waitpid(__WALL), set the ptrace options, then register the process and
+    // its threads. The target is left stopped (paused) so the user can inspect before resuming.
+    bool bResult = false;
+
+    qint64 nProcessID = getOptions()->nPID;
+
+    if (nProcessID) {
+        QList<qint64> listThreadIDs;
+
+        QDir taskDir(QString("/proc/%1/task").arg(nProcessID));
+        const QStringList listEntries = taskDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+        for (const QString &sEntry : listEntries) {
+            bool bOk = false;
+            qint64 nTID = sEntry.toLongLong(&bOk);
+            if (bOk) {
+                listThreadIDs.append(nTID);
+            }
+        }
+
+        // Fall back to the main thread if /proc enumeration yielded nothing.
+        if (listThreadIDs.isEmpty()) {
+            listThreadIDs.append(nProcessID);
+        }
+
+        bool bAttached = false;
+
+        for (qint64 nTID : listThreadIDs) {
+            if (ptrace(PTRACE_ATTACH, nTID, 0, 0) != -1) {
+                qint32 nStatus = 0;
+                waitpid(nTID, &nStatus, __WALL);
+                setPtraceOptions(nTID);
+                bAttached = true;
+            } else {
+#ifdef QT_DEBUG
+                qDebug("Cannot PTRACE_ATTACH %lld: %s", (long long)nTID, strerror(errno));
+#endif
+            }
+        }
+
+        if (bAttached) {
+            setDebugActive(true);
+
+            // The target's executable path is the /proc/<pid>/exe symlink.
+            QString sFileName = QFileInfo(QString("/proc/%1/exe").arg(nProcessID)).symLinkTarget();
+
+            XInfoDB::PROCESS_INFO processInfo = {};
+            processInfo.nProcessID = nProcessID;
+            processInfo.nMainThreadID = nProcessID;
+            processInfo.sFileName = sFileName;
+            processInfo.sBaseFileName = QFileInfo(sFileName).baseName();
+            processInfo.hProcessMemoryIO = XProcess::openMemoryIO(nProcessID);
+            processInfo.hProcessMemoryQuery = XProcess::openMemoryQuery(nProcessID);
+
+            getXInfoDB()->setProcessInfo(processInfo);
+
+            emit eventCreateProcess(&processInfo);
+
+            for (qint64 nTID : listThreadIDs) {
+                XInfoDB::THREAD_INFO threadInfo = {};
+                threadInfo.nThreadID = nTID;
+                threadInfo.threadStatus = XInfoDB::THREAD_STATUS_PAUSED;
+                getXInfoDB()->addThreadInfo(&threadInfo);
+
+                emit eventCreateThread(&threadInfo);
+            }
+
+            startDebugLoop();
+
+            bResult = true;
+        }
+    }
+
+    return bResult;
 }
 
 void XLinuxDebugger::cleanUp()
