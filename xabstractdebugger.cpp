@@ -342,7 +342,7 @@ XAbstractDebugger::OPTIONS XAbstractDebugger::getDefaultOptions(QString sFileNam
 {
     OPTIONS result = {};
     // TODO auto analyse
-    QSet<XBinary::FT> ftTypes = XFormats::getFileTypes(sFileName);
+    QSet<XBinary::FT> ftTypes = XFormats::getFileTypes(sFileName, XBinary::FT_FLAG_EXECUTABLES);
 
     if (ftTypes.contains(XBinary::FT_PE)) {
         QFile file;
