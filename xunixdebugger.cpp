@@ -48,6 +48,16 @@ XUnixDebugger::XUnixDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDeb
 
 bool XUnixDebugger::run()
 {
+    return resumeAllThreads();
+}
+
+bool XUnixDebugger::resumeThread(X_ID nThreadId, qint32 nSignal)
+{
+    return getXInfoDB()->resumeThread_Id(nThreadId, nSignal);
+}
+
+bool XUnixDebugger::resumeAllThreads()
+{
     return getXInfoDB()->resumeAllThreads();
 }
 
@@ -361,7 +371,7 @@ bool XUnixDebugger::stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo)
     bResult = getXInfoDB()->stepInto_Id(nThreadId, bpInfo);
 
     if (bResult) {
-        bResult = getXInfoDB()->resumeAllThreads();
+        bResult = resumeAllThreads();
     }
 
     return bResult;
@@ -374,7 +384,7 @@ bool XUnixDebugger::stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo)
     bResult = getXInfoDB()->stepOver_Id(nThreadId, bpInfo);
 
     if (bResult) {
-        bResult = getXInfoDB()->resumeAllThreads();
+        bResult = resumeAllThreads();
     }
 
     return bResult;
@@ -472,12 +482,12 @@ void XUnixDebugger::_debugEvent()
                         emit eventCreateThread(&threadInfo);
                     }
                     // The new thread's initial (SIGSTOP) stop is reaped by a later wait(-1) pass.
-                    getXInfoDB()->resumeThread_Id(state.nThreadId);
+                    resumeThread(state.nThreadId);
                     return;
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_THREADEXIT) {
                     // PTRACE_EVENT_EXIT is a pre-exit stop. Continue it now; the following
                     // WIFEXITED/WIFSIGNALED status performs removal and emits exactly one event.
-                    getXInfoDB()->resumeThread_Id(state.nThreadId);
+                    resumeThread(state.nThreadId);
                     return;
                 }
 
@@ -640,21 +650,21 @@ void XUnixDebugger::_debugEvent()
                         // debugger-generated SIGSTOP is deliberately suppressed when continuing.
                         nSignal = state.nCode;
                     }
-#if defined(Q_OS_MACOS) && defined(Q_PROCESSOR_ARM_64)
+#if defined(Q_OS_MACOS)
                     else if ((state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT) && (state.nCode == SIGTRAP)) {
-                        // A BRK that is not ours must reach the debuggee; suppressing it would
-                        // continue at the same instruction and immediately trap forever.
+                        // An INT3/BRK that is not ours must continue through Darwin's previous
+                        // exception handler instead of being swallowed by the debugger.
                         nSignal = SIGTRAP;
                     }
 #endif
 
-                    if (!getXInfoDB()->resumeThread_Id(state.nThreadId, nSignal)) {
+                    if (!resumeThread(state.nThreadId, nSignal)) {
                         emit errorMessage(QString("%1 %2: %3").arg(tr("Cannot continue thread"))
                                               .arg(state.nThreadId)
                                               .arg(QString::fromLocal8Bit(strerror(errno))));
                     }
                 } else if (result == BPSTATUS_HANDLED) {
-                    getXInfoDB()->resumeAllThreads();
+                    resumeAllThreads();
                 }
             }
         }

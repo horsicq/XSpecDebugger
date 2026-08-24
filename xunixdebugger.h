@@ -65,7 +65,7 @@ public:
 
     EXECUTEPROCESS executeProcess(const QString &sFileName, const QString &sDirectory);  // TODO args, TODO sDirectory
     bool setPtraceOptions(qint64 nThreadID);
-    STATE waitForSignal(qint64 nThreadID, qint32 nOptions);
+    virtual STATE waitForSignal(qint64 nThreadID, qint32 nOptions);
     bool waitForSigchild();
     virtual bool _setStep(XProcess::HANDLEID handleID);  // TODO remove
     void startDebugLoop();
@@ -78,6 +78,10 @@ public:
 
 public slots:
     void _debugEvent();
+
+protected:
+    virtual bool resumeThread(X_ID nThreadId, qint32 nSignal = 0);
+    virtual bool resumeAllThreads();
 
 private:
     BPSTATUS _handleBreakpoint(STATE state, XInfoDB::BPT bpType);

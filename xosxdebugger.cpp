@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <mach/mach.h>
+#include <mach/ndr.h>
 #include <signal.h>
 #include <string.h>
 #include <sys/ptrace.h>
@@ -43,9 +44,76 @@ namespace {
 enum CHILD_LAUNCH_STAGE {
     CHILD_LAUNCH_STAGE_UNKNOWN = 0,
     CHILD_LAUNCH_STAGE_PTRACE,
+    CHILD_LAUNCH_STAGE_SIGEXC,
     CHILD_LAUNCH_STAGE_CHDIR,
     CHILD_LAUNCH_STAGE_EXECVE
 };
+
+union DARWIN_MACH_MESSAGE {
+    mach_msg_header_t header;
+    char data[1024];
+};
+
+struct DARWIN_EXCEPTION_CAPTURE {
+    task_t hExpectedTask;
+    task_t hTask;
+    thread_act_t hThread;
+    exception_type_t exceptionType;
+    QVector<mach_exception_data_type_t> listCodes;
+};
+
+struct DARWIN_EXCEPTION_MESSAGE {
+    DARWIN_MACH_MESSAGE request;
+    DARWIN_MACH_MESSAGE reply;
+    DARWIN_EXCEPTION_CAPTURE capture;
+    X_ID nThreadId;
+};
+
+struct DARWIN_MIG_REPLY_ERROR {
+    mach_msg_header_t header;
+    NDR_record_t ndr;
+    kern_return_t result;
+};
+
+DARWIN_EXCEPTION_CAPTURE *g_pExceptionCapture = nullptr;
+
+void copyExceptionCodes(QVector<mach_exception_data_type_t> *pCodes, mach_exception_data_t pData, mach_msg_type_number_t nCodeCount)
+{
+    pCodes->clear();
+    pCodes->reserve(static_cast<qint32>(nCodeCount));
+
+    for (mach_msg_type_number_t i = 0; i < nCodeCount; i++) {
+        mach_exception_data_type_t nCode = 0;
+        memcpy(&nCode, reinterpret_cast<const char *>(pData) + (i * sizeof(nCode)), sizeof(nCode));
+        pCodes->append(nCode);
+    }
+}
+
+kern_return_t getThreadIdentifier(thread_act_t hThread, X_ID *pThreadId)
+{
+    thread_identifier_info_data_t identifierInfo = {};
+    mach_msg_type_number_t nInfoCount = THREAD_IDENTIFIER_INFO_COUNT;
+    const kern_return_t result = thread_info(hThread, THREAD_IDENTIFIER_INFO, reinterpret_cast<thread_info_t>(&identifierInfo), &nInfoCount);
+
+    if ((result == KERN_SUCCESS) && pThreadId) {
+        *pThreadId = static_cast<X_ID>(identifierInfo.thread_id);
+    }
+
+    return result;
+}
+
+void setReplyResult(DARWIN_EXCEPTION_MESSAGE *pMessage, kern_return_t result)
+{
+    if (pMessage->reply.header.msgh_size >= sizeof(DARWIN_MIG_REPLY_ERROR)) {
+        reinterpret_cast<DARWIN_MIG_REPLY_ERROR *>(&pMessage->reply)->result = result;
+    }
+}
+
+kern_return_t sendExceptionReply(DARWIN_EXCEPTION_MESSAGE *pMessage)
+{
+    return mach_msg(&pMessage->reply.header, MACH_SEND_MSG | MACH_SEND_INTERRUPT, pMessage->reply.header.msgh_size, 0, MACH_PORT_NULL,
+                    MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
+}
 
 struct CHILD_LAUNCH_ERROR {
     qint32 nStage;
@@ -96,6 +164,81 @@ void terminateAndReapChild(pid_t nProcessID)
     reapChild(nProcessID);
 }
 }  // namespace
+
+extern "C" boolean_t mach_exc_server(mach_msg_header_t *pRequest, mach_msg_header_t *pReply);
+
+extern "C" kern_return_t catch_mach_exception_raise(mach_port_t hExceptionPort, mach_port_t hThread, mach_port_t hTask,
+                                                     exception_type_t exceptionType, mach_exception_data_t pCodes,
+                                                     mach_msg_type_number_t nCodeCount)
+{
+    Q_UNUSED(hExceptionPort)
+
+    if ((g_pExceptionCapture == nullptr) || (hTask != g_pExceptionCapture->hExpectedTask)) {
+        return KERN_FAILURE;
+    }
+
+    g_pExceptionCapture->hTask = hTask;
+    g_pExceptionCapture->hThread = hThread;
+    g_pExceptionCapture->exceptionType = exceptionType;
+    copyExceptionCodes(&g_pExceptionCapture->listCodes, pCodes, nCodeCount);
+
+    return KERN_SUCCESS;
+}
+
+extern "C" kern_return_t catch_mach_exception_raise_state(mach_port_t hExceptionPort, exception_type_t exceptionType,
+                                                           const mach_exception_data_t pCodes, mach_msg_type_number_t nCodeCount, int *pFlavor,
+                                                           const thread_state_t pOldState, mach_msg_type_number_t nOldStateCount,
+                                                           thread_state_t pNewState, mach_msg_type_number_t *pNewStateCount)
+{
+    Q_UNUSED(hExceptionPort)
+    Q_UNUSED(exceptionType)
+    Q_UNUSED(pCodes)
+    Q_UNUSED(nCodeCount)
+    Q_UNUSED(pFlavor)
+    Q_UNUSED(pOldState)
+    Q_UNUSED(nOldStateCount)
+    Q_UNUSED(pNewState)
+    Q_UNUSED(pNewStateCount)
+
+    return KERN_FAILURE;
+}
+
+extern "C" kern_return_t catch_mach_exception_raise_state_identity(
+    mach_port_t hExceptionPort, mach_port_t hThread, mach_port_t hTask, exception_type_t exceptionType, mach_exception_data_t pCodes,
+    mach_msg_type_number_t nCodeCount, int *pFlavor, thread_state_t pOldState, mach_msg_type_number_t nOldStateCount, thread_state_t pNewState,
+    mach_msg_type_number_t *pNewStateCount)
+{
+    Q_UNUSED(hExceptionPort)
+    Q_UNUSED(hThread)
+    Q_UNUSED(hTask)
+    Q_UNUSED(exceptionType)
+    Q_UNUSED(pCodes)
+    Q_UNUSED(nCodeCount)
+    Q_UNUSED(pFlavor)
+    Q_UNUSED(pOldState)
+    Q_UNUSED(nOldStateCount)
+    Q_UNUSED(pNewState)
+    Q_UNUSED(pNewStateCount)
+
+    return KERN_FAILURE;
+}
+
+struct XOSXDebugger::DARWIN_STATE {
+    task_t hTask = MACH_PORT_NULL;
+    mach_port_t hExceptionPort = MACH_PORT_NULL;
+    exception_mask_t exceptionMask = EXC_MASK_SOFTWARE | EXC_MASK_BREAKPOINT;
+    exception_mask_t savedMasks[EXC_TYPES_COUNT] = {};
+    mach_port_t savedPorts[EXC_TYPES_COUNT] = {};
+    exception_behavior_t savedBehaviors[EXC_TYPES_COUNT] = {};
+    thread_state_flavor_t savedFlavors[EXC_TYPES_COUNT] = {};
+    mach_msg_type_number_t nSavedPortCount = 0;
+    QList<DARWIN_EXCEPTION_MESSAGE> listQueuedMessages;
+    DARWIN_EXCEPTION_MESSAGE currentMessage = {};
+    QList<X_ID> listStepSuspendedThreadIds;
+    bool bCurrentMessage = false;
+    bool bTaskSuspended = false;
+    bool bInitialPtraceStop = false;
+};
 
 XOSXDebugger::XOSXDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XUnixDebugger(pParent, pXInfoDB)
 {
