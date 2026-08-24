@@ -332,7 +332,10 @@ bool XUnixDebugger::_setStep(XProcess::HANDLEID handleID)
     bResult = (ptrace(PTRACE_SINGLESTEP, handleID.nID, 0, 0) != -1);
 #endif
 #if defined(Q_OS_MACOS)
-    bResult = (ptrace(PT_STEP, handleID.nID, (caddr_t)1, 0) != -1);
+    // Darwin's ptrace step operation always chooses task_threads()[0].  Mach-backed
+    // debuggers identify threads with stable THREAD_IDENTIFIER_INFO IDs, so set the
+    // selected thread's hardware step state through XInfoDB instead.
+    bResult = getXInfoDB()->_setStep_Id(static_cast<X_ID>(handleID.nID));
 #endif
     //    int wait_status;
     //    waitpid(handleID.nID,&wait_status,0);

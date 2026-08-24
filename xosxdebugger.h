@@ -50,8 +50,8 @@ private:
     bool replyCurrentException(qint32 nSignal, bool bForwardException);
     bool continueAfterException(X_ID nThreadId, qint32 nSignal, bool bAllThreads);
     bool prepareSingleStepIsolation(X_ID *pStepThreadId);
-    void releaseSingleStepIsolation();
-    bool syncDarwinThreads(X_ID nStoppedThreadId = 0);
+    bool releaseSingleStepIsolation();
+    bool syncDarwinThreads(X_ID nStoppedThreadId = 0, bool bEmitEvents = true);
 
 signals:
 

@@ -39,7 +39,12 @@ osx {
     XOSXDEBUGGER_MIG_DEFS = $$PWD/xosxdebugger_mach_exc.defs
     xosxdebugger_mig.input = XOSXDEBUGGER_MIG_DEFS
     xosxdebugger_mig.output = $$XOSXDEBUGGER_MIG_DIR/mach_excServer.c
-    xosxdebugger_mig.commands = mkdir -p $$shell_quote($$XOSXDEBUGGER_MIG_DIR) && cd $$shell_quote($$XOSXDEBUGGER_MIG_DIR) && xcrun --sdk macosx mig ${QMAKE_FILE_IN}
+    xosxdebugger_mig.commands = mkdir -p $$shell_quote($$XOSXDEBUGGER_MIG_DIR) && \
+        xcrun --sdk macosx mig \
+        -header $$shell_quote($$XOSXDEBUGGER_MIG_DIR/mach_exc.h) \
+        -server $$shell_quote($$XOSXDEBUGGER_MIG_DIR/mach_excServer.c) \
+        -user $$shell_quote($$XOSXDEBUGGER_MIG_DIR/mach_excUser.c) \
+        ${QMAKE_FILE_IN}
     xosxdebugger_mig.variable_out = SOURCES
     xosxdebugger_mig.CONFIG += target_predeps
     QMAKE_EXTRA_COMPILERS += xosxdebugger_mig

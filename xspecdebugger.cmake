@@ -62,7 +62,12 @@ if(APPLE)
     )
     add_custom_command(
         OUTPUT ${XOSXDEBUGGER_MIG_OUTPUTS}
-        COMMAND ${XOSXDEBUGGER_MIG_EXECUTABLE} -isysroot ${XOSXDEBUGGER_MIG_SYSROOT} ${CMAKE_CURRENT_LIST_DIR}/xosxdebugger_mach_exc.defs
+        COMMAND ${XOSXDEBUGGER_MIG_EXECUTABLE}
+                -isysroot ${XOSXDEBUGGER_MIG_SYSROOT}
+                -header ${XOSXDEBUGGER_MIG_DIR}/mach_exc.h
+                -server ${XOSXDEBUGGER_MIG_DIR}/mach_excServer.c
+                -user ${XOSXDEBUGGER_MIG_DIR}/mach_excUser.c
+                ${CMAKE_CURRENT_LIST_DIR}/xosxdebugger_mach_exc.defs
         WORKING_DIRECTORY ${XOSXDEBUGGER_MIG_DIR}
         DEPENDS ${CMAKE_CURRENT_LIST_DIR}/xosxdebugger_mach_exc.defs
         VERBATIM

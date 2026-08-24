@@ -20,6 +20,7 @@
  */
 #include "xosxdebugger.h"
 
+#include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
 #include <QProcess>
@@ -51,11 +52,12 @@ enum CHILD_LAUNCH_STAGE {
     CHILD_LAUNCH_STAGE_UNKNOWN = 0,
     CHILD_LAUNCH_STAGE_PTRACE,
     CHILD_LAUNCH_STAGE_SIGEXC,
+    CHILD_LAUNCH_STAGE_GATE,
     CHILD_LAUNCH_STAGE_CHDIR,
     CHILD_LAUNCH_STAGE_EXECVE
 };
 
-union DARWIN_MACH_MESSAGE {
+union alignas(16) DARWIN_MACH_MESSAGE {
     mach_msg_header_t header;
     char data[1024];
 };
@@ -66,6 +68,7 @@ struct DARWIN_EXCEPTION_CAPTURE {
     thread_act_t hThread;
     exception_type_t exceptionType;
     QVector<mach_exception_data_type_t> listCodes;
+    bool bAccepted;
 };
 
 struct DARWIN_EXCEPTION_MESSAGE {
@@ -81,7 +84,7 @@ struct DARWIN_MIG_REPLY_ERROR {
     kern_return_t result;
 };
 
-DARWIN_EXCEPTION_CAPTURE *g_pExceptionCapture = nullptr;
+thread_local DARWIN_EXCEPTION_CAPTURE *g_pExceptionCapture = nullptr;
 
 void copyExceptionCodes(QVector<mach_exception_data_type_t> *pCodes, mach_exception_data_t pData, mach_msg_type_number_t nCodeCount)
 {
@@ -117,8 +120,45 @@ void setReplyResult(DARWIN_EXCEPTION_MESSAGE *pMessage, kern_return_t result)
 
 kern_return_t sendExceptionReply(DARWIN_EXCEPTION_MESSAGE *pMessage)
 {
-    return mach_msg(&pMessage->reply.header, MACH_SEND_MSG | MACH_SEND_INTERRUPT, pMessage->reply.header.msgh_size, 0, MACH_PORT_NULL,
-                    MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
+    kern_return_t result = KERN_SUCCESS;
+    do {
+        result = mach_msg(&pMessage->reply.header, MACH_SEND_MSG | MACH_SEND_INTERRUPT, pMessage->reply.header.msgh_size, 0,
+                          MACH_PORT_NULL, MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
+    } while (result == MACH_SEND_INTERRUPTED);
+
+    return result;
+}
+
+void discardExceptionReply(DARWIN_EXCEPTION_MESSAGE *pMessage)
+{
+    if (MACH_PORT_VALID(pMessage->reply.header.msgh_remote_port)) {
+        // A failed or deliberately abandoned MIG reply still owns its send-once
+        // destination. mach_msg_destroy() releases that right without touching the
+        // separately adopted task/thread descriptor rights in capture.
+        mach_msg_destroy(&pMessage->reply.header);
+        pMessage->reply.header.msgh_remote_port = MACH_PORT_NULL;
+    }
+}
+
+void releaseCapturedPorts(DARWIN_EXCEPTION_MESSAGE *pMessage)
+{
+    if (MACH_PORT_VALID(pMessage->capture.hThread)) {
+        mach_port_deallocate(mach_task_self(), pMessage->capture.hThread);
+        pMessage->capture.hThread = MACH_PORT_NULL;
+    }
+    if (MACH_PORT_VALID(pMessage->capture.hTask)) {
+        mach_port_deallocate(mach_task_self(), pMessage->capture.hTask);
+        pMessage->capture.hTask = MACH_PORT_NULL;
+    }
+}
+
+void destroyUnadoptedRequest(DARWIN_EXCEPTION_MESSAGE *pMessage)
+{
+    // The MIG demultiplexer copied the incoming send-once reply right into the
+    // reply header. Detach it from the request before destroying descriptors that
+    // were rejected before a callback could adopt them.
+    pMessage->request.header.msgh_remote_port = MACH_PORT_NULL;
+    mach_msg_destroy(&pMessage->request.header);
 }
 
 struct CHILD_LAUNCH_ERROR {
@@ -146,6 +186,40 @@ void writeChildLaunchError(qint32 nFileDescriptor, CHILD_LAUNCH_STAGE stage, qin
         } else {
             break;
         }
+    }
+}
+
+bool writePipeByte(qint32 nFileDescriptor, char cValue)
+{
+    while (true) {
+        const ssize_t nWritten = ::write(nFileDescriptor, &cValue, 1);
+        if (nWritten == 1) {
+            return true;
+        }
+        if ((nWritten == -1) && (errno == EINTR)) {
+            continue;
+        }
+        if (nWritten == 0) {
+            errno = EIO;
+        }
+        return false;
+    }
+}
+
+bool readPipeByte(qint32 nFileDescriptor, char *pValue)
+{
+    while (true) {
+        const ssize_t nRead = ::read(nFileDescriptor, pValue, 1);
+        if (nRead == 1) {
+            return true;
+        }
+        if ((nRead == -1) && (errno == EINTR)) {
+            continue;
+        }
+        if (nRead == 0) {
+            errno = ECANCELED;
+        }
+        return false;
     }
 }
 
@@ -179,14 +253,22 @@ extern "C" kern_return_t catch_mach_exception_raise(mach_port_t hExceptionPort, 
 {
     Q_UNUSED(hExceptionPort)
 
-    if ((g_pExceptionCapture == nullptr) || (hTask != g_pExceptionCapture->hExpectedTask)) {
+    if (g_pExceptionCapture == nullptr) {
         return KERN_FAILURE;
     }
 
+    // MIG transfers these descriptor rights to the server routine even when it
+    // returns an error. Adopt them first so every path releases them exactly once.
     g_pExceptionCapture->hTask = hTask;
     g_pExceptionCapture->hThread = hThread;
     g_pExceptionCapture->exceptionType = exceptionType;
     copyExceptionCodes(&g_pExceptionCapture->listCodes, pCodes, nCodeCount);
+
+    if (hTask != g_pExceptionCapture->hExpectedTask) {
+        return KERN_FAILURE;
+    }
+
+    g_pExceptionCapture->bAccepted = true;
 
     return KERN_SUCCESS;
 }
@@ -215,19 +297,28 @@ extern "C" kern_return_t catch_mach_exception_raise_state_identity(
     mach_msg_type_number_t *pNewStateCount)
 {
     Q_UNUSED(hExceptionPort)
-    Q_UNUSED(hThread)
-    Q_UNUSED(hTask)
-    Q_UNUSED(exceptionType)
-    Q_UNUSED(pCodes)
-    Q_UNUSED(nCodeCount)
     Q_UNUSED(pFlavor)
     Q_UNUSED(pOldState)
     Q_UNUSED(nOldStateCount)
     Q_UNUSED(pNewState)
     Q_UNUSED(pNewStateCount)
 
+    if (g_pExceptionCapture) {
+        // This backend requests EXCEPTION_DEFAULT, but still own and release a
+        // well-formed state-identity message if one is sent to the port.
+        g_pExceptionCapture->hTask = hTask;
+        g_pExceptionCapture->hThread = hThread;
+        g_pExceptionCapture->exceptionType = exceptionType;
+        copyExceptionCodes(&g_pExceptionCapture->listCodes, pCodes, nCodeCount);
+    }
+
     return KERN_FAILURE;
 }
+
+struct DARWIN_SUSPENDED_THREAD {
+    X_ID nThreadId;
+    thread_act_t hThread;
+};
 
 struct XOSXDebugger::DARWIN_STATE {
     task_t hTask = MACH_PORT_NULL;
@@ -240,10 +331,9 @@ struct XOSXDebugger::DARWIN_STATE {
     mach_msg_type_number_t nSavedPortCount = 0;
     QList<DARWIN_EXCEPTION_MESSAGE> listQueuedMessages;
     DARWIN_EXCEPTION_MESSAGE currentMessage = {};
-    QList<X_ID> listStepSuspendedThreadIds;
+    QList<DARWIN_SUSPENDED_THREAD> listStepSuspendedThreads;
     bool bCurrentMessage = false;
     bool bTaskSuspended = false;
-    bool bInitialPtraceStop = false;
 };
 
 XOSXDebugger::XOSXDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XUnixDebugger(pParent, pXInfoDB), m_pDarwinState(new DARWIN_STATE)
@@ -287,7 +377,6 @@ bool XOSXDebugger::installExceptionPort(task_t hTask)
         return false;
     }
 
-    m_pDarwinState->bInitialPtraceStop = true;
     return true;
 }
 
@@ -307,21 +396,46 @@ void XOSXDebugger::shutdownExceptionPort(bool bForwardPending)
     if (bForwardPending) {
         if (m_pDarwinState->bCurrentMessage) {
             setReplyResult(&m_pDarwinState->currentMessage, KERN_FAILURE);
-            sendExceptionReply(&m_pDarwinState->currentMessage);
+            if (sendExceptionReply(&m_pDarwinState->currentMessage) != KERN_SUCCESS) {
+                discardExceptionReply(&m_pDarwinState->currentMessage);
+            }
+            releaseCapturedPorts(&m_pDarwinState->currentMessage);
         }
 
         for (DARWIN_EXCEPTION_MESSAGE &message : m_pDarwinState->listQueuedMessages) {
             setReplyResult(&message, KERN_FAILURE);
-            sendExceptionReply(&message);
+            if (sendExceptionReply(&message) != KERN_SUCCESS) {
+                discardExceptionReply(&message);
+            }
+            releaseCapturedPorts(&message);
+        }
+    } else {
+        if (m_pDarwinState->bCurrentMessage) {
+            discardExceptionReply(&m_pDarwinState->currentMessage);
+            releaseCapturedPorts(&m_pDarwinState->currentMessage);
+        }
+        for (DARWIN_EXCEPTION_MESSAGE &message : m_pDarwinState->listQueuedMessages) {
+            discardExceptionReply(&message);
+            releaseCapturedPorts(&message);
         }
     }
 
     m_pDarwinState->bCurrentMessage = false;
     m_pDarwinState->listQueuedMessages.clear();
-    releaseSingleStepIsolation();
+    const bool bIsolationReleased = releaseSingleStepIsolation();
 
-    if (m_pDarwinState->bTaskSuspended && (m_pDarwinState->hTask != MACH_PORT_NULL)) {
+    if (bIsolationReleased && m_pDarwinState->bTaskSuspended && (m_pDarwinState->hTask != MACH_PORT_NULL)) {
         task_resume(m_pDarwinState->hTask);
+    } else if (!bIsolationReleased) {
+        // Exception-port shutdown is terminal for this backend (detach is unsupported).
+        // Keep the task-level suspension in place so no partially isolated target runs,
+        // but release our retained Mach send-right references before abandoning it.
+        for (const DARWIN_SUSPENDED_THREAD &suspendedThread : m_pDarwinState->listStepSuspendedThreads) {
+            if (MACH_PORT_VALID(suspendedThread.hThread)) {
+                mach_port_deallocate(mach_task_self(), suspendedThread.hThread);
+            }
+        }
+        m_pDarwinState->listStepSuspendedThreads.clear();
     }
     m_pDarwinState->bTaskSuspended = false;
 
@@ -338,14 +452,17 @@ void XOSXDebugger::shutdownExceptionPort(bool bForwardPending)
 
     m_pDarwinState->hExceptionPort = MACH_PORT_NULL;
     m_pDarwinState->hTask = MACH_PORT_NULL;
-    m_pDarwinState->bInitialPtraceStop = false;
 }
 
-bool XOSXDebugger::syncDarwinThreads(X_ID nStoppedThreadId)
+bool XOSXDebugger::syncDarwinThreads(X_ID nStoppedThreadId, bool bEmitEvents)
 {
     QList<X_ID> listThreadIds;
     if (!getXInfoDB()->updateDarwinThreadPorts(&listThreadIds)) {
         return false;
+    }
+
+    if (!bEmitEvents) {
+        return !nStoppedThreadId || listThreadIds.contains(nStoppedThreadId);
     }
 
     const QList<XInfoDB::THREAD_INFO> listPreviousThreads = *(getXInfoDB()->getThreadInfos());
@@ -405,8 +522,12 @@ bool XOSXDebugger::receiveException(STATE *pState)
         if ((capture.exceptionType == EXC_SOFTWARE) && (capture.listCodes.count() >= 2) &&
             (capture.listCodes.at(0) == EXC_SOFT_SIGNAL)) {
             pState->nCode = static_cast<quint32>(capture.listCodes.at(1));
-            pState->debuggerStatus = ((pState->nCode == SIGSTOP) || (pState->nCode == SIGABRT)) ? DEBUGGER_STATUS_STOP
-                                                                                               : DEBUGGER_STATUS_EXCEPTION;
+            if (pState->nCode == SIGTRAP) {
+                pState->debuggerStatus = DEBUGGER_STATUS_SIGTRAP;
+            } else {
+                pState->debuggerStatus = ((pState->nCode == SIGSTOP) || (pState->nCode == SIGABRT)) ? DEBUGGER_STATUS_STOP
+                                                                                                   : DEBUGGER_STATUS_EXCEPTION;
+            }
         } else if (capture.exceptionType == EXC_BREAKPOINT) {
             const bool bPendingStep =
                 !getXInfoDB()->findBreakPointByThreadID(pState->nThreadId, XInfoDB::BPT_CODE_STEP_FLAG).sUUID.isEmpty() ||
@@ -452,11 +573,18 @@ bool XOSXDebugger::receiveException(STATE *pState)
         const bool bDemultiplexed = mach_exc_server(&message.request.header, &message.reply.header);
         g_pExceptionCapture = nullptr;
 
-        if (!bDemultiplexed || (message.capture.hThread == MACH_PORT_NULL) ||
+        if (!bDemultiplexed || !message.capture.bAccepted || (message.capture.hThread == MACH_PORT_NULL) ||
             (getThreadIdentifier(message.capture.hThread, &message.nThreadId) != KERN_SUCCESS) || !message.nThreadId) {
             if (bDemultiplexed) {
                 setReplyResult(&message, KERN_FAILURE);
-                sendExceptionReply(&message);
+                if (sendExceptionReply(&message) != KERN_SUCCESS) {
+                    discardExceptionReply(&message);
+                }
+                if (MACH_PORT_VALID(message.capture.hThread) || MACH_PORT_VALID(message.capture.hTask)) {
+                    releaseCapturedPorts(&message);
+                } else {
+                    destroyUnadoptedRequest(&message);
+                }
             } else {
                 mach_msg_destroy(&message.request.header);
             }
@@ -466,11 +594,16 @@ bool XOSXDebugger::receiveException(STATE *pState)
         if (!m_pDarwinState->bTaskSuspended) {
             if (task_suspend(m_pDarwinState->hTask) != KERN_SUCCESS) {
                 setReplyResult(&message, KERN_FAILURE);
-                sendExceptionReply(&message);
+                if (sendExceptionReply(&message) != KERN_SUCCESS) {
+                    discardExceptionReply(&message);
+                }
+                releaseCapturedPorts(&message);
                 continue;
             }
             m_pDarwinState->bTaskSuspended = true;
-            releaseSingleStepIsolation();
+            if (!releaseSingleStepIsolation()) {
+                emit errorMessage(tr("Cannot release Darwin single-step thread isolation"));
+            }
         }
 
         m_pDarwinState->listQueuedMessages.append(message);
@@ -479,7 +612,7 @@ bool XOSXDebugger::receiveException(STATE *pState)
 
     if (bReceivedAny) {
         const X_ID nStoppedThreadId = m_pDarwinState->listQueuedMessages.first().nThreadId;
-        if (!syncDarwinThreads(nStoppedThreadId)) {
+        if (!syncDarwinThreads(nStoppedThreadId, isDebugActive())) {
             emit errorMessage(tr("Cannot refresh Darwin thread ports after an exception"));
         }
     }
@@ -487,32 +620,40 @@ bool XOSXDebugger::receiveException(STATE *pState)
     return promoteMessage();
 }
 
-void XOSXDebugger::releaseSingleStepIsolation()
+bool XOSXDebugger::releaseSingleStepIsolation()
 {
-    if (m_pDarwinState->listStepSuspendedThreadIds.isEmpty()) {
-        return;
+    if (m_pDarwinState->listStepSuspendedThreads.isEmpty()) {
+        return true;
     }
 
-    thread_act_array_t pThreads = nullptr;
-    mach_msg_type_number_t nThreadCount = 0;
+    for (qint32 i = m_pDarwinState->listStepSuspendedThreads.count() - 1; i >= 0; i--) {
+        const DARWIN_SUSPENDED_THREAD suspendedThread = m_pDarwinState->listStepSuspendedThreads.at(i);
+        const thread_act_t hThread = suspendedThread.hThread;
+        const kern_return_t result = thread_resume(hThread);
+        bool bReleased = (result == KERN_SUCCESS) || (result == KERN_TERMINATED);
+        bool bRightGone = false;
 
-    if ((m_pDarwinState->hTask != MACH_PORT_NULL) &&
-        (task_threads(m_pDarwinState->hTask, &pThreads, &nThreadCount) == KERN_SUCCESS)) {
-        for (mach_msg_type_number_t i = 0; i < nThreadCount; i++) {
-            X_ID nThreadId = 0;
-            if ((getThreadIdentifier(pThreads[i], &nThreadId) == KERN_SUCCESS) &&
-                m_pDarwinState->listStepSuspendedThreadIds.contains(nThreadId)) {
-                thread_resume(pThreads[i]);
+        if (!bReleased) {
+            mach_port_type_t portType = 0;
+            const kern_return_t typeResult = mach_port_type(mach_task_self(), hThread, &portType);
+            bReleased = (typeResult == KERN_SUCCESS) && ((portType & MACH_PORT_TYPE_DEAD_NAME) != 0);
+            // A missing name means the retained right has already gone away. Any other
+            // inspection failure is inconclusive, so retain the exact right and retry later.
+            bRightGone = (typeResult == KERN_INVALID_NAME);
+        }
+
+        if (bReleased || bRightGone) {
+            if (bReleased) {
+                // This is the exact task_threads() send right on which thread_suspend()
+                // succeeded. Drop it only after balancing that increment or confirming that
+                // the target thread has terminated and the right has become a dead name.
+                mach_port_deallocate(mach_task_self(), hThread);
             }
-            mach_port_deallocate(mach_task_self(), pThreads[i]);
-        }
-
-        if (pThreads) {
-            vm_deallocate(mach_task_self(), reinterpret_cast<vm_address_t>(pThreads), static_cast<vm_size_t>(nThreadCount) * sizeof(*pThreads));
+            m_pDarwinState->listStepSuspendedThreads.removeAt(i);
         }
     }
 
-    m_pDarwinState->listStepSuspendedThreadIds.clear();
+    return m_pDarwinState->listStepSuspendedThreads.isEmpty();
 }
 
 bool XOSXDebugger::prepareSingleStepIsolation(X_ID *pStepThreadId)
@@ -521,7 +662,9 @@ bool XOSXDebugger::prepareSingleStepIsolation(X_ID *pStepThreadId)
         *pStepThreadId = 0;
     }
 
-    releaseSingleStepIsolation();
+    if (!releaseSingleStepIsolation()) {
+        return false;
+    }
 
     QList<X_ID> listThreadIds;
     if (!getXInfoDB()->updateDarwinThreadPorts(&listThreadIds)) {
@@ -551,15 +694,25 @@ bool XOSXDebugger::prepareSingleStepIsolation(X_ID *pStepThreadId)
     bool bResult = true;
     for (mach_msg_type_number_t i = 0; i < nThreadCount; i++) {
         X_ID nThreadId = 0;
+        bool bKeepThreadPort = false;
         if ((getThreadIdentifier(pThreads[i], &nThreadId) != KERN_SUCCESS) || !nThreadId) {
             bResult = false;
         } else if ((nThreadId != nStepThreadId) && (thread_suspend(pThreads[i]) == KERN_SUCCESS)) {
-            m_pDarwinState->listStepSuspendedThreadIds.append(nThreadId);
+            // Retain every exact task_threads() send right until the matching suspend
+            // increment is successfully balanced. Re-enumerating by ID during unwind can
+            // otherwise strand a live thread if enumeration temporarily fails.
+            DARWIN_SUSPENDED_THREAD suspendedThread = {};
+            suspendedThread.nThreadId = nThreadId;
+            suspendedThread.hThread = pThreads[i];
+            m_pDarwinState->listStepSuspendedThreads.append(suspendedThread);
+            bKeepThreadPort = true;
         } else if (nThreadId != nStepThreadId) {
             bResult = false;
         }
 
-        mach_port_deallocate(mach_task_self(), pThreads[i]);
+        if (!bKeepThreadPort) {
+            mach_port_deallocate(mach_task_self(), pThreads[i]);
+        }
     }
 
     if (pThreads) {
@@ -599,6 +752,7 @@ bool XOSXDebugger::replyCurrentException(qint32 nSignal, bool bForwardException)
         return false;
     }
 
+    releaseCapturedPorts(&message);
     m_pDarwinState->bCurrentMessage = false;
     return true;
 }
@@ -606,6 +760,17 @@ bool XOSXDebugger::replyCurrentException(qint32 nSignal, bool bForwardException)
 bool XOSXDebugger::continueAfterException(X_ID nThreadId, qint32 nSignal, bool bAllThreads)
 {
     Q_UNUSED(bAllThreads)
+
+    // Simultaneous exceptions are deliberately surfaced one at a time. Do not let an
+    // early UI command resume the task in the short interval before the event loop has
+    // promoted the next retained message.
+    if (!m_pDarwinState->bCurrentMessage && !m_pDarwinState->listQueuedMessages.isEmpty()) {
+        return false;
+    }
+
+    if (!m_pDarwinState->listStepSuspendedThreads.isEmpty() && !releaseSingleStepIsolation()) {
+        return false;
+    }
 
     if (m_pDarwinState->bCurrentMessage) {
         if (m_pDarwinState->currentMessage.nThreadId != nThreadId) {
@@ -635,11 +800,6 @@ bool XOSXDebugger::continueAfterException(X_ID nThreadId, qint32 nSignal, bool b
         if (bResult) {
             m_pDarwinState->bTaskSuspended = false;
         }
-    } else if (m_pDarwinState->bInitialPtraceStop) {
-        bResult = (ptrace(PT_CONTINUE, getXInfoDB()->getProcessInfo()->nProcessID, (caddr_t)1, nSignal) != -1);
-        if (bResult) {
-            m_pDarwinState->bInitialPtraceStop = false;
-        }
     }
 
     if (!bResult) {
@@ -664,7 +824,10 @@ XUnixDebugger::STATE XOSXDebugger::waitForSignal(qint64 nThreadID, qint32 nOptio
         return result;
     }
 
-    return XUnixDebugger::waitForSignal(nThreadID, nOptions);
+    // PT_SIGEXC redirects traced signals to the Mach exception port. Never block in
+    // waitpid while a faulting thread is synchronously waiting for our Mach reply;
+    // waitpid remains a nonblocking process-exit fallback only.
+    return XUnixDebugger::waitForSignal(nThreadID, nOptions | WNOHANG);
 }
 
 bool XOSXDebugger::resumeThread(X_ID nThreadId, qint32 nSignal)
@@ -739,8 +902,26 @@ bool XOSXDebugger::load()
     char **ppEnvironment = listEnvironmentPointers.data();
 
     qint32 anLaunchPipe[2] = {-1, -1};
+    qint32 anReadyPipe[2] = {-1, -1};
+    qint32 anGatePipe[2] = {-1, -1};
     if (::pipe(anLaunchPipe) == -1) {
         emit errorMessage(QString("%1: %2").arg(tr("Cannot create launch pipe"), QString::fromLocal8Bit(strerror(errno))));
+        return false;
+    }
+
+    if ((::pipe(anReadyPipe) == -1) || (::pipe(anGatePipe) == -1)) {
+        const qint32 nPipeError = errno;
+        ::close(anLaunchPipe[0]);
+        ::close(anLaunchPipe[1]);
+        if (anReadyPipe[0] != -1) {
+            ::close(anReadyPipe[0]);
+            ::close(anReadyPipe[1]);
+        }
+        if (anGatePipe[0] != -1) {
+            ::close(anGatePipe[0]);
+            ::close(anGatePipe[1]);
+        }
+        emit errorMessage(QString("%1: %2").arg(tr("Cannot create launch synchronization pipes"), QString::fromLocal8Bit(strerror(nPipeError))));
         return false;
     }
 
@@ -749,6 +930,10 @@ bool XOSXDebugger::load()
         qint32 nPipeError = errno;
         ::close(anLaunchPipe[0]);
         ::close(anLaunchPipe[1]);
+        ::close(anReadyPipe[0]);
+        ::close(anReadyPipe[1]);
+        ::close(anGatePipe[0]);
+        ::close(anGatePipe[1]);
         emit errorMessage(QString("%1: %2").arg(tr("Cannot configure launch pipe"), QString::fromLocal8Bit(strerror(nPipeError))));
         return false;
     }
@@ -756,9 +941,9 @@ bool XOSXDebugger::load()
     pid_t nProcessID = ::fork();
 
     if (nProcessID == 0) {
-        // Closing the CLOEXEC descriptor is the success handshake. Every controlled failure
-        // writes one fixed-size record and exits without invoking Qt in the forked child.
         ::close(anLaunchPipe[0]);
+        ::close(anReadyPipe[0]);
+        ::close(anGatePipe[1]);
 
         if (::ptrace(PT_TRACE_ME, 0, 0, 0) == -1) {
             qint32 nError = errno;
@@ -771,6 +956,24 @@ bool XOSXDebugger::load()
             writeChildLaunchError(anLaunchPipe[1], CHILD_LAUNCH_STAGE_SIGEXC, nError);
             ::_exit(127);
         }
+
+        // PT_SIGEXC converts the exec SIGTRAP into a synchronous Mach exception. Do not
+        // exec until the parent has installed the corresponding receive port, otherwise the
+        // child can block in do_bsdexception before the parent has anything it can service.
+        if (!writePipeByte(anReadyPipe[1], 1)) {
+            writeChildLaunchError(anLaunchPipe[1], CHILD_LAUNCH_STAGE_GATE, errno);
+            ::_exit(127);
+        }
+        ::close(anReadyPipe[1]);
+
+        char cGate = 0;
+        const bool bGateRead = readPipeByte(anGatePipe[0], &cGate);
+        if (!bGateRead || (cGate != 1)) {
+            const qint32 nError = bGateRead ? EPROTO : errno;
+            writeChildLaunchError(anLaunchPipe[1], CHILD_LAUNCH_STAGE_GATE, nError);
+            ::_exit(127);
+        }
+        ::close(anGatePipe[0]);
 
         if (bHasDirectory && (::chdir(pDirectory) == -1)) {
             qint32 nError = errno;
@@ -787,53 +990,43 @@ bool XOSXDebugger::load()
 
     qint32 nForkError = errno;
     ::close(anLaunchPipe[1]);
+    ::close(anReadyPipe[1]);
+    ::close(anGatePipe[0]);
 
     if (nProcessID < 0) {
         ::close(anLaunchPipe[0]);
+        ::close(anReadyPipe[0]);
+        ::close(anGatePipe[1]);
         emit errorMessage(QString("%1: %2").arg(tr("Cannot fork"), QString::fromLocal8Bit(strerror(nForkError))));
         return false;
     }
 
     CHILD_LAUNCH_ERROR launchError = {};
-    char *pLaunchError = reinterpret_cast<char *>(&launchError);
     size_t nErrorBytes = 0;
     qint32 nReadError = 0;
-
-    while (nErrorBytes < sizeof(launchError)) {
-        ssize_t nRead = ::read(anLaunchPipe[0], pLaunchError + nErrorBytes, sizeof(launchError) - nErrorBytes);
-
-        if (nRead > 0) {
-            nErrorBytes += (size_t)nRead;
-        } else if (nRead == 0) {
-            break;
-        } else if (errno == EINTR) {
-            continue;
-        } else {
-            nReadError = errno;
-            break;
+    auto readLaunchStatus = [&]() {
+        char *pLaunchError = reinterpret_cast<char *>(&launchError);
+        while (nErrorBytes < sizeof(launchError)) {
+            const ssize_t nRead = ::read(anLaunchPipe[0], pLaunchError + nErrorBytes, sizeof(launchError) - nErrorBytes);
+            if (nRead > 0) {
+                nErrorBytes += static_cast<size_t>(nRead);
+            } else if (nRead == 0) {
+                break;
+            } else if (errno != EINTR) {
+                nReadError = errno;
+                break;
+            }
         }
-    }
+    };
 
-    ::close(anLaunchPipe[0]);
-
-    if (nReadError) {
-        terminateAndReapChild(nProcessID);
-        emit errorMessage(QString("%1: %2").arg(tr("Cannot read launch status"), QString::fromLocal8Bit(strerror(nReadError))));
-        return false;
-    }
-
-    if (nErrorBytes) {
-        if (nErrorBytes != sizeof(launchError)) {
-            terminateAndReapChild(nProcessID);
-            emit errorMessage(tr("Invalid child launch status"));
-            return false;
-        }
-
+    auto getLaunchOperation = [&]() -> QString {
         QString sOperation;
         if (launchError.nStage == CHILD_LAUNCH_STAGE_PTRACE) {
             sOperation = "ptrace(PT_TRACE_ME)";
         } else if (launchError.nStage == CHILD_LAUNCH_STAGE_SIGEXC) {
             sOperation = "ptrace(PT_SIGEXC)";
+        } else if (launchError.nStage == CHILD_LAUNCH_STAGE_GATE) {
+            sOperation = tr("Child launch synchronization");
         } else if (launchError.nStage == CHILD_LAUNCH_STAGE_CHDIR) {
             sOperation = "chdir";
         } else if (launchError.nStage == CHILD_LAUNCH_STAGE_EXECVE) {
@@ -841,17 +1034,23 @@ bool XOSXDebugger::load()
         } else {
             sOperation = tr("Child launch");
         }
+        return sOperation;
+    };
 
-        reapChild(nProcessID);
-        emit errorMessage(QString("%1: %2").arg(sOperation, QString::fromLocal8Bit(strerror(launchError.nError))));
-        return false;
-    }
-
-    STATE stateStart = waitForSignal(nProcessID, 0);
-    if ((!stateStart.bIsValid) ||
-        ((stateStart.debuggerStatus != DEBUGGER_STATUS_SIGTRAP) && (stateStart.debuggerStatus != DEBUGGER_STATUS_BREAKPOINT))) {
+    char cReady = 0;
+    const bool bChildReady = readPipeByte(anReadyPipe[0], &cReady) && (cReady == 1);
+    ::close(anReadyPipe[0]);
+    if (!bChildReady) {
+        ::close(anGatePipe[1]);
+        readLaunchStatus();
+        ::close(anLaunchPipe[0]);
         terminateAndReapChild(nProcessID);
-        emit errorMessage(tr("The child did not stop after execve"));
+
+        if (nErrorBytes == sizeof(launchError)) {
+            emit errorMessage(QString("%1: %2").arg(getLaunchOperation(), QString::fromLocal8Bit(strerror(launchError.nError))));
+        } else {
+            emit errorMessage(tr("The child did not reach the Darwin launch gate"));
+        }
         return false;
     }
 
@@ -862,12 +1061,16 @@ bool XOSXDebugger::load()
     processInfo.hProcess = XProcess::openProcess(nProcessID);
 
     if (!processInfo.hProcess) {
+        ::close(anGatePipe[1]);
+        ::close(anLaunchPipe[0]);
         terminateAndReapChild(nProcessID);
         emit errorMessage(tr("Cannot open the child task port"));
         return false;
     }
 
     if (!installExceptionPort(processInfo.hProcess)) {
+        ::close(anGatePipe[1]);
+        ::close(anLaunchPipe[0]);
         mach_port_deallocate(mach_task_self(), processInfo.hProcess);
         terminateAndReapChild(nProcessID);
         emit errorMessage(tr("Cannot install the Darwin exception port"));
@@ -876,8 +1079,65 @@ bool XOSXDebugger::load()
 
     getXInfoDB()->setProcessInfo(processInfo);
 
+    const bool bGateReleased = writePipeByte(anGatePipe[1], 1);
+    ::close(anGatePipe[1]);
+    if (!bGateReleased) {
+        ::close(anLaunchPipe[0]);
+        shutdownExceptionPort(true);
+        mach_port_deallocate(mach_task_self(), processInfo.hProcess);
+        getXInfoDB()->getProcessInfo()->hProcess = MACH_PORT_NULL;
+        terminateAndReapChild(nProcessID);
+        emit errorMessage(tr("Cannot release the child launch gate"));
+        return false;
+    }
+
+    // The CLOEXEC launch descriptor closes only after execve succeeds. A controlled
+    // pre-exec failure writes one fixed-size record instead.
+    readLaunchStatus();
+    ::close(anLaunchPipe[0]);
+
+    if (nReadError || nErrorBytes) {
+        shutdownExceptionPort(true);
+        mach_port_deallocate(mach_task_self(), processInfo.hProcess);
+        getXInfoDB()->getProcessInfo()->hProcess = MACH_PORT_NULL;
+
+        if (nReadError) {
+            terminateAndReapChild(nProcessID);
+            emit errorMessage(QString("%1: %2").arg(tr("Cannot read launch status"), QString::fromLocal8Bit(strerror(nReadError))));
+        } else if (nErrorBytes != sizeof(launchError)) {
+            terminateAndReapChild(nProcessID);
+            emit errorMessage(tr("Invalid child launch status"));
+        } else {
+            reapChild(nProcessID);
+            emit errorMessage(QString("%1: %2").arg(getLaunchOperation(), QString::fromLocal8Bit(strerror(launchError.nError))));
+        }
+        return false;
+    }
+
+    STATE stateStart = {};
+    QElapsedTimer initialExceptionTimer;
+    initialExceptionTimer.start();
+    do {
+        stateStart = waitForSignal(nProcessID, WNOHANG);
+        if (stateStart.bIsValid) {
+            break;
+        }
+        ::usleep(1000);
+    } while (initialExceptionTimer.elapsed() < 10000);
+
+    if ((!stateStart.bIsValid) || (stateStart.nCode != SIGTRAP) ||
+        ((stateStart.debuggerStatus != DEBUGGER_STATUS_SIGTRAP) && (stateStart.debuggerStatus != DEBUGGER_STATUS_BREAKPOINT))) {
+        shutdownExceptionPort(true);
+        getXInfoDB()->clearDarwinThreadPorts();
+        mach_port_deallocate(mach_task_self(), processInfo.hProcess);
+        getXInfoDB()->getProcessInfo()->hProcess = MACH_PORT_NULL;
+        terminateAndReapChild(nProcessID);
+        emit errorMessage(tr("The child did not report its exec exception"));
+        return false;
+    }
+
     QList<X_ID> listThreadIds;
-    if (!getXInfoDB()->updateDarwinThreadPorts(&listThreadIds) || listThreadIds.isEmpty()) {
+    if (!getXInfoDB()->updateDarwinThreadPorts(&listThreadIds) || !listThreadIds.contains(stateStart.nThreadId)) {
         shutdownExceptionPort(true);
         getXInfoDB()->clearDarwinThreadPorts();
         mach_port_deallocate(mach_task_self(), processInfo.hProcess);
@@ -887,7 +1147,7 @@ bool XOSXDebugger::load()
         return false;
     }
 
-    processInfo.nMainThreadID = listThreadIds.first();
+    processInfo.nMainThreadID = stateStart.nThreadId;
     getXInfoDB()->getProcessInfo()->nMainThreadID = processInfo.nMainThreadID;
     setDebugActive(true);
     emit eventCreateProcess(&processInfo);
