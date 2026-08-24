@@ -30,6 +30,17 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+namespace {
+XInfoDB::BPT getNativeSoftwareBreakpointType()
+{
+#if defined(Q_OS_MACOS) && defined(Q_PROCESSOR_ARM_64)
+    return XInfoDB::BPT_CODE_SOFTWARE_BRK;
+#else
+    return XInfoDB::BPT_CODE_SOFTWARE_INT3;
+#endif
+}
+}  // namespace
+
 XUnixDebugger::XUnixDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent, pXInfoDB)
 {
     g_pTimer = nullptr;
@@ -486,10 +497,10 @@ void XUnixDebugger::_debugEvent()
                     }
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_KERNEL) {
                     qDebug("DEBUGGER_STATUS_KERNEL");
-                    result = _handleBreakpoint(state, XInfoDB::BPT_CODE_SOFTWARE_INT3);
+                    result = _handleBreakpoint(state, getNativeSoftwareBreakpointType());
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT) {
                     qDebug("DEBUGGER_STATUS_BREAKPOINT");
-                    result = _handleBreakpoint(state, XInfoDB::BPT_CODE_SOFTWARE_INT3);
+                    result = _handleBreakpoint(state, getNativeSoftwareBreakpointType());
                 }
                 //
                 //                getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
@@ -629,6 +640,13 @@ void XUnixDebugger::_debugEvent()
                         // debugger-generated SIGSTOP is deliberately suppressed when continuing.
                         nSignal = state.nCode;
                     }
+#if defined(Q_OS_MACOS) && defined(Q_PROCESSOR_ARM_64)
+                    else if ((state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT) && (state.nCode == SIGTRAP)) {
+                        // A BRK that is not ours must reach the debuggee; suppressing it would
+                        // continue at the same instruction and immediately trap forever.
+                        nSignal = SIGTRAP;
+                    }
+#endif
 
                     if (!getXInfoDB()->resumeThread_Id(state.nThreadId, nSignal)) {
                         emit errorMessage(QString("%1 %2: %3").arg(tr("Cannot continue thread"))
@@ -653,6 +671,8 @@ XAbstractDebugger::BPSTATUS XUnixDebugger::_handleBreakpoint(STATE state, XInfoD
 
     if (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) {
         _currentBP = getXInfoDB()->findBreakPointByExceptionAddress(state.nAddress, bpType);
+    } else if (bpType == XInfoDB::BPT_CODE_SOFTWARE_BRK) {
+        _currentBP = getXInfoDB()->findBreakPointByAddress(state.nAddress, bpType);
     } else if ((bpType == XInfoDB::BPT_CODE_STEP_FLAG) || (bpType == XInfoDB::BPT_CODE_STEP_TO_RESTORE)) {
         _currentBP = getXInfoDB()->findBreakPointByThreadID(state.nThreadId, bpType);
     }
@@ -666,7 +686,8 @@ XAbstractDebugger::BPSTATUS XUnixDebugger::_handleBreakpoint(STATE state, XInfoD
     if (bSuccess) {
         getXInfoDB()->suspendAllThreads();
 
-        if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_UD2) ||
+        if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_BRK) ||
+            (bpType == XInfoDB::BPT_CODE_SOFTWARE_UD2) ||
             (bpType == XInfoDB::BPT_CODE_SOFTWARE_HLT) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_CLI) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_STI) ||
             (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSB) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSD) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSB) ||
             (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSD) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG)) {
@@ -674,11 +695,8 @@ XAbstractDebugger::BPSTATUS XUnixDebugger::_handleBreakpoint(STATE state, XInfoD
                 getXInfoDB()->setCurrentIntructionPointer_Id(state.nThreadId, _currentBP.nAddress);  // go to prev instruction address
             }
 
-            if (_currentBP.bOneShot) {
-                getXInfoDB()->removeBreakPoint(_currentBP.sUUID);
-            } else {
-                getXInfoDB()->disableBreakPoint(_currentBP.sUUID);
-            }
+            const bool bOriginalInstructionRestored = _currentBP.bOneShot ? getXInfoDB()->removeBreakPoint(_currentBP.sUUID)
+                                                                          : getXInfoDB()->disableBreakPoint(_currentBP.sUUID);
 
             XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
             breakPointInfo.nAddress = state.nAddress;
@@ -691,14 +709,21 @@ XAbstractDebugger::BPSTATUS XUnixDebugger::_handleBreakpoint(STATE state, XInfoD
 
             _eventBreakPoint(&breakPointInfo);
 
+            if (!bOriginalInstructionRestored) {
+                emit errorMessage(QString("%1: 0x%2").arg(tr("Cannot restore software breakpoint")).arg(_currentBP.nAddress, 0, 16));
+                return BPSTATUS_CALLBACK;
+            }
+
             // mb TODO add it later
             if (!_currentBP.bOneShot) {
                 XInfoDB::BREAKPOINT bp = {};
-                bp.nAddress = state.nAddress;
+                bp.nAddress = _currentBP.nAddress;
                 bp.nThreadID = state.nThreadId;
                 bp.bpType = XInfoDB::BPT_CODE_STEP_TO_RESTORE;
                 bp.vInfo = _currentBP.sUUID;
-                getXInfoDB()->addBreakPoint(bp);
+                if (!getXInfoDB()->addBreakPoint(bp)) {
+                    emit errorMessage(QString("%1: 0x%2").arg(tr("Cannot single-step restored breakpoint")).arg(_currentBP.nAddress, 0, 16));
+                }
             }
 
             result = BPSTATUS_CALLBACK;
@@ -719,12 +744,16 @@ XAbstractDebugger::BPSTATUS XUnixDebugger::_handleBreakpoint(STATE state, XInfoD
 
             result = BPSTATUS_CALLBACK;
         } else if (bpType == XInfoDB::BPT_CODE_STEP_TO_RESTORE) {
-            getXInfoDB()->removeBreakPoint(_currentBP.sUUID);
+            if (!getXInfoDB()->removeBreakPoint(_currentBP.sUUID)) {
+                emit errorMessage(tr("Cannot finish breakpoint single-step"));
+                return BPSTATUS_CALLBACK;
+            }
 
             XInfoDB::BREAKPOINT _subBP = getXInfoDB()->findBreakPointByUUID(_currentBP.vInfo.toString());
 
             if (_subBP.sUUID != "") {
                 XADDR nCurrentAddress = getXInfoDB()->getCurrentInstructionPointer_Id(state.nThreadId);
+                bool bBreakpointRearmed = false;
 
                 if ((nCurrentAddress >= _subBP.nAddress) && (nCurrentAddress < _subBP.nAddress + _subBP.nDataSize)) {
                     XInfoDB::BREAKPOINT bp = {};
@@ -732,9 +761,14 @@ XAbstractDebugger::BPSTATUS XUnixDebugger::_handleBreakpoint(STATE state, XInfoD
                     bp.nThreadID = state.nThreadId;
                     bp.bpType = XInfoDB::BPT_CODE_STEP_TO_RESTORE;
                     bp.vInfo = _subBP.sUUID;
-                    getXInfoDB()->addBreakPoint(bp);
+                    bBreakpointRearmed = getXInfoDB()->addBreakPoint(bp);
                 } else {
-                    getXInfoDB()->enableBreakPoint(_subBP.sUUID);
+                    bBreakpointRearmed = getXInfoDB()->enableBreakPoint(_subBP.sUUID);
+                }
+
+                if (!bBreakpointRearmed) {
+                    emit errorMessage(QString("%1: 0x%2").arg(tr("Cannot rearm software breakpoint")).arg(_subBP.nAddress, 0, 16));
+                    return BPSTATUS_CALLBACK;
                 }
             }
 
