@@ -2,6 +2,7 @@
 #define XDEBUGGERCONSOLE_H
 
 #include <QObject>
+#include <QAtomicInt>
 #include <QTimer>
 #ifdef Q_OS_WIN
 #include "xwindowsdebugger.h"
@@ -9,7 +10,7 @@
 #ifdef Q_OS_LINUX
 #include "xlinuxdebugger.h"
 #endif
-#ifdef Q_OS_OSX
+#ifdef Q_OS_MACOS
 #include "xosxdebugger.h"
 #endif
 
@@ -18,7 +19,7 @@ class XDebuggerConsole : public QObject {
 public:
     explicit XDebuggerConsole(QObject *pParent = nullptr);
 
-    void run(XAbstractDebugger::OPTIONS options);
+    bool run(XAbstractDebugger::OPTIONS options);
 
     struct COMMAND_RESULT {
         QList<QString> listTexts;
@@ -29,8 +30,8 @@ public:
     // TODO History TODO init for init commandControl
 
 private:
-    static XADDR _getAddress(COMMAND_RESULT *pCommandResult, const QString &sString, XADDR nDefaultValue);
-    static qint32 _getNumber(COMMAND_RESULT *pCommandResult, const QString &sString, qint32 nDefaultValue);
+    static bool _getAddress(COMMAND_RESULT *pCommandResult, const QString &sString, XADDR *pValue);
+    static bool _getNumber(COMMAND_RESULT *pCommandResult, const QString &sString, qint32 *pValue);
 
 private slots:
     void onEventCreateProcess(XInfoDB::PROCESS_INFO *pProcessInfo);
@@ -48,8 +49,10 @@ private:
     XInfoDB *g_pInfoDB;
 #ifdef Q_OS_WIN
     QThread *g_pThread;
+    QAtomicInt g_nWorkerFinished;
 #endif
     XAbstractDebugger *g_pDebugger;
+    QAtomicInt g_nTargetStarted;
     XAbstractDebugger::OPTIONS g_options;
 };
 

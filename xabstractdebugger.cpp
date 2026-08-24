@@ -35,8 +35,7 @@ XAbstractDebugger::XAbstractDebugger(QObject *pParent, XInfoDB *pXInfoDB) : QObj
     // static XOptions::BUNDLE bundle = XOptions::getBundle();
 
     g_handle = 0;
-    g_bIsDebugActive = false;
-    g_bIsTraceActive = false;
+    g_nLifecycleState.storeRelaxed(0);
     g_pXInfoDB = pXInfoDB;
 }
 
@@ -407,22 +406,54 @@ XAbstractDebugger::OPTIONS XAbstractDebugger::getDefaultOptions(QString sFileNam
 
 void XAbstractDebugger::setDebugActive(bool bState)
 {
-    g_bIsDebugActive = bState;
+    qint32 nOldState = g_nLifecycleState.loadAcquire();
+
+    while (!(nOldState & LIFECYCLE_SHUTDOWN_REQUESTED)) {
+        qint32 nNewState = bState ? (nOldState | LIFECYCLE_DEBUG_ACTIVE) : (nOldState & ~LIFECYCLE_DEBUG_ACTIVE);
+
+        if (g_nLifecycleState.testAndSetOrdered(nOldState, nNewState)) {
+            break;
+        }
+
+        nOldState = g_nLifecycleState.loadAcquire();
+    }
 }
 
 bool XAbstractDebugger::isDebugActive()
 {
-    return g_bIsDebugActive;
+    return (g_nLifecycleState.loadAcquire() & LIFECYCLE_DEBUG_ACTIVE) != 0;
 }
 
 void XAbstractDebugger::setTraceActive(bool bState)
 {
-    g_bIsTraceActive = bState;
+    qint32 nOldState = g_nLifecycleState.loadAcquire();
+
+    while (!(nOldState & LIFECYCLE_SHUTDOWN_REQUESTED)) {
+        qint32 nNewState = bState ? (nOldState | LIFECYCLE_TRACE_ACTIVE) : (nOldState & ~LIFECYCLE_TRACE_ACTIVE);
+
+        if (g_nLifecycleState.testAndSetOrdered(nOldState, nNewState)) {
+            break;
+        }
+
+        nOldState = g_nLifecycleState.loadAcquire();
+    }
 }
 
 bool XAbstractDebugger::isTraceActive()
 {
-    return g_bIsTraceActive;
+    return (g_nLifecycleState.loadAcquire() & LIFECYCLE_TRACE_ACTIVE) != 0;
+}
+
+void XAbstractDebugger::requestShutdown()
+{
+    // One atomic transition both latches shutdown and clears the active flags. A racing
+    // setDebugActive(true) / setTraceActive(true) can therefore never revive the loop.
+    g_nLifecycleState.fetchAndStoreOrdered(LIFECYCLE_SHUTDOWN_REQUESTED);
+}
+
+bool XAbstractDebugger::isShutdownRequested()
+{
+    return (g_nLifecycleState.loadAcquire() & LIFECYCLE_SHUTDOWN_REQUESTED) != 0;
 }
 
 void XAbstractDebugger::process()
@@ -430,11 +461,23 @@ void XAbstractDebugger::process()
 #ifdef QT_DEBUG
     qDebug("Current thread: %lld", (qint64)QThread::currentThreadId());
 #endif
+    if (isShutdownRequested()) {
+        return;
+    }
+
     if (g_options.sFileName != "") {
         load();
     } else if (g_options.nPID != 0) {
         attach();
     }
+}
+
+void XAbstractDebugger::shutdown()
+{
+    requestShutdown();
+    cleanUp();
+    deleteLater();
+    emit shutdownFinished();
 }
 
 void XAbstractDebugger::onDebuggerCommand(qint32 nCommand)

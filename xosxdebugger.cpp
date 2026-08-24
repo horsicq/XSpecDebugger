@@ -20,126 +20,320 @@
  */
 #include "xosxdebugger.h"
 
+#include <QFile>
+#include <QFileInfo>
+#include <QProcess>
+#include <QVector>
+#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
+#include <QRegExp>
+#endif
+
+#include <crt_externs.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <mach/mach.h>
+#include <signal.h>
+#include <string.h>
+#include <sys/ptrace.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+namespace {
+enum CHILD_LAUNCH_STAGE {
+    CHILD_LAUNCH_STAGE_UNKNOWN = 0,
+    CHILD_LAUNCH_STAGE_PTRACE,
+    CHILD_LAUNCH_STAGE_CHDIR,
+    CHILD_LAUNCH_STAGE_EXECVE
+};
+
+struct CHILD_LAUNCH_ERROR {
+    qint32 nStage;
+    qint32 nError;
+};
+
+void writeChildLaunchError(qint32 nFileDescriptor, CHILD_LAUNCH_STAGE stage, qint32 nError)
+{
+    CHILD_LAUNCH_ERROR launchError = {};
+    launchError.nStage = stage;
+    launchError.nError = nError;
+
+    const char *pData = reinterpret_cast<const char *>(&launchError);
+    size_t nRemaining = sizeof(launchError);
+
+    while (nRemaining) {
+        ssize_t nWritten = ::write(nFileDescriptor, pData, nRemaining);
+
+        if (nWritten > 0) {
+            pData += nWritten;
+            nRemaining -= (size_t)nWritten;
+        } else if ((nWritten == -1) && (errno == EINTR)) {
+            continue;
+        } else {
+            break;
+        }
+    }
+}
+
+void reapChild(pid_t nProcessID)
+{
+    qint32 nStatus = 0;
+    pid_t nWaitResult = 0;
+
+    do {
+        nWaitResult = ::waitpid(nProcessID, &nStatus, 0);
+    } while ((nWaitResult == -1) && (errno == EINTR));
+}
+
+void terminateAndReapChild(pid_t nProcessID)
+{
+    if ((::kill(nProcessID, SIGKILL) == -1) && (errno != ESRCH)) {
+#ifdef QT_DEBUG
+        qDebug("Cannot terminate child: %s", strerror(errno));
+#endif
+    }
+
+    reapChild(nProcessID);
+}
+}  // namespace
+
 XOSXDebugger::XOSXDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XUnixDebugger(pParent, pXInfoDB)
 {
 }
 
 bool XOSXDebugger::load()
 {
-    bool bResult = false;
-
     QString sFileName = getOptions()->sFileName;
     QString sDirectory = getOptions()->sDirectory;
+    setDebugActive(false);
 
-    quint32 nMapSize = 0x1000;
-    char *pMapMemory = (char *)mmap(nullptr, nMapSize, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if (!XBinary::isFileExists(sFileName)) {
+        emit errorMessage(QString("%1: %2").arg(tr("Cannot load file"), sFileName));
+        return false;
+    }
 
-    XBinary::_zeroMemory(pMapMemory, nMapSize);
+    // Build all Qt-backed data before fork(). The child uses only async-signal-safe system calls
+    // before execve(), avoiding allocator locks inherited from other threads.
+    QStringList listArguments;
+    listArguments.append(sFileName);
 
-    if (XBinary::isFileExists(sFileName)) {
-        qint32 nProcessID = fork();
-
-        if (nProcessID == 0) {
-            // Child process
-            // ptrace(PTRACE_TRACEME,0,nullptr,nullptr);
-            ptrace(PT_TRACE_ME, 0, 0, 0);
-
-            // TODO redirect console
-
-            EXECUTEPROCESS ep = executeProcess(sFileName, sDirectory);
-
-            XBinary::_copyMemory(pMapMemory, ep.sStatus.toLatin1().data(), ep.sStatus.toLatin1().size());
-
-            // Never reach
-            abort();
-        } else if (nProcessID > 0) {
-            // Parent
-#ifdef QT_DEBUG
-            qDebug("Forked");
+    QString sArguments = getOptions()->sArguments;
+    if (!sArguments.isEmpty()) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+        listArguments.append(QProcess::splitCommand(sArguments));
+#else
+        listArguments.append(sArguments.split(QRegExp("\\s+"), QString::SkipEmptyParts));
 #endif
+    }
 
-            QString sStatusString = pMapMemory;
-            munmap(pMapMemory, nMapSize);
+    QList<QByteArray> listArgumentData;
+    for (const QString &sArgument : listArguments) {
+        listArgumentData.append(QFile::encodeName(sArgument));
+    }
 
-#ifdef QT_DEBUG
-            if (sStatusString != "") {
-                qDebug("Status %s", sStatusString.toLatin1().data());
-            }
-#endif
+    QVector<char *> listArgumentPointers;
+    for (qint32 i = 0; i < listArgumentData.count(); i++) {
+        listArgumentPointers.append(listArgumentData[i].data());
+    }
+    listArgumentPointers.append(nullptr);
 
-            setDebugActive(true);
+    QList<QByteArray> listEnvironmentData;
+    char **ppInheritedEnvironment = *_NSGetEnviron();
+    for (char **ppEnvironment = ppInheritedEnvironment; ppEnvironment && *ppEnvironment; ppEnvironment++) {
+        listEnvironmentData.append(QByteArray(*ppEnvironment));
+    }
 
-            STATE _stateStart = waitForSignal(nProcessID);  // TODO result
+    QVector<char *> listEnvironmentPointers;
+    for (qint32 i = 0; i < listEnvironmentData.count(); i++) {
+        listEnvironmentPointers.append(listEnvironmentData[i].data());
+    }
+    listEnvironmentPointers.append(nullptr);
 
-            if (_stateStart.debuggerStatus == DEBUGGER_STATUS_STOP) {
-                //                        setPtraceOptions(nProcessID); // Set options
+    QByteArray baFileName = QFile::encodeName(sFileName);
+    QByteArray baDirectory = QFile::encodeName(sDirectory);
+    const bool bHasDirectory = !baDirectory.isEmpty();
+    char *pFileName = baFileName.data();
+    char *pDirectory = baDirectory.data();
+    char **ppArguments = listArgumentPointers.data();
+    char **ppEnvironment = listEnvironmentPointers.data();
 
-                XInfoDB::PROCESS_INFO processInfo = {};
+    qint32 anLaunchPipe[2] = {-1, -1};
+    if (::pipe(anLaunchPipe) == -1) {
+        emit errorMessage(QString("%1: %2").arg(tr("Cannot create launch pipe"), QString::fromLocal8Bit(strerror(errno))));
+        return false;
+    }
 
-                processInfo.nProcessID = nProcessID;
-                processInfo.nMainThreadID = nProcessID;
-                processInfo.sFileName = sFileName;
-                //                        processInfo.sBaseFileName;
-                //                        processInfo.nImageBase;
-                //                        processInfo.nImageSize;
-                //                        processInfo.nStartAddress;
-                //                        processInfo.nThreadLocalBase;
-                processInfo.hProcess = XProcess::openProcess(nProcessID);
-                //                        processInfo.hMainThread;
+    qint32 nDescriptorFlags = ::fcntl(anLaunchPipe[1], F_GETFD);
+    if ((nDescriptorFlags == -1) || (::fcntl(anLaunchPipe[1], F_SETFD, nDescriptorFlags | FD_CLOEXEC) == -1)) {
+        qint32 nPipeError = errno;
+        ::close(anLaunchPipe[0]);
+        ::close(anLaunchPipe[1]);
+        emit errorMessage(QString("%1: %2").arg(tr("Cannot configure launch pipe"), QString::fromLocal8Bit(strerror(nPipeError))));
+        return false;
+    }
 
-                getXInfoDB()->setProcessInfo(processInfo);
+    pid_t nProcessID = ::fork();
 
-                emit eventCreateProcess(&processInfo);
+    if (nProcessID == 0) {
+        // Closing the CLOEXEC descriptor is the success handshake. Every controlled failure
+        // writes one fixed-size record and exits without invoking Qt in the forked child.
+        ::close(anLaunchPipe[0]);
 
-                XInfoDB::THREAD_INFO threadInfo = {};
+        if (::ptrace(PT_TRACE_ME, 0, 0, 0) == -1) {
+            qint32 nError = errno;
+            writeChildLaunchError(anLaunchPipe[1], CHILD_LAUNCH_STAGE_PTRACE, nError);
+            ::_exit(127);
+        }
 
-                threadInfo.nThreadID = nProcessID;
-                threadInfo.threadStatus = XInfoDB::THREAD_STATUS_PAUSED;
+        if (bHasDirectory && (::chdir(pDirectory) == -1)) {
+            qint32 nError = errno;
+            writeChildLaunchError(anLaunchPipe[1], CHILD_LAUNCH_STAGE_CHDIR, nError);
+            ::_exit(127);
+        }
 
-                getXInfoDB()->addThreadInfo(&threadInfo);
+        ::execve(pFileName, ppArguments, ppEnvironment);
 
-                emit eventCreateThread(&threadInfo);
+        qint32 nError = errno;
+        writeChildLaunchError(anLaunchPipe[1], CHILD_LAUNCH_STAGE_EXECVE, nError);
+        ::_exit(127);
+    }
 
-                // TODO if
+    qint32 nForkError = errno;
+    ::close(anLaunchPipe[1]);
 
-                XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
+    if (nProcessID < 0) {
+        ::close(anLaunchPipe[0]);
+        emit errorMessage(QString("%1: %2").arg(tr("Cannot fork"), QString::fromLocal8Bit(strerror(nForkError))));
+        return false;
+    }
 
-                breakPointInfo.nExceptionAddress = getXInfoDB()->getCurrentInstructionPointer_Id(nProcessID);
-                breakPointInfo.bpType = XInfoDB::BPT_CODE_HARDWARE;
-                breakPointInfo.bpInfo = XInfoDB::BPI_PROCESSENTRYPOINT;
+    CHILD_LAUNCH_ERROR launchError = {};
+    char *pLaunchError = reinterpret_cast<char *>(&launchError);
+    size_t nErrorBytes = 0;
+    qint32 nReadError = 0;
 
-                breakPointInfo.hProcess = getXInfoDB()->getProcessInfo()->hProcess;
-                breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
-                breakPointInfo.nThreadID = getXInfoDB()->getProcessInfo()->nMainThreadID;
+    while (nErrorBytes < sizeof(launchError)) {
+        ssize_t nRead = ::read(anLaunchPipe[0], pLaunchError + nErrorBytes, sizeof(launchError) - nErrorBytes);
 
-                //                getXInfoDB()->suspendAllThreads();
-                _eventBreakPoint(&breakPointInfo);
-            }
-        } else if (nProcessID == -1) {
-            // TODO error
+        if (nRead > 0) {
+            nErrorBytes += (size_t)nRead;
+        } else if (nRead == 0) {
+            break;
+        } else if (errno == EINTR) {
+            continue;
+        } else {
+            nReadError = errno;
+            break;
         }
     }
 
-    return bResult;
+    ::close(anLaunchPipe[0]);
+
+    if (nReadError) {
+        terminateAndReapChild(nProcessID);
+        emit errorMessage(QString("%1: %2").arg(tr("Cannot read launch status"), QString::fromLocal8Bit(strerror(nReadError))));
+        return false;
+    }
+
+    if (nErrorBytes) {
+        if (nErrorBytes != sizeof(launchError)) {
+            terminateAndReapChild(nProcessID);
+            emit errorMessage(tr("Invalid child launch status"));
+            return false;
+        }
+
+        QString sOperation;
+        if (launchError.nStage == CHILD_LAUNCH_STAGE_PTRACE) {
+            sOperation = "ptrace(PT_TRACE_ME)";
+        } else if (launchError.nStage == CHILD_LAUNCH_STAGE_CHDIR) {
+            sOperation = "chdir";
+        } else if (launchError.nStage == CHILD_LAUNCH_STAGE_EXECVE) {
+            sOperation = "execve";
+        } else {
+            sOperation = tr("Child launch");
+        }
+
+        reapChild(nProcessID);
+        emit errorMessage(QString("%1: %2").arg(sOperation, QString::fromLocal8Bit(strerror(launchError.nError))));
+        return false;
+    }
+
+    STATE stateStart = waitForSignal(nProcessID, 0);
+    if ((!stateStart.bIsValid) ||
+        ((stateStart.debuggerStatus != DEBUGGER_STATUS_SIGTRAP) && (stateStart.debuggerStatus != DEBUGGER_STATUS_BREAKPOINT))) {
+        terminateAndReapChild(nProcessID);
+        emit errorMessage(tr("The child did not stop after execve"));
+        return false;
+    }
+
+    XInfoDB::PROCESS_INFO processInfo = {};
+    processInfo.nProcessID = nProcessID;
+    processInfo.nMainThreadID = nProcessID;
+    processInfo.sFileName = sFileName;
+    processInfo.sBaseFileName = QFileInfo(sFileName).fileName();
+    processInfo.hProcess = XProcess::openProcess(nProcessID);
+
+    if (!processInfo.hProcess) {
+        terminateAndReapChild(nProcessID);
+        emit errorMessage(tr("Cannot open the child task port"));
+        return false;
+    }
+
+    getXInfoDB()->setProcessInfo(processInfo);
+    setDebugActive(true);
+    emit eventCreateProcess(&processInfo);
+
+    XInfoDB::THREAD_INFO threadInfo = {};
+    threadInfo.nThreadID = nProcessID;
+    threadInfo.threadStatus = XInfoDB::THREAD_STATUS_PAUSED;
+    getXInfoDB()->addThreadInfo(&threadInfo);
+    emit eventCreateThread(&threadInfo);
+
+    getXInfoDB()->setThreadStatus(stateStart.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
+
+    XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
+    breakPointInfo.nExceptionAddress = getXInfoDB()->getCurrentInstructionPointer_Id(nProcessID);
+    breakPointInfo.bpType = XInfoDB::BPT_PROCESS_STOP;
+    breakPointInfo.bpInfo = XInfoDB::BPI_PROCESSENTRYPOINT;
+    breakPointInfo.hProcess = getXInfoDB()->getProcessInfo()->hProcess;
+    breakPointInfo.nProcessID = getXInfoDB()->getProcessInfo()->nProcessID;
+    breakPointInfo.nThreadID = getXInfoDB()->getProcessInfo()->nMainThreadID;
+
+    _eventBreakPoint(&breakPointInfo);
+    startDebugLoop();
+
+    return true;
 }
 
 bool XOSXDebugger::attach()
 {
-    // TODO
+    emit errorMessage(tr("Attaching to an existing process is not supported on macOS"));
+    return false;
 }
 
 void XOSXDebugger::cleanUp()
 {
+    XUnixDebugger::cleanUp();
+
+    XInfoDB::PROCESS_INFO *pProcessInfo = getXInfoDB()->getProcessInfo();
+    if (pProcessInfo->hProcess) {
+        mach_port_deallocate(mach_task_self(), pProcessInfo->hProcess);
+        pProcessInfo->hProcess = MACH_PORT_NULL;
+    }
 }
 
 QString XOSXDebugger::getArch()
 {
-    // TODO
+#ifdef Q_PROCESSOR_ARM_64
+    return "ARM64";
+#elif defined(Q_PROCESSOR_X86_64)
     return "AMD64";
+#else
+    return QSysInfo::currentCpuArchitecture();
+#endif
 }
 
 XBinary::MODE XOSXDebugger::getMode()
 {
-    // TODO
-    return XBinary::MODE_64;
+    return (sizeof(void *) == 8) ? XBinary::MODE_64 : XBinary::MODE_32;
 }

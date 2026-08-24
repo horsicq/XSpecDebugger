@@ -20,6 +20,39 @@
  */
 #include "xwindowsdebugger.h"
 
+#include <QProcess>
+#include <QVector>
+
+namespace {
+QString quoteWindowsCommandLineArgument(const QString &sArgument)
+{
+    // CreateProcessW receives a single command-line string. Quote every argv
+    // element and escape backslashes according to CommandLineToArgvW rules.
+    QString sResult = QStringLiteral("\"");
+    qint32 nBackslashes = 0;
+
+    for (const QChar &cCurrent : sArgument) {
+        if (cCurrent == QLatin1Char('\\')) {
+            nBackslashes++;
+        } else if (cCurrent == QLatin1Char('"')) {
+            sResult.append(QString((nBackslashes * 2) + 1, QLatin1Char('\\')));
+            sResult.append(cCurrent);
+            nBackslashes = 0;
+        } else {
+            sResult.append(QString(nBackslashes, QLatin1Char('\\')));
+            sResult.append(cCurrent);
+            nBackslashes = 0;
+        }
+    }
+
+    // Backslashes immediately before the closing quote must be doubled.
+    sResult.append(QString(nBackslashes * 2, QLatin1Char('\\')));
+    sResult.append(QLatin1Char('"'));
+
+    return sResult;
+}
+}  // namespace
+
 XWindowsDebugger::XWindowsDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent, pXInfoDB)
 {
     g_bBreakpointExceptions = false;
@@ -38,7 +71,7 @@ bool XWindowsDebugger::load()
 {
     bool bResult = false;
 
-    qint32 nFlags = DEBUG_PROCESS | DEBUG_ONLY_THIS_PROCESS | CREATE_SUSPENDED;  // TODO check CREATE_UNICODE_ENVIRONMENT | CREATE_NEW_CONSOLE;
+    qint32 nFlags = DEBUG_PROCESS | DEBUG_ONLY_THIS_PROCESS;  // TODO check CREATE_UNICODE_ENVIRONMENT | CREATE_NEW_CONSOLE;
 
     if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_SHOWCONSOLE].bValid) {
         if (getOptions()->records[XAbstractDebugger::OPTIONS_TYPE_SHOWCONSOLE].varValue.toBool()) {
@@ -84,10 +117,25 @@ bool XWindowsDebugger::load()
     // TODO 32/64 !!! do not load if not the same(WOW64)
     sturtupInfo.cb = sizeof(sturtupInfo);
 
-    // mb TODO use only the second parameter! the first -> null cause length limitaion.
-    QString sArguments = QString("\"%1\" \"%2\"").arg(getOptions()->sFileName, getOptions()->sArguments);
-    BOOL bCreateProcess = CreateProcessW((const wchar_t *)(getOptions()->sFileName.utf16()), (wchar_t *)sArguments.utf16(), nullptr, nullptr, 0, nFlags, nullptr,
-                                         (const wchar_t *)(getOptions()->sDirectory.utf16()), &sturtupInfo, &processInfo);
+    const QString sFileName = getOptions()->sFileName;
+    const QString sDirectory = getOptions()->sDirectory;
+    QStringList listCommandLineArguments;
+    listCommandLineArguments.append(quoteWindowsCommandLineArgument(sFileName));
+
+    const QStringList listTargetArguments = QProcess::splitCommand(getOptions()->sArguments);
+    for (const QString &sArgument : listTargetArguments) {
+        listCommandLineArguments.append(quoteWindowsCommandLineArgument(sArgument));
+    }
+
+    const QString sCommandLine = listCommandLineArguments.join(QLatin1Char(' '));
+    QVector<wchar_t> commandLineBuffer(sCommandLine.size() + 1);
+    sCommandLine.toWCharArray(commandLineBuffer.data());
+    commandLineBuffer[sCommandLine.size()] = L'\0';
+
+    const wchar_t *pApplicationName = reinterpret_cast<const wchar_t *>(sFileName.utf16());
+    const wchar_t *pCurrentDirectory = sDirectory.isEmpty() ? nullptr : reinterpret_cast<const wchar_t *>(sDirectory.utf16());
+    BOOL bCreateProcess = CreateProcessW(pApplicationName, commandLineBuffer.data(), nullptr, nullptr, 0, nFlags, nullptr, pCurrentDirectory, &sturtupInfo,
+                                         &processInfo);
 
     if (bCreateProcess) {
         cleanUp();
@@ -101,14 +149,27 @@ bool XWindowsDebugger::load()
 
         setTraceFileName(XBinary::getResultFileName(getOptions()->sFileName, "trace.txt"));  // TODO Check mb Remove
 
-        bResult = true;
         DWORD dwProcessID = processInfo.dwProcessId;
+        HANDLE hCreatedProcess = processInfo.hProcess;
 
-        if (ResumeThread(processInfo.hThread) != ((DWORD)-1)) {
-            setDebugActive(true);
+        // CreateProcessW returns caller-owned handles in PROCESS_INFORMATION. The
+        // debug loop receives its own process/thread handles in CREATE_PROCESS_DEBUG_EVENT.
+        // Keep the original process handle until the loop has started/stopped so teardown that
+        // races the first debug event can still terminate the newly created target safely.
+        CloseHandle(processInfo.hThread);
+        processInfo.hThread = nullptr;
 
-            _debugLoop(dwProcessID);
+        bResult = true;
+        setDebugActive(true);
+
+        _debugLoop(dwProcessID);
+
+        if (isShutdownRequested()) {
+            TerminateProcess(hCreatedProcess, 0);
         }
+
+        CloseHandle(hCreatedProcess);
+        processInfo.hProcess = nullptr;
     } else {
         emit errorMessage(QString("%1: %2 (%3)").arg(tr("Cannot load file"), getOptions()->sFileName, XProcess::getLastErrorAsString()));
     }
@@ -157,6 +218,11 @@ bool XWindowsDebugger::attach()
             bResult = true;
 
             _debugLoop((DWORD)nProcessID);
+
+            if (isShutdownRequested()) {
+                // Must run on the same thread that called DebugActiveProcess().
+                DebugActiveProcessStop((DWORD)nProcessID);
+            }
         } else {
             emit errorMessage(QString("%1: %2 (%3)").arg(tr("Cannot attach to process"), QString::number(nProcessID), XProcess::getLastErrorAsString()));
         }
@@ -267,7 +333,7 @@ bool XWindowsDebugger::stepInto()
 
 bool XWindowsDebugger::stepOver()
 {
-    return stepOverByHandle(getXInfoDB()->getCurrentThreadHandle(), XInfoDB::BPI_STEPINTO);
+    return stepOverByHandle(getXInfoDB()->getCurrentThreadHandle(), XInfoDB::BPI_STEPOVER);
 }
 
 void XWindowsDebugger::_debugLoop(DWORD dwProcessID)
@@ -300,7 +366,35 @@ void XWindowsDebugger::_debugLoop(DWORD dwProcessID)
                     }
                 }
 
-                ContinueDebugEvent(dbgEvent.dwProcessId, dbgEvent.dwThreadId, nStatus);
+                if (ContinueDebugEvent(dbgEvent.dwProcessId, dbgEvent.dwThreadId, nStatus)) {
+                    // Handles delivered in debug events are system-owned. They become
+                    // invalid after the matching exit event is continued, so discard
+                    // every cached alias before later cleanup can act on a recycled value.
+                    if (dbgEvent.dwDebugEventCode == EXIT_THREAD_DEBUG_EVENT) {
+                        XInfoDB::PROCESS_INFO *pProcessInfo = getXInfoDB()->getProcessInfo();
+
+                        if (pProcessInfo->nMainThreadID == dbgEvent.dwThreadId) {
+                            pProcessInfo->hMainThread = nullptr;
+                            pProcessInfo->nMainThreadID = 0;
+                        }
+
+                        if (getXInfoDB()->getCurrentThreadId() == dbgEvent.dwThreadId) {
+                            getXInfoDB()->setCurrentThreadHandle(nullptr);
+                            getXInfoDB()->setCurrentThreadId(0);
+                        }
+                    } else if (dbgEvent.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT) {
+                        XInfoDB::PROCESS_INFO *pProcessInfo = getXInfoDB()->getProcessInfo();
+                        pProcessInfo->hProcess = nullptr;
+                        pProcessInfo->hMainThread = nullptr;
+                        pProcessInfo->nProcessID = 0;
+                        pProcessInfo->nMainThreadID = 0;
+                        getXInfoDB()->setCurrentThreadHandle(nullptr);
+                        getXInfoDB()->setCurrentThreadId(0);
+                    }
+                } else {
+                    emit errorMessage(QString("%1 (%2)").arg(tr("Cannot continue debug event"), XProcess::getLastErrorAsString()));
+                    setDebugActive(false);
+                }
             }
         } else {
             QThread::msleep(100);
@@ -509,12 +603,6 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
         if (result == BPSTATUS_UNKNOWN) result = _handleBreakpoint(pDebugEvent, XInfoDB::BPT_CODE_SOFTWARE_INT1LONG);
     }
 
-    qint32 nResult = DBG_EXCEPTION_NOT_HANDLED;
-
-    if ((result == BPSTATUS_CALLBACK) || (result == BPSTATUS_HANDLED)) {
-        nResult = DBG_CONTINUE;
-    }
-
     if (result == BPSTATUS_UNKNOWN) {
         bool bSuccess = false;
 
@@ -555,6 +643,12 @@ quint32 XWindowsDebugger::on_EXCEPTION_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
 
     if (result == BPSTATUS_HANDLED) {
         getXInfoDB()->resumeAllThreads();
+    }
+
+    qint32 nResult = DBG_EXCEPTION_NOT_HANDLED;
+
+    if ((result == BPSTATUS_CALLBACK) || (result == BPSTATUS_HANDLED)) {
+        nResult = DBG_CONTINUE;
     }
 
     //    qDebug("on_EXCEPTION_DEBUG_EVENT");
@@ -601,6 +695,12 @@ quint32 XWindowsDebugger::on_CREATE_PROCESS_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent
     processInfo.nImageSize = XProcess::getRegionAllocationSize(processInfo.hProcess, processInfo.nImageBase);
     processInfo.nStartAddress = (qint64)(pDebugEvent->u.CreateProcessInfo.lpStartAddress);  // TODO Check value
     processInfo.sFileName = XProcess::getFileNameByHandle(pDebugEvent->u.CreateProcessInfo.hFile);
+
+    if (pDebugEvent->u.CreateProcessInfo.hFile && (pDebugEvent->u.CreateProcessInfo.hFile != INVALID_HANDLE_VALUE)) {
+        CloseHandle(pDebugEvent->u.CreateProcessInfo.hFile);
+        pDebugEvent->u.CreateProcessInfo.hFile = nullptr;
+    }
+
     processInfo.sBaseFileName = XBinary::getBaseFileName(processInfo.sFileName);
     processInfo.nThreadLocalBase = (qint64)(pDebugEvent->u.CreateProcessInfo.lpThreadLocalBase);
 
@@ -683,6 +783,12 @@ quint32 XWindowsDebugger::on_LOAD_DLL_DEBUG_EVENT(DEBUG_EVENT *pDebugEvent)
     sharedObjectInfo.nImageBase = (qint64)(pDebugEvent->u.LoadDll.lpBaseOfDll);
     sharedObjectInfo.nImageSize = XProcess::getRegionAllocationSize(getXInfoDB()->getProcessInfo()->hProcess, sharedObjectInfo.nImageBase);
     sharedObjectInfo.sFileName = XProcess::getFileNameByHandle(pDebugEvent->u.LoadDll.hFile);
+
+    if (pDebugEvent->u.LoadDll.hFile && (pDebugEvent->u.LoadDll.hFile != INVALID_HANDLE_VALUE)) {
+        CloseHandle(pDebugEvent->u.LoadDll.hFile);
+        pDebugEvent->u.LoadDll.hFile = nullptr;
+    }
+
     sharedObjectInfo.sName = QFileInfo(sharedObjectInfo.sFileName).fileName().toUpper();
 
     getXInfoDB()->addSharedObjectInfo(&sharedObjectInfo);

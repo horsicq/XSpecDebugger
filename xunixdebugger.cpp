@@ -22,6 +22,14 @@
 
 #include <QProcess>
 
+#include <errno.h>
+#include <signal.h>
+#include <string.h>
+#include <sys/ptrace.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 XUnixDebugger::XUnixDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent, pXInfoDB)
 {
     g_pTimer = nullptr;
@@ -158,7 +166,6 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
     if (nChildThreadId > 0) {
         result.bIsValid = true;
         result.nThreadId = nChildThreadId;
-        result.nAddress = getXInfoDB()->getCurrentInstructionPointer_Id(nChildThreadId);
 
 #if defined(Q_OS_LINUX)
         // ptrace-event stops (clone/exit) are encoded in the high byte of the wait status and
@@ -184,55 +191,76 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
         }
 #endif
 
-        siginfo_t sigInfo = {};
-
-        if (ptrace(PTRACE_GETSIGINFO, nChildThreadId, 0, &sigInfo) < 0) {
-            qDebug("Error: %s", strerror(errno));
-        } else {
-            qDebug("Parent: si_signo %X", sigInfo.si_signo);
-            qDebug("Parent: si_code %X", sigInfo.si_code);
-            qDebug("Parent: si_value %X", sigInfo.si_value.sival_int);
-            qDebug("Parent: si_errno %X", sigInfo.si_errno);
-            qDebug("Parent: si_pid %u", sigInfo.si_pid);
-            qDebug("Parent: si_uid %u", sigInfo.si_uid);
-            qDebug("Parent: si_addr %lX", (uint64_t)sigInfo.si_addr);
-            qDebug("Parent: si_status %X", sigInfo.si_status);
-            qDebug("Parent: si_band %lX", sigInfo.si_band);
-
-            result.nExceptionAddress = (XADDR)sigInfo.si_addr;
-        }
-
-        // 80 = SI_KERNEL
-
-        if (sigInfo.si_code == TRAP_TRACE) {
-            result.debuggerStatus = DEBUGGER_STATUS_STEP;
-        } else if (sigInfo.si_code == TRAP_BRKPT) {
-            result.debuggerStatus = DEBUGGER_STATUS_BREAKPOINT;  // TODO // 0xF1 int1
-        } else if (sigInfo.si_code == SI_KERNEL) {               // 0xCC int3 9xF4 hlt
-            // result.nAddress = result.nAddress - 1;  // BP
-            result.debuggerStatus = DEBUGGER_STATUS_KERNEL;
-        } else if (WIFSTOPPED(nResult)) {
+        if (WIFSTOPPED(nResult)) {
+            result.nAddress = getXInfoDB()->getCurrentInstructionPointer_Id(nChildThreadId);
             result.nCode = WSTOPSIG(nResult);
 
-            if (WSTOPSIG(nResult) == SIGTRAP) {
-                result.debuggerStatus = DEBUGGER_STATUS_SIGTRAP;
-            } else if (WSTOPSIG(nResult) == SIGABRT) {
+            siginfo_t sigInfo = {};
+            bool bHasSigInfo = false;
+
+#if defined(Q_OS_LINUX)
+            bHasSigInfo = (ptrace(PTRACE_GETSIGINFO, nChildThreadId, 0, &sigInfo) >= 0);
+#endif
+
+#if defined(Q_OS_LINUX)
+            if (!bHasSigInfo) {
+                qDebug("Error: %s", strerror(errno));
+            } else {
+                qDebug("Parent: si_signo %X", sigInfo.si_signo);
+                qDebug("Parent: si_code %X", sigInfo.si_code);
+                qDebug("Parent: si_value %X", sigInfo.si_value.sival_int);
+                qDebug("Parent: si_errno %X", sigInfo.si_errno);
+                qDebug("Parent: si_pid %u", sigInfo.si_pid);
+                qDebug("Parent: si_uid %u", sigInfo.si_uid);
+                qDebug("Parent: si_addr %lX", (uint64_t)sigInfo.si_addr);
+                qDebug("Parent: si_status %X", sigInfo.si_status);
+                qDebug("Parent: si_band %lX", sigInfo.si_band);
+
+                result.nExceptionAddress = (XADDR)sigInfo.si_addr;
+            }
+#else
+            result.nExceptionAddress = result.nAddress;
+#endif
+
+            // Signal-specific si_code values overlap (for example TRAP_BRKPT and SEGV_MAPERR are
+            // both 1), so trap codes are meaningful only when the actual stop signal is SIGTRAP.
+            if (result.nCode == SIGTRAP) {
+#if defined(Q_OS_LINUX)
+                if (bHasSigInfo && (sigInfo.si_code == TRAP_TRACE)) {
+                    result.debuggerStatus = DEBUGGER_STATUS_STEP;
+                } else if (bHasSigInfo && (sigInfo.si_code == TRAP_BRKPT)) {
+                    result.debuggerStatus = DEBUGGER_STATUS_BREAKPOINT;  // TODO // 0xF1 int1
+                } else if (bHasSigInfo && (sigInfo.si_code == SI_KERNEL)) {
+                    // result.nAddress = result.nAddress - 1;  // BP
+                    result.debuggerStatus = DEBUGGER_STATUS_KERNEL;  // 0xCC int3, 0xF4 hlt
+                } else {
+                    result.debuggerStatus = DEBUGGER_STATUS_SIGTRAP;
+                }
+#else
+                // Darwin's ptrace API has no PTRACE_GETSIGINFO equivalent. The pending debugger
+                // bookkeeping distinguishes a requested single-step from a software trap.
+                XInfoDB::BREAKPOINT stepBreakpoint = getXInfoDB()->findBreakPointByThreadID(nChildThreadId, XInfoDB::BPT_CODE_STEP_FLAG);
+                XInfoDB::BREAKPOINT restoreBreakpoint = getXInfoDB()->findBreakPointByThreadID(nChildThreadId, XInfoDB::BPT_CODE_STEP_TO_RESTORE);
+                result.debuggerStatus = (!stepBreakpoint.sUUID.isEmpty() || !restoreBreakpoint.sUUID.isEmpty()) ? DEBUGGER_STATUS_STEP
+                                                                                                                : DEBUGGER_STATUS_BREAKPOINT;
+#endif
+            } else if (result.nCode == SIGABRT) {
                 result.debuggerStatus = DEBUGGER_STATUS_STOP;
             } else {
                 result.debuggerStatus = DEBUGGER_STATUS_EXCEPTION;
             }
 
-            if (WSTOPSIG(nResult) == SIGABRT) {
+            if (result.nCode == SIGABRT) {
                 qDebug("process unexpectedly aborted");
-            } else if (WSTOPSIG(nResult) == SIGPIPE) {
+            } else if (result.nCode == SIGPIPE) {
                 qDebug("SIGPIPE");  // TODO Check IN/OUT HANDLES
-            } else if (WSTOPSIG(nResult) == SIGTRAP) {
+            } else if (result.nCode == SIGTRAP) {
                 qDebug("SIGTRAP");
-            } else if (WSTOPSIG(nResult) == SIGSTOP) {
+            } else if (result.nCode == SIGSTOP) {
                 qDebug("SIGSTOP");
             } else {
             }
-            qDebug("!!!WSTOPSIG %x", WSTOPSIG(nResult));
+            qDebug("!!!WSTOPSIG %x", result.nCode);
         } else if (WIFEXITED(nResult)) {
             result.debuggerStatus = DEBUGGER_STATUS_EXIT;
             result.nCode = WEXITSTATUS(nResult);
@@ -245,7 +273,7 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
         // TODO fast events
 
         qDebug("STATUS: %x", nResult);
-    } else if ((nChildThreadId < 0) && (errno == 10)) {
+    } else if ((nChildThreadId < 0) && (errno == ECHILD)) {
         // No child processes
         // TODO
         stopDebugLoop();
@@ -256,6 +284,7 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
 
 bool XUnixDebugger::waitForSigchild()
 {
+#if defined(Q_OS_LINUX)
     sigset_t mask = {};
     siginfo_t info = {};
     timespec ts = {};
@@ -269,17 +298,20 @@ bool XUnixDebugger::waitForSigchild()
     } while (nRet == -1 && errno == EINTR);
 
     return (nRet == SIGCHLD);
+#else
+    // Darwin has no sigtimedwait(). Its event loop polls waitpid(WNOHANG) directly.
+    return false;
+#endif
 }
 
 bool XUnixDebugger::_setStep(XProcess::HANDLEID handleID)
 {
-    // TODO handle return
-    bool bResult = true;
+    bool bResult = false;
 #if defined(Q_OS_LINUX)
-    ptrace(PTRACE_SINGLESTEP, handleID.nID, 0, 0);
+    bResult = (ptrace(PTRACE_SINGLESTEP, handleID.nID, 0, 0) != -1);
 #endif
-#if defined(Q_OS_OSX)
-    ptrace(PT_STEP, handleID.nID, 0, 0);
+#if defined(Q_OS_MACOS)
+    bResult = (ptrace(PT_STEP, handleID.nID, (caddr_t)1, 0) != -1);
 #endif
     //    int wait_status;
     //    waitpid(handleID.nID,&wait_status,0);
@@ -344,7 +376,7 @@ bool XUnixDebugger::stepInto()
 
 bool XUnixDebugger::stepOver()
 {
-    return stepIntoById(getXInfoDB()->getCurrentThreadId(), XInfoDB::BPI_STEPINTO);
+    return stepOverById(getXInfoDB()->getCurrentThreadId(), XInfoDB::BPI_STEPOVER);
 }
 
 void XUnixDebugger::_debugEvent()
@@ -355,13 +387,65 @@ void XUnixDebugger::_debugEvent()
         if (!waitForSigchild()) {
             // Wait for an event on ANY traced thread (-1), not only the main thread, so events on
             // sibling threads of a multithreaded target are reaped. __WALL also covers threads.
-            STATE state = waitForSignal(-1, __WALL | WNOHANG);
+            qint32 nWaitOptions = WNOHANG;
+#if defined(Q_OS_LINUX)
+            nWaitOptions |= __WALL;
+#endif
+            STATE state = waitForSignal(-1, nWaitOptions);
 
             if (state.bIsValid) {
                 BPSTATUS result = BPSTATUS_UNKNOWN;
 
-                // Thread-lifecycle events (from PTRACE_O_TRACECLONE / PTRACE_O_TRACEEXIT). NOTE:
-                // robust group-stop handling of the freshly cloned thread needs on-Linux validation.
+                // WIFEXITED/WIFSIGNALED describe a thread that has actually gone away. A terminal
+                // wait status for a secondary TID is not a process exit: remove only that thread
+                // and keep polling the remaining tracees. The thread-group leader (PID == TID) is
+                // the process-lifetime event.
+                if ((state.debuggerStatus == DEBUGGER_STATUS_EXIT) || (state.debuggerStatus == DEBUGGER_STATUS_SIGNAL)) {
+                    XInfoDB::PROCESS_INFO *pProcessInfo = getXInfoDB()->getProcessInfo();
+                    bool bProcessExit = (state.nThreadId == pProcessInfo->nProcessID);
+
+                    if (bProcessExit) {
+                        XInfoDB::EXITPROCESS_INFO exitProcessInfo = {};
+                        exitProcessInfo.nProcessID = pProcessInfo->nProcessID;
+                        exitProcessInfo.nThreadID = state.nThreadId;
+                        exitProcessInfo.nExitCode = state.nCode;
+                        exitProcessInfo.sFileName = pProcessInfo->sFileName;
+
+                        // A leader's final status means no live tracees remain, but remove every
+                        // cached record defensively so cleanup cannot act on stale TIDs.
+                        const QList<XInfoDB::THREAD_INFO> listThreadInfos = *(getXInfoDB()->getThreadInfos());
+                        for (const XInfoDB::THREAD_INFO &threadInfo : listThreadInfos) {
+                            getXInfoDB()->removeThreadInfo(threadInfo.nThreadID);
+                        }
+
+                        getXInfoDB()->setCurrentThreadId(0);
+                        emit eventExitProcess(&exitProcessInfo);
+
+                        pProcessInfo->nProcessID = 0;
+                        pProcessInfo->nMainThreadID = 0;
+                        setDebugActive(false);
+                        stopDebugLoop();
+                    } else {
+                        getXInfoDB()->removeThreadInfo(state.nThreadId);
+
+                        if (getXInfoDB()->getCurrentThreadId() == state.nThreadId) {
+                            getXInfoDB()->setCurrentThreadId(0);
+                        }
+
+                        XInfoDB::EXITTHREAD_INFO exitThreadInfo = {};
+                        exitThreadInfo.nThreadID = state.nThreadId;
+                        exitThreadInfo.nExitCode = state.nCode;
+                        emit eventExitThread(&exitThreadInfo);
+                    }
+
+                    return;
+                }
+
+                // Every remaining status is a ptrace stop. Mark it paused before attempting to
+                // continue it; resumeThread_Id intentionally refuses to continue running threads.
+                getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
+
+                // Thread-lifecycle events (from PTRACE_O_TRACECLONE / PTRACE_O_TRACEEXIT).
                 if (state.debuggerStatus == DEBUGGER_STATUS_THREADCREATE) {
                     if (state.nNewThreadId) {
                         XInfoDB::THREAD_INFO threadInfo = {};
@@ -380,20 +464,13 @@ void XUnixDebugger::_debugEvent()
                     getXInfoDB()->resumeThread_Id(state.nThreadId);
                     return;
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_THREADEXIT) {
-                    XInfoDB::EXITTHREAD_INFO exitThreadInfo = {};
-                    exitThreadInfo.nThreadID = state.nThreadId;
-                    exitThreadInfo.nExitCode = state.nCode;
-                    emit eventExitThread(&exitThreadInfo);
-
+                    // PTRACE_EVENT_EXIT is a pre-exit stop. Continue it now; the following
+                    // WIFEXITED/WIFSIGNALED status performs removal and emits exactly one event.
                     getXInfoDB()->resumeThread_Id(state.nThreadId);
                     return;
                 }
 
-                getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
-
-                if (state.debuggerStatus == DEBUGGER_STATUS_SIGNAL) {
-                    qDebug("DEBUGGER_STATUS_SIGNAL");
-                } else if (state.debuggerStatus == DEBUGGER_STATUS_STOP) {
+                if (state.debuggerStatus == DEBUGGER_STATUS_STOP) {
                     qDebug("DEBUGGER_STATUS_STOP");
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_STEP) {
                     qDebug("DEBUGGER_STATUS_STEP");
@@ -413,9 +490,6 @@ void XUnixDebugger::_debugEvent()
                 } else if (state.debuggerStatus == DEBUGGER_STATUS_BREAKPOINT) {
                     qDebug("DEBUGGER_STATUS_BREAKPOINT");
                     result = _handleBreakpoint(state, XInfoDB::BPT_CODE_SOFTWARE_INT3);
-                } else if (state.debuggerStatus == DEBUGGER_STATUS_EXIT) {
-                    qDebug("DEBUGGER_STATUS_EXIT");
-                    result = BPSTATUS_EXIT;
                 }
                 //
                 //                getXInfoDB()->setThreadStatus(state.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
@@ -547,11 +621,22 @@ void XUnixDebugger::_debugEvent()
                 }
 
                 if (result == BPSTATUS_UNKNOWN) {
-                    getXInfoDB()->resumeThread_Id(state.nThreadId);
+                    qint32 nSignal = 0;
+
+                    if (((state.debuggerStatus == DEBUGGER_STATUS_EXCEPTION) || (state.debuggerStatus == DEBUGGER_STATUS_STOP)) &&
+                        (state.nCode != SIGSTOP)) {
+                        // Preserve signal-delivery semantics for faults and ordinary signals. A
+                        // debugger-generated SIGSTOP is deliberately suppressed when continuing.
+                        nSignal = state.nCode;
+                    }
+
+                    if (!getXInfoDB()->resumeThread_Id(state.nThreadId, nSignal)) {
+                        emit errorMessage(QString("%1 %2: %3").arg(tr("Cannot continue thread"))
+                                              .arg(state.nThreadId)
+                                              .arg(QString::fromLocal8Bit(strerror(errno))));
+                    }
                 } else if (result == BPSTATUS_HANDLED) {
                     getXInfoDB()->resumeAllThreads();
-                } else if (result == BPSTATUS_EXIT) {
-                    setDebugActive(false);
                 }
             }
         }

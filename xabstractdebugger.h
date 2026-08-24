@@ -21,6 +21,7 @@
 #ifndef XABSTRACTDEBUGGER_H
 #define XABSTRACTDEBUGGER_H
 
+#include <QAtomicInt>
 #include <QThread>
 #include <QTimer>
 
@@ -119,6 +120,11 @@ public:
     void setTraceActive(bool bState);
     bool isTraceActive();
 
+    // Thread-safe cancellation entry point. This can be called by the owning GUI
+    // thread even while process() is inside a platform debug loop.
+    void requestShutdown();
+    bool isShutdownRequested();
+
     virtual bool stepIntoByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo);
     virtual bool stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo);
     virtual bool stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo);
@@ -136,10 +142,13 @@ public:
 
 public slots:
     void process();
+    // Runs cleanup in the debugger's affinity thread, then asks its QThread to stop.
+    void shutdown();
     void onDebuggerCommand(qint32 nCommand);  // runs on the worker thread (see DBGCOMMAND)
     void testSlot(X_ID nThreadId);  // TODO remove
 
 signals:
+    void shutdownFinished();
     void cannotLoadFile(const QString &sFileName);  // TODO send if cannot load file to debugger
     void errorMessage(const QString &sErrorMessage);
     void infoMessage(const QString &sInfoMessage);
@@ -157,12 +166,17 @@ signals:
     void eventFunctionLeave(XInfoDB::FUNCTION_INFO *pFunctionInfo);
 
 private:
+    enum LIFECYCLE_FLAG {
+        LIFECYCLE_DEBUG_ACTIVE = 1,
+        LIFECYCLE_TRACE_ACTIVE = 2,
+        LIFECYCLE_SHUTDOWN_REQUESTED = 4
+    };
+
     XInfoDB *g_pXInfoDB;
     OPTIONS g_options;
     csh g_handle;
     QString g_sTraceFileName;
-    bool g_bIsDebugActive;
-    bool g_bIsTraceActive;
+    QAtomicInt g_nLifecycleState;
 };
 
 #endif  // XABSTRACTDEBUGGER_H
