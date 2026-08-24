@@ -29,10 +29,16 @@
 #endif
 
 #include <crt_externs.h>
+#include <stdint.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <mach/mach.h>
 #include <mach/ndr.h>
+#if defined(Q_PROCESSOR_X86_64)
+#include <mach/i386/exception.h>
+#elif defined(Q_PROCESSOR_ARM_64)
+#include <mach/arm/exception.h>
+#endif
 #include <signal.h>
 #include <string.h>
 #include <sys/ptrace.h>
@@ -240,8 +246,440 @@ struct XOSXDebugger::DARWIN_STATE {
     bool bInitialPtraceStop = false;
 };
 
-XOSXDebugger::XOSXDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XUnixDebugger(pParent, pXInfoDB)
+XOSXDebugger::XOSXDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XUnixDebugger(pParent, pXInfoDB), m_pDarwinState(new DARWIN_STATE)
 {
+}
+
+XOSXDebugger::~XOSXDebugger()
+{
+    shutdownExceptionPort(true);
+    delete m_pDarwinState;
+}
+
+bool XOSXDebugger::installExceptionPort(task_t hTask)
+{
+    shutdownExceptionPort(false);
+
+    m_pDarwinState->hTask = hTask;
+    kern_return_t result = mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &m_pDarwinState->hExceptionPort);
+
+    if (result == KERN_SUCCESS) {
+        result = mach_port_insert_right(mach_task_self(), m_pDarwinState->hExceptionPort, m_pDarwinState->hExceptionPort, MACH_MSG_TYPE_MAKE_SEND);
+    }
+
+    if (result == KERN_SUCCESS) {
+        m_pDarwinState->nSavedPortCount = EXC_TYPES_COUNT;
+        result = task_get_exception_ports(hTask, m_pDarwinState->exceptionMask, m_pDarwinState->savedMasks,
+                                          &m_pDarwinState->nSavedPortCount, m_pDarwinState->savedPorts,
+                                          m_pDarwinState->savedBehaviors, m_pDarwinState->savedFlavors);
+        if (result != KERN_SUCCESS) {
+            m_pDarwinState->nSavedPortCount = 0;
+        }
+    }
+
+    if (result == KERN_SUCCESS) {
+        result = task_set_exception_ports(hTask, m_pDarwinState->exceptionMask, m_pDarwinState->hExceptionPort,
+                                          EXCEPTION_DEFAULT | MACH_EXCEPTION_CODES, THREAD_STATE_NONE);
+    }
+
+    if (result != KERN_SUCCESS) {
+        shutdownExceptionPort(false);
+        return false;
+    }
+
+    m_pDarwinState->bInitialPtraceStop = true;
+    return true;
+}
+
+void XOSXDebugger::shutdownExceptionPort(bool bForwardPending)
+{
+    if (m_pDarwinState == nullptr) {
+        return;
+    }
+
+    if ((m_pDarwinState->hTask != MACH_PORT_NULL) && m_pDarwinState->nSavedPortCount) {
+        for (mach_msg_type_number_t i = 0; i < m_pDarwinState->nSavedPortCount; i++) {
+            task_set_exception_ports(m_pDarwinState->hTask, m_pDarwinState->savedMasks[i], m_pDarwinState->savedPorts[i],
+                                     m_pDarwinState->savedBehaviors[i], m_pDarwinState->savedFlavors[i]);
+        }
+    }
+
+    if (bForwardPending) {
+        if (m_pDarwinState->bCurrentMessage) {
+            setReplyResult(&m_pDarwinState->currentMessage, KERN_FAILURE);
+            sendExceptionReply(&m_pDarwinState->currentMessage);
+        }
+
+        for (DARWIN_EXCEPTION_MESSAGE &message : m_pDarwinState->listQueuedMessages) {
+            setReplyResult(&message, KERN_FAILURE);
+            sendExceptionReply(&message);
+        }
+    }
+
+    m_pDarwinState->bCurrentMessage = false;
+    m_pDarwinState->listQueuedMessages.clear();
+    releaseSingleStepIsolation();
+
+    if (m_pDarwinState->bTaskSuspended && (m_pDarwinState->hTask != MACH_PORT_NULL)) {
+        task_resume(m_pDarwinState->hTask);
+    }
+    m_pDarwinState->bTaskSuspended = false;
+
+    for (mach_msg_type_number_t i = 0; i < m_pDarwinState->nSavedPortCount; i++) {
+        if (MACH_PORT_VALID(m_pDarwinState->savedPorts[i])) {
+            mach_port_deallocate(mach_task_self(), m_pDarwinState->savedPorts[i]);
+        }
+    }
+    m_pDarwinState->nSavedPortCount = 0;
+
+    if (MACH_PORT_VALID(m_pDarwinState->hExceptionPort)) {
+        mach_port_destroy(mach_task_self(), m_pDarwinState->hExceptionPort);
+    }
+
+    m_pDarwinState->hExceptionPort = MACH_PORT_NULL;
+    m_pDarwinState->hTask = MACH_PORT_NULL;
+    m_pDarwinState->bInitialPtraceStop = false;
+}
+
+bool XOSXDebugger::syncDarwinThreads(X_ID nStoppedThreadId)
+{
+    QList<X_ID> listThreadIds;
+    if (!getXInfoDB()->updateDarwinThreadPorts(&listThreadIds)) {
+        return false;
+    }
+
+    const QList<XInfoDB::THREAD_INFO> listPreviousThreads = *(getXInfoDB()->getThreadInfos());
+
+    for (X_ID nThreadId : listThreadIds) {
+        XInfoDB::THREAD_INFO threadInfo = getXInfoDB()->findThreadInfoByID(nThreadId);
+
+        if (!threadInfo.nThreadID) {
+            threadInfo.nThreadID = nThreadId;
+            threadInfo.threadStatus = XInfoDB::THREAD_STATUS_PAUSED;
+            getXInfoDB()->addThreadInfo(&threadInfo);
+            emit eventCreateThread(&threadInfo);
+        } else if (m_pDarwinState->bTaskSuspended) {
+            getXInfoDB()->setThreadStatus(nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
+        }
+    }
+
+    for (const XInfoDB::THREAD_INFO &threadInfo : listPreviousThreads) {
+        if (!listThreadIds.contains(threadInfo.nThreadID)) {
+            getXInfoDB()->removeThreadInfo(threadInfo.nThreadID);
+
+            XInfoDB::EXITTHREAD_INFO exitThreadInfo = {};
+            exitThreadInfo.nThreadID = threadInfo.nThreadID;
+            emit eventExitThread(&exitThreadInfo);
+        }
+    }
+
+    if (nStoppedThreadId && !listThreadIds.contains(nStoppedThreadId)) {
+        return false;
+    }
+
+    return true;
+}
+
+bool XOSXDebugger::receiveException(STATE *pState)
+{
+    if ((pState == nullptr) || !MACH_PORT_VALID(m_pDarwinState->hExceptionPort) || m_pDarwinState->bCurrentMessage) {
+        return false;
+    }
+
+    auto promoteMessage = [&]() -> bool {
+        if (m_pDarwinState->listQueuedMessages.isEmpty()) {
+            return false;
+        }
+
+        m_pDarwinState->currentMessage = m_pDarwinState->listQueuedMessages.takeFirst();
+        m_pDarwinState->bCurrentMessage = true;
+        const DARWIN_EXCEPTION_CAPTURE &capture = m_pDarwinState->currentMessage.capture;
+
+        *pState = {};
+        pState->bIsValid = true;
+        pState->nThreadId = m_pDarwinState->currentMessage.nThreadId;
+        pState->nCode = SIGTRAP;
+        pState->nAddress = getXInfoDB()->getCurrentInstructionPointer_Id(pState->nThreadId);
+        pState->nExceptionAddress = pState->nAddress;
+
+        if ((capture.exceptionType == EXC_SOFTWARE) && (capture.listCodes.count() >= 2) &&
+            (capture.listCodes.at(0) == EXC_SOFT_SIGNAL)) {
+            pState->nCode = static_cast<quint32>(capture.listCodes.at(1));
+            pState->debuggerStatus = ((pState->nCode == SIGSTOP) || (pState->nCode == SIGABRT)) ? DEBUGGER_STATUS_STOP
+                                                                                               : DEBUGGER_STATUS_EXCEPTION;
+        } else if (capture.exceptionType == EXC_BREAKPOINT) {
+            const bool bPendingStep =
+                !getXInfoDB()->findBreakPointByThreadID(pState->nThreadId, XInfoDB::BPT_CODE_STEP_FLAG).sUUID.isEmpty() ||
+                !getXInfoDB()->findBreakPointByThreadID(pState->nThreadId, XInfoDB::BPT_CODE_STEP_TO_RESTORE).sUUID.isEmpty();
+            bool bHardwareStep = bPendingStep;
+#if defined(Q_PROCESSOR_X86_64)
+            bHardwareStep = bHardwareStep || (!capture.listCodes.isEmpty() && (capture.listCodes.at(0) == EXC_I386_SGL));
+#endif
+            pState->debuggerStatus = bHardwareStep ? DEBUGGER_STATUS_STEP : DEBUGGER_STATUS_BREAKPOINT;
+
+            if (bHardwareStep && !getXInfoDB()->_setStep_Id(pState->nThreadId, false)) {
+                emit errorMessage(QString("%1 %2").arg(tr("Cannot clear single-step state for thread")).arg(pState->nThreadId));
+            }
+        } else {
+            pState->nCode = 0;
+            pState->debuggerStatus = DEBUGGER_STATUS_EXCEPTION;
+        }
+
+        return true;
+    };
+
+    if (promoteMessage()) {
+        return true;
+    }
+
+    bool bReceivedAny = false;
+
+    while (true) {
+        DARWIN_EXCEPTION_MESSAGE message = {};
+        message.capture.hExpectedTask = m_pDarwinState->hTask;
+        const kern_return_t receiveResult = mach_msg(&message.request.header,
+                                                     MACH_RCV_MSG | MACH_RCV_INTERRUPT | MACH_RCV_TIMEOUT,
+                                                     0, sizeof(message.request.data), m_pDarwinState->hExceptionPort, 0, MACH_PORT_NULL);
+
+        if (receiveResult == MACH_RCV_TIMED_OUT) {
+            break;
+        }
+        if (receiveResult != KERN_SUCCESS) {
+            return false;
+        }
+
+        g_pExceptionCapture = &message.capture;
+        const bool bDemultiplexed = mach_exc_server(&message.request.header, &message.reply.header);
+        g_pExceptionCapture = nullptr;
+
+        if (!bDemultiplexed || (message.capture.hThread == MACH_PORT_NULL) ||
+            (getThreadIdentifier(message.capture.hThread, &message.nThreadId) != KERN_SUCCESS) || !message.nThreadId) {
+            if (bDemultiplexed) {
+                setReplyResult(&message, KERN_FAILURE);
+                sendExceptionReply(&message);
+            } else {
+                mach_msg_destroy(&message.request.header);
+            }
+            continue;
+        }
+
+        if (!m_pDarwinState->bTaskSuspended) {
+            if (task_suspend(m_pDarwinState->hTask) != KERN_SUCCESS) {
+                setReplyResult(&message, KERN_FAILURE);
+                sendExceptionReply(&message);
+                continue;
+            }
+            m_pDarwinState->bTaskSuspended = true;
+            releaseSingleStepIsolation();
+        }
+
+        m_pDarwinState->listQueuedMessages.append(message);
+        bReceivedAny = true;
+    }
+
+    if (bReceivedAny) {
+        const X_ID nStoppedThreadId = m_pDarwinState->listQueuedMessages.first().nThreadId;
+        if (!syncDarwinThreads(nStoppedThreadId)) {
+            emit errorMessage(tr("Cannot refresh Darwin thread ports after an exception"));
+        }
+    }
+
+    return promoteMessage();
+}
+
+void XOSXDebugger::releaseSingleStepIsolation()
+{
+    if (m_pDarwinState->listStepSuspendedThreadIds.isEmpty()) {
+        return;
+    }
+
+    thread_act_array_t pThreads = nullptr;
+    mach_msg_type_number_t nThreadCount = 0;
+
+    if ((m_pDarwinState->hTask != MACH_PORT_NULL) &&
+        (task_threads(m_pDarwinState->hTask, &pThreads, &nThreadCount) == KERN_SUCCESS)) {
+        for (mach_msg_type_number_t i = 0; i < nThreadCount; i++) {
+            X_ID nThreadId = 0;
+            if ((getThreadIdentifier(pThreads[i], &nThreadId) == KERN_SUCCESS) &&
+                m_pDarwinState->listStepSuspendedThreadIds.contains(nThreadId)) {
+                thread_resume(pThreads[i]);
+            }
+            mach_port_deallocate(mach_task_self(), pThreads[i]);
+        }
+
+        if (pThreads) {
+            vm_deallocate(mach_task_self(), reinterpret_cast<vm_address_t>(pThreads), static_cast<vm_size_t>(nThreadCount) * sizeof(*pThreads));
+        }
+    }
+
+    m_pDarwinState->listStepSuspendedThreadIds.clear();
+}
+
+bool XOSXDebugger::prepareSingleStepIsolation(X_ID *pStepThreadId)
+{
+    if (pStepThreadId) {
+        *pStepThreadId = 0;
+    }
+
+    releaseSingleStepIsolation();
+
+    QList<X_ID> listThreadIds;
+    if (!getXInfoDB()->updateDarwinThreadPorts(&listThreadIds)) {
+        return false;
+    }
+
+    X_ID nStepThreadId = 0;
+    for (X_ID nThreadId : listThreadIds) {
+        const bool bStep = !getXInfoDB()->findBreakPointByThreadID(nThreadId, XInfoDB::BPT_CODE_STEP_FLAG).sUUID.isEmpty() ||
+                           !getXInfoDB()->findBreakPointByThreadID(nThreadId, XInfoDB::BPT_CODE_STEP_TO_RESTORE).sUUID.isEmpty();
+        if (bStep) {
+            nStepThreadId = nThreadId;
+            break;
+        }
+    }
+
+    if (!nStepThreadId) {
+        return true;
+    }
+
+    thread_act_array_t pThreads = nullptr;
+    mach_msg_type_number_t nThreadCount = 0;
+    if (task_threads(m_pDarwinState->hTask, &pThreads, &nThreadCount) != KERN_SUCCESS) {
+        return false;
+    }
+
+    bool bResult = true;
+    for (mach_msg_type_number_t i = 0; i < nThreadCount; i++) {
+        X_ID nThreadId = 0;
+        if ((getThreadIdentifier(pThreads[i], &nThreadId) != KERN_SUCCESS) || !nThreadId) {
+            bResult = false;
+        } else if ((nThreadId != nStepThreadId) && (thread_suspend(pThreads[i]) == KERN_SUCCESS)) {
+            m_pDarwinState->listStepSuspendedThreadIds.append(nThreadId);
+        } else if (nThreadId != nStepThreadId) {
+            bResult = false;
+        }
+
+        mach_port_deallocate(mach_task_self(), pThreads[i]);
+    }
+
+    if (pThreads) {
+        vm_deallocate(mach_task_self(), reinterpret_cast<vm_address_t>(pThreads), static_cast<vm_size_t>(nThreadCount) * sizeof(*pThreads));
+    }
+
+    if (!bResult) {
+        releaseSingleStepIsolation();
+        return false;
+    }
+
+    if (pStepThreadId) {
+        *pStepThreadId = nStepThreadId;
+    }
+
+    return true;
+}
+
+bool XOSXDebugger::replyCurrentException(qint32 nSignal, bool bForwardException)
+{
+    if (!m_pDarwinState->bCurrentMessage) {
+        return false;
+    }
+
+    DARWIN_EXCEPTION_MESSAGE &message = m_pDarwinState->currentMessage;
+    const bool bSoftSignal = (message.capture.exceptionType == EXC_SOFTWARE) && (message.capture.listCodes.count() >= 2) &&
+                             (message.capture.listCodes.at(0) == EXC_SOFT_SIGNAL);
+
+    if (bSoftSignal &&
+        (ptrace(PT_THUPDATE, getXInfoDB()->getProcessInfo()->nProcessID,
+                reinterpret_cast<caddr_t>(static_cast<uintptr_t>(message.capture.hThread)), nSignal) == -1)) {
+        return false;
+    }
+
+    setReplyResult(&message, bForwardException ? KERN_FAILURE : KERN_SUCCESS);
+    if (sendExceptionReply(&message) != KERN_SUCCESS) {
+        return false;
+    }
+
+    m_pDarwinState->bCurrentMessage = false;
+    return true;
+}
+
+bool XOSXDebugger::continueAfterException(X_ID nThreadId, qint32 nSignal, bool bAllThreads)
+{
+    Q_UNUSED(bAllThreads)
+
+    if (m_pDarwinState->bCurrentMessage) {
+        if (m_pDarwinState->currentMessage.nThreadId != nThreadId) {
+            return false;
+        }
+
+        const bool bForwardException = (m_pDarwinState->currentMessage.capture.exceptionType == EXC_BREAKPOINT) && (nSignal != 0);
+        if (!replyCurrentException(nSignal, bForwardException)) {
+            return false;
+        }
+
+        // Keep the task frozen while each simultaneously queued stop is surfaced through the
+        // common event path. No exception reply is lost or silently swallowed.
+        if (!m_pDarwinState->listQueuedMessages.isEmpty()) {
+            return true;
+        }
+    }
+
+    X_ID nStepThreadId = 0;
+    if (!prepareSingleStepIsolation(&nStepThreadId)) {
+        return false;
+    }
+
+    bool bResult = false;
+    if (m_pDarwinState->bTaskSuspended) {
+        bResult = (task_resume(m_pDarwinState->hTask) == KERN_SUCCESS);
+        if (bResult) {
+            m_pDarwinState->bTaskSuspended = false;
+        }
+    } else if (m_pDarwinState->bInitialPtraceStop) {
+        bResult = (ptrace(PT_CONTINUE, getXInfoDB()->getProcessInfo()->nProcessID, (caddr_t)1, nSignal) != -1);
+        if (bResult) {
+            m_pDarwinState->bInitialPtraceStop = false;
+        }
+    }
+
+    if (!bResult) {
+        releaseSingleStepIsolation();
+        return false;
+    }
+
+    const QList<XInfoDB::THREAD_INFO> listThreadInfos = *(getXInfoDB()->getThreadInfos());
+    for (const XInfoDB::THREAD_INFO &threadInfo : listThreadInfos) {
+        const XInfoDB::THREAD_STATUS status = (!nStepThreadId || (threadInfo.nThreadID == nStepThreadId)) ? XInfoDB::THREAD_STATUS_RUNNING
+                                                                                                         : XInfoDB::THREAD_STATUS_PAUSED;
+        getXInfoDB()->setThreadStatus(threadInfo.nThreadID, status);
+    }
+
+    return true;
+}
+
+XUnixDebugger::STATE XOSXDebugger::waitForSignal(qint64 nThreadID, qint32 nOptions)
+{
+    STATE result = {};
+    if (receiveException(&result)) {
+        return result;
+    }
+
+    return XUnixDebugger::waitForSignal(nThreadID, nOptions);
+}
+
+bool XOSXDebugger::resumeThread(X_ID nThreadId, qint32 nSignal)
+{
+    return continueAfterException(nThreadId, nSignal, false);
+}
+
+bool XOSXDebugger::resumeAllThreads()
+{
+    X_ID nThreadId = getXInfoDB()->getCurrentThreadId();
+    if (m_pDarwinState->bCurrentMessage) {
+        nThreadId = m_pDarwinState->currentMessage.nThreadId;
+    }
+
+    return continueAfterException(nThreadId, 0, true);
 }
 
 bool XOSXDebugger::load()
@@ -328,6 +766,12 @@ bool XOSXDebugger::load()
             ::_exit(127);
         }
 
+        if (::ptrace(PT_SIGEXC, 0, 0, 0) == -1) {
+            qint32 nError = errno;
+            writeChildLaunchError(anLaunchPipe[1], CHILD_LAUNCH_STAGE_SIGEXC, nError);
+            ::_exit(127);
+        }
+
         if (bHasDirectory && (::chdir(pDirectory) == -1)) {
             qint32 nError = errno;
             writeChildLaunchError(anLaunchPipe[1], CHILD_LAUNCH_STAGE_CHDIR, nError);
@@ -388,6 +832,8 @@ bool XOSXDebugger::load()
         QString sOperation;
         if (launchError.nStage == CHILD_LAUNCH_STAGE_PTRACE) {
             sOperation = "ptrace(PT_TRACE_ME)";
+        } else if (launchError.nStage == CHILD_LAUNCH_STAGE_SIGEXC) {
+            sOperation = "ptrace(PT_SIGEXC)";
         } else if (launchError.nStage == CHILD_LAUNCH_STAGE_CHDIR) {
             sOperation = "chdir";
         } else if (launchError.nStage == CHILD_LAUNCH_STAGE_EXECVE) {
@@ -411,7 +857,6 @@ bool XOSXDebugger::load()
 
     XInfoDB::PROCESS_INFO processInfo = {};
     processInfo.nProcessID = nProcessID;
-    processInfo.nMainThreadID = nProcessID;
     processInfo.sFileName = sFileName;
     processInfo.sBaseFileName = QFileInfo(sFileName).fileName();
     processInfo.hProcess = XProcess::openProcess(nProcessID);
@@ -422,20 +867,41 @@ bool XOSXDebugger::load()
         return false;
     }
 
+    if (!installExceptionPort(processInfo.hProcess)) {
+        mach_port_deallocate(mach_task_self(), processInfo.hProcess);
+        terminateAndReapChild(nProcessID);
+        emit errorMessage(tr("Cannot install the Darwin exception port"));
+        return false;
+    }
+
     getXInfoDB()->setProcessInfo(processInfo);
+
+    QList<X_ID> listThreadIds;
+    if (!getXInfoDB()->updateDarwinThreadPorts(&listThreadIds) || listThreadIds.isEmpty()) {
+        shutdownExceptionPort(true);
+        getXInfoDB()->clearDarwinThreadPorts();
+        mach_port_deallocate(mach_task_self(), processInfo.hProcess);
+        getXInfoDB()->getProcessInfo()->hProcess = MACH_PORT_NULL;
+        terminateAndReapChild(nProcessID);
+        emit errorMessage(tr("Cannot identify the initial Darwin thread"));
+        return false;
+    }
+
+    processInfo.nMainThreadID = listThreadIds.first();
+    getXInfoDB()->getProcessInfo()->nMainThreadID = processInfo.nMainThreadID;
     setDebugActive(true);
     emit eventCreateProcess(&processInfo);
 
     XInfoDB::THREAD_INFO threadInfo = {};
-    threadInfo.nThreadID = nProcessID;
+    threadInfo.nThreadID = processInfo.nMainThreadID;
     threadInfo.threadStatus = XInfoDB::THREAD_STATUS_PAUSED;
     getXInfoDB()->addThreadInfo(&threadInfo);
     emit eventCreateThread(&threadInfo);
 
-    getXInfoDB()->setThreadStatus(stateStart.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
+    getXInfoDB()->setCurrentThreadId(processInfo.nMainThreadID);
 
     XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
-    breakPointInfo.nExceptionAddress = getXInfoDB()->getCurrentInstructionPointer_Id(nProcessID);
+    breakPointInfo.nExceptionAddress = getXInfoDB()->getCurrentInstructionPointer_Id(processInfo.nMainThreadID);
     breakPointInfo.bpType = XInfoDB::BPT_PROCESS_STOP;
     breakPointInfo.bpInfo = XInfoDB::BPI_PROCESSENTRYPOINT;
     breakPointInfo.hProcess = getXInfoDB()->getProcessInfo()->hProcess;
@@ -454,8 +920,16 @@ bool XOSXDebugger::attach()
     return false;
 }
 
+bool XOSXDebugger::stop()
+{
+    shutdownExceptionPort(true);
+    return XUnixDebugger::stop();
+}
+
 void XOSXDebugger::cleanUp()
 {
+    shutdownExceptionPort(true);
+    getXInfoDB()->clearDarwinThreadPorts();
     XUnixDebugger::cleanUp();
 
     XInfoDB::PROCESS_INFO *pProcessInfo = getXInfoDB()->getProcessInfo();

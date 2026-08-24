@@ -35,6 +35,15 @@ linux {
 }
 
 osx {
+    XOSXDEBUGGER_MIG_DIR = $$OUT_PWD/xosxdebugger_mig
+    XOSXDEBUGGER_MIG_DEFS = $$PWD/xosxdebugger_mach_exc.defs
+    xosxdebugger_mig.input = XOSXDEBUGGER_MIG_DEFS
+    xosxdebugger_mig.output = $$XOSXDEBUGGER_MIG_DIR/mach_excServer.c
+    xosxdebugger_mig.commands = mkdir -p $$shell_quote($$XOSXDEBUGGER_MIG_DIR) && cd $$shell_quote($$XOSXDEBUGGER_MIG_DIR) && xcrun --sdk macosx mig ${QMAKE_FILE_IN}
+    xosxdebugger_mig.variable_out = SOURCES
+    xosxdebugger_mig.CONFIG += target_predeps
+    QMAKE_EXTRA_COMPILERS += xosxdebugger_mig
+
     HEADERS += \
         $$PWD/xunixdebugger.h \
         $$PWD/xosxdebugger.h
@@ -76,4 +85,5 @@ osx {
 
 DISTFILES += \
     $$PWD/LICENSE \
-    $$PWD/README.md
+    $$PWD/README.md \
+    $$PWD/xosxdebugger_mach_exc.defs
