@@ -1078,6 +1078,12 @@ bool XOSXDebugger::load()
     }
 
     getXInfoDB()->setProcessInfo(processInfo);
+    auto clearStoredProcessIdentity = [this]() {
+        XInfoDB::PROCESS_INFO *pStoredProcessInfo = getXInfoDB()->getProcessInfo();
+        pStoredProcessInfo->nProcessID = 0;
+        pStoredProcessInfo->nMainThreadID = 0;
+        getXInfoDB()->setCurrentThreadId(0);
+    };
 
     const bool bGateReleased = writePipeByte(anGatePipe[1], 1);
     ::close(anGatePipe[1]);
@@ -1087,6 +1093,7 @@ bool XOSXDebugger::load()
         mach_port_deallocate(mach_task_self(), processInfo.hProcess);
         getXInfoDB()->getProcessInfo()->hProcess = MACH_PORT_NULL;
         terminateAndReapChild(nProcessID);
+        clearStoredProcessIdentity();
         emit errorMessage(tr("Cannot release the child launch gate"));
         return false;
     }
@@ -1103,12 +1110,15 @@ bool XOSXDebugger::load()
 
         if (nReadError) {
             terminateAndReapChild(nProcessID);
+            clearStoredProcessIdentity();
             emit errorMessage(QString("%1: %2").arg(tr("Cannot read launch status"), QString::fromLocal8Bit(strerror(nReadError))));
         } else if (nErrorBytes != sizeof(launchError)) {
             terminateAndReapChild(nProcessID);
+            clearStoredProcessIdentity();
             emit errorMessage(tr("Invalid child launch status"));
         } else {
             reapChild(nProcessID);
+            clearStoredProcessIdentity();
             emit errorMessage(QString("%1: %2").arg(getLaunchOperation(), QString::fromLocal8Bit(strerror(launchError.nError))));
         }
         return false;
@@ -1132,6 +1142,7 @@ bool XOSXDebugger::load()
         mach_port_deallocate(mach_task_self(), processInfo.hProcess);
         getXInfoDB()->getProcessInfo()->hProcess = MACH_PORT_NULL;
         terminateAndReapChild(nProcessID);
+        clearStoredProcessIdentity();
         emit errorMessage(tr("The child did not report its exec exception"));
         return false;
     }
@@ -1143,6 +1154,7 @@ bool XOSXDebugger::load()
         mach_port_deallocate(mach_task_self(), processInfo.hProcess);
         getXInfoDB()->getProcessInfo()->hProcess = MACH_PORT_NULL;
         terminateAndReapChild(nProcessID);
+        clearStoredProcessIdentity();
         emit errorMessage(tr("Cannot identify the initial Darwin thread"));
         return false;
     }
@@ -1158,6 +1170,11 @@ bool XOSXDebugger::load()
     getXInfoDB()->addThreadInfo(&threadInfo);
     emit eventCreateThread(&threadInfo);
 
+    if (hasPendingTermination()) {
+        finishPendingTermination();
+        return true;
+    }
+
     getXInfoDB()->setCurrentThreadId(processInfo.nMainThreadID);
 
     XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
@@ -1169,7 +1186,11 @@ bool XOSXDebugger::load()
     breakPointInfo.nThreadID = getXInfoDB()->getProcessInfo()->nMainThreadID;
 
     _eventBreakPoint(&breakPointInfo);
-    startDebugLoop();
+    if (hasPendingTermination()) {
+        finishPendingTermination();
+    } else {
+        startDebugLoop();
+    }
 
     return true;
 }

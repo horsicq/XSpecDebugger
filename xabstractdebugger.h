@@ -22,6 +22,7 @@
 #define XABSTRACTDEBUGGER_H
 
 #include <QAtomicInt>
+#include <QStringList>
 #include <QThread>
 #include <QTimer>
 
@@ -144,12 +145,17 @@ public slots:
     void process();
     // Runs cleanup in the debugger's affinity thread, then asks its QThread to stop.
     void shutdown();
-    void onDebuggerCommand(qint32 nCommand);  // runs on the worker thread (see DBGCOMMAND)
+    void onDebuggerCommand(qint32 nCommand, quint64 nRequestId);  // runs on the worker thread (see DBGCOMMAND)
     void testSlot(X_ID nThreadId);  // TODO remove
 
 signals:
     void shutdownFinished();
-    void cannotLoadFile(const QString &sFileName);  // TODO send if cannot load file to debugger
+    // Completion for commands queued from a GUI thread. The result is emitted by the
+    // debugger's affinity thread after the platform operation has actually run.
+    void debuggerCommandFinished(qint32 nCommand, quint64 nRequestId, bool bSuccess);
+    // Owned console output returned by the debugger worker to a GUI requester.
+    void debuggerConsoleCommandFinished(quint64 nRequestId, const QStringList &listTexts, const QStringList &listErrors);
+    void cannotLoadFile(const QString &sFileName);
     void errorMessage(const QString &sErrorMessage);
     void infoMessage(const QString &sInfoMessage);
     void warningMessage(const QString &sWarningMessage);

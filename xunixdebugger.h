@@ -21,6 +21,7 @@
 #ifndef XUNIXDEBUGGER_H
 #define XUNIXDEBUGGER_H
 
+#include <QSet>
 #include <QTimer>
 
 #include "xabstractdebugger.h"
@@ -82,13 +83,24 @@ public slots:
 protected:
     virtual bool resumeThread(X_ID nThreadId, qint32 nSignal = 0);
     virtual bool resumeAllThreads();
+    bool hasPendingTermination() const;
+    void finishPendingTermination();
 
 private:
     BPSTATUS _handleBreakpoint(STATE state, XInfoDB::BPT bpType);
+    void _refreshTerminationThreads();
+    bool _drainTermination(bool bWait);
+    void _completeProcessExit(X_ID nProcessId, X_ID nThreadId, quint32 nExitCode, const QString &sFileName);
 
 private:
     const qint32 N_N_DEDELAY = 50;
     QTimer *g_pTimer;
+    bool g_bTerminationPending;
+    X_ID g_nTerminationProcessId;
+    X_ID g_nTerminationExitThreadId;
+    quint32 g_nTerminationExitCode;
+    QString g_sTerminationFileName;
+    QSet<X_ID> g_setTerminationThreadIds;
 };
 
 #endif  // XUNIXDEBUGGER_H

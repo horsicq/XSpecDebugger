@@ -466,7 +466,9 @@ void XAbstractDebugger::process()
     }
 
     if (g_options.sFileName != "") {
-        load();
+        if ((!load()) && (!isShutdownRequested())) {
+            emit cannotLoadFile(g_options.sFileName);
+        }
     } else if (g_options.nPID != 0) {
         attach();
     }
@@ -480,21 +482,37 @@ void XAbstractDebugger::shutdown()
     emit shutdownFinished();
 }
 
-void XAbstractDebugger::onDebuggerCommand(qint32 nCommand)
+void XAbstractDebugger::onDebuggerCommand(qint32 nCommand, quint64 nRequestId)
 {
     // Executes on the debugger's worker thread (queued from the GUI). On Linux this is mandatory:
     // every ptrace() request must be issued from the same thread that attached/traced the target.
 #ifdef QT_DEBUG
     qDebug("onDebuggerCommand %d on thread %lld", nCommand, (qint64)QThread::currentThreadId());
 #endif
+    bool bSuccess = false;
+
     switch (nCommand) {
-        case DBGCOMMAND_RUN: run(); break;
-        case DBGCOMMAND_STEPINTO: stepInto(); break;
-        case DBGCOMMAND_STEPOVER: stepOver(); break;
-        case DBGCOMMAND_TRACEINTO: stepInto(); break;  // TODO preserve BPI_TRACEINTO semantics
-        case DBGCOMMAND_TRACEOVER: stepOver(); break;  // TODO preserve BPI_TRACEOVER semantics
-        case DBGCOMMAND_STOP: stop(); break;
+        case DBGCOMMAND_RUN: bSuccess = run(); break;
+        case DBGCOMMAND_STEPINTO: bSuccess = stepInto(); break;
+        case DBGCOMMAND_STEPOVER: bSuccess = stepOver(); break;
+        case DBGCOMMAND_TRACEINTO:
+#ifdef Q_OS_WIN
+            bSuccess = stepIntoByHandle(getXInfoDB()->getCurrentThreadHandle(), XInfoDB::BPI_TRACEINTO);
+#else
+            bSuccess = stepIntoById(getXInfoDB()->getCurrentThreadId(), XInfoDB::BPI_TRACEINTO);
+#endif
+            break;
+        case DBGCOMMAND_TRACEOVER:
+#ifdef Q_OS_WIN
+            bSuccess = stepOverByHandle(getXInfoDB()->getCurrentThreadHandle(), XInfoDB::BPI_TRACEOVER);
+#else
+            bSuccess = stepOverById(getXInfoDB()->getCurrentThreadId(), XInfoDB::BPI_TRACEOVER);
+#endif
+            break;
+        case DBGCOMMAND_STOP: bSuccess = stop(); break;
     }
+
+    emit debuggerCommandFinished(nCommand, nRequestId, bSuccess);
 }
 
 void XAbstractDebugger::testSlot(X_ID nThreadId)

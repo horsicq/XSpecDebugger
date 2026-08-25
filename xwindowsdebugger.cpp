@@ -320,7 +320,7 @@ bool XWindowsDebugger::stepOverByHandle(X_HANDLE hThread, XInfoDB::BPI bpInfo)
     bResult = getXInfoDB()->stepOver_Handle(hThread, bpInfo);
 
     if (bResult) {
-        getXInfoDB()->resumeAllThreads();
+        bResult = getXInfoDB()->resumeAllThreads();
     }
 
     return bResult;

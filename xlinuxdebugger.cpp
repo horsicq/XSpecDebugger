@@ -323,6 +323,11 @@ bool XLinuxDebugger::load()
 
     emit eventCreateThread(&threadInfo);
 
+    if (hasPendingTermination()) {
+        finishPendingTermination();
+        return true;
+    }
+
     // TODO if BP on system
 
     getXInfoDB()->setThreadStatus(_stateStart.nThreadId, XInfoDB::THREAD_STATUS_PAUSED);
@@ -342,7 +347,14 @@ bool XLinuxDebugger::load()
     //                getXInfoDB()->_lockId(nProcessID);
     _eventBreakPoint(&breakPointInfo);
 
-    startDebugLoop();
+    // A script callback can call stop() synchronously from the initial breakpoint, before a
+    // timer exists. The callback has unwound here, so finish that pending kill/reap now instead
+    // of starting a normal loop for a dead target.
+    if (hasPendingTermination()) {
+        finishPendingTermination();
+    } else {
+        startDebugLoop();
+    }
     bResult = true;
 
     return bResult;
@@ -375,14 +387,23 @@ bool XLinuxDebugger::attach()
             listThreadIDs.append(nProcessID);
         }
 
-        bool bAttached = false;
+        QList<qint64> listAttachedThreadIDs;
 
         for (qint64 nTID : listThreadIDs) {
             if (ptrace(PTRACE_ATTACH, nTID, 0, 0) != -1) {
                 qint32 nStatus = 0;
-                waitpid(nTID, &nStatus, __WALL);
-                setPtraceOptions(nTID);
-                bAttached = true;
+                pid_t nWaitResult = 0;
+                do {
+                    nWaitResult = waitpid(nTID, &nStatus, __WALL);
+                } while ((nWaitResult == -1) && (errno == EINTR));
+
+                if ((nWaitResult == nTID) && WIFSTOPPED(nStatus) && setPtraceOptions(nTID)) {
+                    listAttachedThreadIDs.append(nTID);
+                } else {
+                    // Never publish a TID that this tracer cannot wait/control. Cleanup drains
+                    // only the successfully attached set, so a failed attach cannot hang it.
+                    ptrace(PTRACE_DETACH, nTID, 0, 0);
+                }
             } else {
 #ifdef QT_DEBUG
                 qDebug("Cannot PTRACE_ATTACH %lld: %s", (long long)nTID, strerror(errno));
@@ -390,7 +411,17 @@ bool XLinuxDebugger::attach()
             }
         }
 
-        if (bAttached) {
+        // The thread-group leader is the stable process identity used by wait/stop. If attaching
+        // it failed, release any partial attaches rather than advertising a broken session.
+        if (!listAttachedThreadIDs.contains(nProcessID)) {
+            for (qint64 nTID : listAttachedThreadIDs) {
+                ptrace(PTRACE_DETACH, nTID, 0, 0);
+            }
+            emit errorMessage(QString("%1: %2").arg(tr("Cannot attach to process")).arg(nProcessID));
+            return false;
+        }
+
+        if (!listAttachedThreadIDs.isEmpty()) {
             setDebugActive(true);
 
             // The target's executable path is the /proc/<pid>/exe symlink.
@@ -408,7 +439,7 @@ bool XLinuxDebugger::attach()
 
             emit eventCreateProcess(&processInfo);
 
-            for (qint64 nTID : listThreadIDs) {
+            for (qint64 nTID : listAttachedThreadIDs) {
                 XInfoDB::THREAD_INFO threadInfo = {};
                 threadInfo.nThreadID = nTID;
                 threadInfo.threadStatus = XInfoDB::THREAD_STATUS_PAUSED;
@@ -417,7 +448,11 @@ bool XLinuxDebugger::attach()
                 emit eventCreateThread(&threadInfo);
             }
 
-            startDebugLoop();
+            if (hasPendingTermination()) {
+                finishPendingTermination();
+            } else {
+                startDebugLoop();
+            }
 
             bResult = true;
         }
@@ -441,9 +476,7 @@ void XLinuxDebugger::cleanUp()
     }
 #endif
 
-    stop();
-    wait();
-    // TODO stopDebugEvent
+    XUnixDebugger::cleanUp();
 }
 
 QString XLinuxDebugger::getArch()

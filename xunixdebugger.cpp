@@ -21,6 +21,7 @@
 #include "xunixdebugger.h"
 
 #include <QProcess>
+#include <QThread>
 
 #include <errno.h>
 #include <signal.h>
@@ -44,10 +45,18 @@ XInfoDB::BPT getNativeSoftwareBreakpointType()
 XUnixDebugger::XUnixDebugger(QObject *pParent, XInfoDB *pXInfoDB) : XAbstractDebugger(pParent, pXInfoDB)
 {
     g_pTimer = nullptr;
+    g_bTerminationPending = false;
+    g_nTerminationProcessId = 0;
+    g_nTerminationExitThreadId = 0;
+    g_nTerminationExitCode = 0;
 }
 
 bool XUnixDebugger::run()
 {
+    if (g_bTerminationPending) {
+        return false;
+    }
+
     return resumeAllThreads();
 }
 
@@ -63,26 +72,244 @@ bool XUnixDebugger::resumeAllThreads()
 
 bool XUnixDebugger::stop()
 {
-    bool bResult = false;
-
-    if (getXInfoDB()->getThreadInfos()->count()) {
-        if (kill(getXInfoDB()->getProcessInfo()->nProcessID, SIGKILL) != -1) {
-            stopDebugLoop();
-
-            setDebugActive(false);
-
-            bResult = true;
-        }
+    if (g_bTerminationPending) {
+        return true;
     }
 
-    return bResult;
+    XInfoDB::PROCESS_INFO *pProcessInfo = getXInfoDB()->getProcessInfo();
+    const X_ID nProcessId = pProcessInfo->nProcessID;
+
+    if (!nProcessId) {
+        return false;
+    }
+
+    // Stopping is a state transition, not completion. In particular, Linux reports a
+    // PTRACE_EVENT_EXIT stop before the final wait status; deleting the polling timer here
+    // strands that tracee and prevents eventExitProcess from reaching the GUI/console.
+    g_bTerminationPending = true;
+    g_nTerminationProcessId = nProcessId;
+    g_nTerminationExitThreadId = nProcessId;
+    g_nTerminationExitCode = SIGKILL;
+    g_sTerminationFileName = pProcessInfo->sFileName;
+    g_setTerminationThreadIds.clear();
+    _refreshTerminationThreads();
+
+    if ((::kill(static_cast<pid_t>(nProcessId), SIGKILL) == -1) && (errno != ESRCH)) {
+        const qint32 nKillError = errno;
+        g_bTerminationPending = false;
+        g_nTerminationProcessId = 0;
+        g_nTerminationExitThreadId = 0;
+        g_nTerminationExitCode = 0;
+        g_sTerminationFileName.clear();
+        g_setTerminationThreadIds.clear();
+        emit errorMessage(QString("%1: %2").arg(tr("Cannot terminate process"), QString::fromLocal8Bit(strerror(nKillError))));
+        return false;
+    }
+
+    // Include a TID registered by any nested callback before this request returns. Clone events
+    // not yet consumed are discovered through PTRACE_GETEVENTMSG in the drain itself.
+    _refreshTerminationThreads();
+
+    return true;
 }
 
 void XUnixDebugger::cleanUp()
 {
-    XUnixDebugger::stop();
-    XUnixDebugger::wait();
-    // TODO stopDebugEvent
+    if (getXInfoDB()->getProcessInfo()->nProcessID) {
+        XUnixDebugger::stop();
+    }
+
+    // requestShutdown() deliberately clears isDebugActive(), so wait() cannot be used for
+    // teardown. Drain independently of that flag and do not let the tracer disappear while
+    // Linux still has a PTRACE_EVENT_EXIT stop outstanding.
+    finishPendingTermination();
+    stopDebugLoop();
+    XAbstractDebugger::cleanUp();
+}
+
+bool XUnixDebugger::hasPendingTermination() const
+{
+    return g_bTerminationPending;
+}
+
+void XUnixDebugger::finishPendingTermination()
+{
+    if (g_bTerminationPending) {
+        // Direct create-process/thread callbacks may request Stop while the loader is still
+        // publishing successfully traced TIDs. Refresh after those callbacks unwind so cleanup
+        // does not finalize on the leader while a later registered sibling remains waitable.
+        _refreshTerminationThreads();
+        _drainTermination(true);
+    }
+}
+
+void XUnixDebugger::_refreshTerminationThreads()
+{
+    if (!g_bTerminationPending || !g_nTerminationProcessId) {
+        return;
+    }
+
+#if defined(Q_OS_LINUX)
+    const QList<XInfoDB::THREAD_INFO> listThreadInfos = *(getXInfoDB()->getThreadInfos());
+    for (const XInfoDB::THREAD_INFO &threadInfo : listThreadInfos) {
+        if (threadInfo.nThreadID) {
+            g_setTerminationThreadIds.insert(threadInfo.nThreadID);
+        }
+    }
+#endif
+
+    // Cache only TIDs known to be ptrace-owned by this debugger. A raw /proc snapshot may
+    // contain threads whose attach failed; treating those as waitable can hang shutdown forever.
+    // Darwin exposes one wait status for the process, so its Mach thread IDs are not added here.
+    g_setTerminationThreadIds.insert(g_nTerminationProcessId);
+}
+
+bool XUnixDebugger::_drainTermination(bool bWait)
+{
+    while (g_bTerminationPending) {
+        bool bProgress = false;
+
+#if defined(Q_OS_LINUX)
+        const QList<X_ID> listThreadIds = g_setTerminationThreadIds.values();
+        for (X_ID nThreadId : listThreadIds) {
+            qint32 nStatus = 0;
+            qint32 nWaitOptions = WNOHANG | __WALL;
+
+            pid_t nWaitResult = 0;
+            do {
+                nWaitResult = ::waitpid(static_cast<pid_t>(nThreadId), &nStatus, nWaitOptions);
+            } while ((nWaitResult == -1) && (errno == EINTR));
+
+            if (nWaitResult > 0) {
+                bProgress = true;
+
+                if (WIFSTOPPED(nStatus)) {
+                    const quint32 nPtraceEvent = static_cast<quint32>(nStatus) >> 16;
+
+                    if (nPtraceEvent == PTRACE_EVENT_CLONE) {
+                        unsigned long nNewThreadId = 0;
+                        if ((ptrace(PTRACE_GETEVENTMSG, nWaitResult, nullptr, &nNewThreadId) != -1) && nNewThreadId) {
+                            g_setTerminationThreadIds.insert(static_cast<X_ID>(nNewThreadId));
+                        }
+                    }
+
+                    // PTRACE_EVENT_EXIT must be continued before waitpid can return the final
+                    // WIFEXITED/WIFSIGNALED state. For an older pending stop, re-deliver SIGKILL.
+                    const qint32 nSignal = (nPtraceEvent == PTRACE_EVENT_EXIT) ? 0 : SIGKILL;
+                    void *pSignal = reinterpret_cast<void *>(static_cast<quintptr>(nSignal));
+                    if ((ptrace(PTRACE_CONT, nWaitResult, nullptr, pSignal) == -1) && (errno != ESRCH)) {
+                        emit warningMessage(QString("%1 %2: %3").arg(tr("Cannot continue terminating thread"))
+                                                .arg(static_cast<qint64>(nWaitResult))
+                                                .arg(QString::fromLocal8Bit(strerror(errno))));
+                    }
+                } else if (WIFEXITED(nStatus) || WIFSIGNALED(nStatus)) {
+                    const X_ID nExitedThreadId = static_cast<X_ID>(nWaitResult);
+                    if (nExitedThreadId == g_nTerminationProcessId) {
+                        g_nTerminationExitThreadId = nExitedThreadId;
+                        g_nTerminationExitCode = WIFEXITED(nStatus) ? static_cast<quint32>(WEXITSTATUS(nStatus))
+                                                                   : static_cast<quint32>(WTERMSIG(nStatus));
+                    }
+                    g_setTerminationThreadIds.remove(nExitedThreadId);
+                    getXInfoDB()->removeThreadInfo(nExitedThreadId);
+                }
+            } else if ((nWaitResult == -1) && (errno == ECHILD)) {
+                // The set contains only successfully traced TIDs. For a specific TID on the
+                // tracer thread, a live child yields 0 with WNOHANG; ECHILD means its wait
+                // relationship/status has already been consumed. No unrelated child is touched.
+                g_setTerminationThreadIds.remove(nThreadId);
+                getXInfoDB()->removeThreadInfo(nThreadId);
+                bProgress = true;
+            } else if (nWaitResult == -1) {
+                const qint32 nWaitError = errno;
+                emit errorMessage(QString("%1 %2: %3").arg(tr("Cannot reap terminating thread"))
+                                      .arg(static_cast<qint64>(nThreadId))
+                                      .arg(QString::fromLocal8Bit(strerror(nWaitError))));
+                // A permanent waitpid error must not spin the shutdown worker forever. The
+                // target already has SIGKILL pending; dropping tracer ownership during teardown
+                // is the only remaining kernel-level fallback.
+                g_setTerminationThreadIds.remove(nThreadId);
+                getXInfoDB()->removeThreadInfo(nThreadId);
+                bProgress = true;
+            }
+        }
+#elif defined(Q_OS_MACOS)
+        qint32 nStatus = 0;
+        pid_t nWaitResult = 0;
+        do {
+            nWaitResult = ::waitpid(static_cast<pid_t>(g_nTerminationProcessId), &nStatus, WNOHANG);
+        } while ((nWaitResult == -1) && (errno == EINTR));
+
+        if (nWaitResult > 0) {
+            bProgress = true;
+            if (WIFSTOPPED(nStatus)) {
+                if ((ptrace(PT_CONTINUE, nWaitResult, reinterpret_cast<caddr_t>(1), SIGKILL) == -1) && (errno != ESRCH)) {
+                    emit warningMessage(QString("%1: %2").arg(tr("Cannot continue terminating process"), QString::fromLocal8Bit(strerror(errno))));
+                }
+            } else if (WIFEXITED(nStatus) || WIFSIGNALED(nStatus)) {
+                g_nTerminationExitThreadId = static_cast<X_ID>(nWaitResult);
+                g_nTerminationExitCode = WIFEXITED(nStatus) ? static_cast<quint32>(WEXITSTATUS(nStatus))
+                                                            : static_cast<quint32>(WTERMSIG(nStatus));
+                g_setTerminationThreadIds.clear();
+            }
+        } else if ((nWaitResult == -1) && (errno == ECHILD)) {
+            errno = 0;
+            if ((::kill(static_cast<pid_t>(g_nTerminationProcessId), 0) == -1) && (errno == ESRCH)) {
+                g_setTerminationThreadIds.clear();
+                bProgress = true;
+            }
+        }
+#endif
+
+        if (g_setTerminationThreadIds.isEmpty()) {
+            _completeProcessExit(g_nTerminationProcessId, g_nTerminationExitThreadId, g_nTerminationExitCode, g_sTerminationFileName);
+            return true;
+        }
+
+        if (!bWait) {
+            return false;
+        }
+
+        if (!bProgress) {
+            QThread::msleep(1);
+        }
+    }
+
+    return true;
+}
+
+void XUnixDebugger::_completeProcessExit(X_ID nProcessId, X_ID nThreadId, quint32 nExitCode, const QString &sFileName)
+{
+    XInfoDB::EXITPROCESS_INFO exitProcessInfo = {};
+    exitProcessInfo.nProcessID = nProcessId;
+    exitProcessInfo.nThreadID = nThreadId;
+    exitProcessInfo.nExitCode = nExitCode;
+    exitProcessInfo.sFileName = sFileName;
+
+    const QList<XInfoDB::THREAD_INFO> listThreadInfos = *(getXInfoDB()->getThreadInfos());
+    for (const XInfoDB::THREAD_INFO &threadInfo : listThreadInfos) {
+        getXInfoDB()->removeThreadInfo(threadInfo.nThreadID);
+    }
+    getXInfoDB()->setCurrentThreadId(0);
+
+    // Teardown disconnected the GUI before requestShutdown(); user-facing exit delivery is only
+    // meaningful for a live session. The local event record remains valid for all current Direct
+    // and BlockingQueued connections until emit returns.
+    if (!isShutdownRequested()) {
+        emit eventExitProcess(&exitProcessInfo);
+    }
+
+    XInfoDB::PROCESS_INFO *pProcessInfo = getXInfoDB()->getProcessInfo();
+    pProcessInfo->nProcessID = 0;
+    pProcessInfo->nMainThreadID = 0;
+    setDebugActive(false);
+    stopDebugLoop();
+
+    g_bTerminationPending = false;
+    g_nTerminationProcessId = 0;
+    g_nTerminationExitThreadId = 0;
+    g_nTerminationExitCode = 0;
+    g_sTerminationFileName.clear();
+    g_setTerminationThreadIds.clear();
 }
 
 XUnixDebugger::EXECUTEPROCESS XUnixDebugger::executeProcess(const QString &sFileName, const QString &sDirectory)
@@ -369,6 +596,10 @@ void XUnixDebugger::stopDebugLoop()
 
 bool XUnixDebugger::stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo)
 {
+    if (g_bTerminationPending) {
+        return false;
+    }
+
     bool bResult = false;
 
     bResult = getXInfoDB()->stepInto_Id(nThreadId, bpInfo);
@@ -382,6 +613,10 @@ bool XUnixDebugger::stepIntoById(X_ID nThreadId, XInfoDB::BPI bpInfo)
 
 bool XUnixDebugger::stepOverById(X_ID nThreadId, XInfoDB::BPI bpInfo)
 {
+    if (g_bTerminationPending) {
+        return false;
+    }
+
     bool bResult = false;
 
     bResult = getXInfoDB()->stepOver_Id(nThreadId, bpInfo);
@@ -405,6 +640,11 @@ bool XUnixDebugger::stepOver()
 
 void XUnixDebugger::_debugEvent()
 {
+    if (g_bTerminationPending) {
+        _drainTermination(false);
+        return;
+    }
+
     if (isDebugActive()) {
         // bool bContinue = false;
 
@@ -414,44 +654,35 @@ void XUnixDebugger::_debugEvent()
             qint32 nWaitOptions = WNOHANG;
 #if defined(Q_OS_LINUX)
             nWaitOptions |= __WALL;
+#ifdef __WNOTHREAD
+            nWaitOptions |= __WNOTHREAD;
 #endif
-            STATE state = waitForSignal(-1, nWaitOptions);
+#endif
+            qint64 nWaitTarget = -1;
+#if defined(Q_OS_MACOS)
+            // Darwin debugger threads are Mach objects, not waitpid children. Poll only the
+            // debuggee PID so an unrelated QProcess child cannot be consumed as a debug event.
+            nWaitTarget = getXInfoDB()->getProcessInfo()->nProcessID;
+#endif
+            STATE state = waitForSignal(nWaitTarget, nWaitOptions);
 
             if (state.bIsValid) {
                 BPSTATUS result = BPSTATUS_UNKNOWN;
 
-                // WIFEXITED/WIFSIGNALED describe a thread that has actually gone away. A terminal
-                // wait status for a secondary TID is not a process exit: remove only that thread
-                // and keep polling the remaining tracees. The thread-group leader (PID == TID) is
-                // the process-lifetime event.
+                // WIFEXITED/WIFSIGNALED describe a tracee that has actually gone away. On Linux
+                // the thread-group leader can report its final status before sibling TIDs have
+                // been reaped, so process completion is the last tracked thread, not PID == TID.
+                // Darwin exposes one waitpid status for the whole process and completes directly.
                 if ((state.debuggerStatus == DEBUGGER_STATUS_EXIT) || (state.debuggerStatus == DEBUGGER_STATUS_SIGNAL)) {
                     XInfoDB::PROCESS_INFO *pProcessInfo = getXInfoDB()->getProcessInfo();
-                    bool bProcessExit = (state.nThreadId == pProcessInfo->nProcessID);
+#if defined(Q_OS_MACOS)
+                    _completeProcessExit(pProcessInfo->nProcessID, state.nThreadId, state.nCode, pProcessInfo->sFileName);
+#else
+                    getXInfoDB()->removeThreadInfo(state.nThreadId);
 
-                    if (bProcessExit) {
-                        XInfoDB::EXITPROCESS_INFO exitProcessInfo = {};
-                        exitProcessInfo.nProcessID = pProcessInfo->nProcessID;
-                        exitProcessInfo.nThreadID = state.nThreadId;
-                        exitProcessInfo.nExitCode = state.nCode;
-                        exitProcessInfo.sFileName = pProcessInfo->sFileName;
-
-                        // A leader's final status means no live tracees remain, but remove every
-                        // cached record defensively so cleanup cannot act on stale TIDs.
-                        const QList<XInfoDB::THREAD_INFO> listThreadInfos = *(getXInfoDB()->getThreadInfos());
-                        for (const XInfoDB::THREAD_INFO &threadInfo : listThreadInfos) {
-                            getXInfoDB()->removeThreadInfo(threadInfo.nThreadID);
-                        }
-
-                        getXInfoDB()->setCurrentThreadId(0);
-                        emit eventExitProcess(&exitProcessInfo);
-
-                        pProcessInfo->nProcessID = 0;
-                        pProcessInfo->nMainThreadID = 0;
-                        setDebugActive(false);
-                        stopDebugLoop();
+                    if (getXInfoDB()->getThreadInfos()->isEmpty()) {
+                        _completeProcessExit(pProcessInfo->nProcessID, state.nThreadId, state.nCode, pProcessInfo->sFileName);
                     } else {
-                        getXInfoDB()->removeThreadInfo(state.nThreadId);
-
                         if (getXInfoDB()->getCurrentThreadId() == state.nThreadId) {
                             getXInfoDB()->setCurrentThreadId(0);
                         }
@@ -461,6 +692,7 @@ void XUnixDebugger::_debugEvent()
                         exitThreadInfo.nExitCode = state.nCode;
                         emit eventExitThread(&exitThreadInfo);
                     }
+#endif
 
                     return;
                 }
@@ -623,6 +855,14 @@ void XUnixDebugger::_debugEvent()
                 //                    g_mapBpOver.remove(state.nThreadId);
                 //                }
 
+                // A DirectConnection script callback may request stop from inside
+                // _handleBreakpoint(). Do not resume or mutate breakpoint state after SIGKILL;
+                // the outer debug-event frame is now unwound enough to drain safely.
+                if (g_bTerminationPending) {
+                    finishPendingTermination();
+                    return;
+                }
+
                 if (result == BPSTATUS_UNKNOWN) {
                     //                    if (true) {
                     //                        qDebug("SYSTEM BP SOFTWARE");
@@ -676,6 +916,10 @@ void XUnixDebugger::_debugEvent()
 
 XAbstractDebugger::BPSTATUS XUnixDebugger::_handleBreakpoint(STATE state, XInfoDB::BPT bpType)
 {
+    if (g_bTerminationPending) {
+        return BPSTATUS_EXIT;
+    }
+
     BPSTATUS result = BPSTATUS_UNKNOWN;
 
     XInfoDB::BREAKPOINT _currentBP = {};
@@ -722,6 +966,10 @@ XAbstractDebugger::BPSTATUS XUnixDebugger::_handleBreakpoint(STATE state, XInfoD
 
             _eventBreakPoint(&breakPointInfo);
 
+            if (g_bTerminationPending) {
+                return BPSTATUS_EXIT;
+            }
+
             if (!bOriginalInstructionRestored) {
                 emit errorMessage(QString("%1: 0x%2").arg(tr("Cannot restore software breakpoint")).arg(_currentBP.nAddress, 0, 16));
                 return BPSTATUS_CALLBACK;
@@ -754,6 +1002,10 @@ XAbstractDebugger::BPSTATUS XUnixDebugger::_handleBreakpoint(STATE state, XInfoD
             breakPointInfo.vInfo = _currentBP.vInfo;
 
             _eventBreakPoint(&breakPointInfo);
+
+            if (g_bTerminationPending) {
+                return BPSTATUS_EXIT;
+            }
 
             result = BPSTATUS_CALLBACK;
         } else if (bpType == XInfoDB::BPT_CODE_STEP_TO_RESTORE) {
