@@ -198,7 +198,8 @@ bool XUnixDebugger::_drainTermination(bool bWait)
                     const qint32 nSignal = (nPtraceEvent == PTRACE_EVENT_EXIT) ? 0 : SIGKILL;
                     void *pSignal = reinterpret_cast<void *>(static_cast<quintptr>(nSignal));
                     if ((ptrace(PTRACE_CONT, nWaitResult, nullptr, pSignal) == -1) && (errno != ESRCH)) {
-                        emit warningMessage(QString("%1 %2: %3").arg(tr("Cannot continue terminating thread"))
+                        emit warningMessage(QString("%1 %2: %3")
+                                                .arg(tr("Cannot continue terminating thread"))
                                                 .arg(static_cast<qint64>(nWaitResult))
                                                 .arg(QString::fromLocal8Bit(strerror(errno))));
                     }
@@ -206,8 +207,7 @@ bool XUnixDebugger::_drainTermination(bool bWait)
                     const X_ID nExitedThreadId = static_cast<X_ID>(nWaitResult);
                     if (nExitedThreadId == g_nTerminationProcessId) {
                         g_nTerminationExitThreadId = nExitedThreadId;
-                        g_nTerminationExitCode = WIFEXITED(nStatus) ? static_cast<quint32>(WEXITSTATUS(nStatus))
-                                                                   : static_cast<quint32>(WTERMSIG(nStatus));
+                        g_nTerminationExitCode = WIFEXITED(nStatus) ? static_cast<quint32>(WEXITSTATUS(nStatus)) : static_cast<quint32>(WTERMSIG(nStatus));
                     }
                     g_setTerminationThreadIds.remove(nExitedThreadId);
                     getXInfoDB()->removeThreadInfo(nExitedThreadId);
@@ -221,9 +221,8 @@ bool XUnixDebugger::_drainTermination(bool bWait)
                 bProgress = true;
             } else if (nWaitResult == -1) {
                 const qint32 nWaitError = errno;
-                emit errorMessage(QString("%1 %2: %3").arg(tr("Cannot reap terminating thread"))
-                                      .arg(static_cast<qint64>(nThreadId))
-                                      .arg(QString::fromLocal8Bit(strerror(nWaitError))));
+                emit errorMessage(
+                    QString("%1 %2: %3").arg(tr("Cannot reap terminating thread")).arg(static_cast<qint64>(nThreadId)).arg(QString::fromLocal8Bit(strerror(nWaitError))));
                 // A permanent waitpid error must not spin the shutdown worker forever. The
                 // target already has SIGKILL pending; dropping tracer ownership during teardown
                 // is the only remaining kernel-level fallback.
@@ -247,8 +246,7 @@ bool XUnixDebugger::_drainTermination(bool bWait)
                 }
             } else if (WIFEXITED(nStatus) || WIFSIGNALED(nStatus)) {
                 g_nTerminationExitThreadId = static_cast<X_ID>(nWaitResult);
-                g_nTerminationExitCode = WIFEXITED(nStatus) ? static_cast<quint32>(WEXITSTATUS(nStatus))
-                                                            : static_cast<quint32>(WTERMSIG(nStatus));
+                g_nTerminationExitCode = WIFEXITED(nStatus) ? static_cast<quint32>(WEXITSTATUS(nStatus)) : static_cast<quint32>(WTERMSIG(nStatus));
                 g_setTerminationThreadIds.clear();
             }
         } else if ((nWaitResult == -1) && (errno == ECHILD)) {
@@ -489,8 +487,7 @@ XUnixDebugger::STATE XUnixDebugger::waitForSignal(qint64 nThreadID, qint32 nOpti
                 // bookkeeping distinguishes a requested single-step from a software trap.
                 XInfoDB::BREAKPOINT stepBreakpoint = getXInfoDB()->findBreakPointByThreadID(nChildThreadId, XInfoDB::BPT_CODE_STEP_FLAG);
                 XInfoDB::BREAKPOINT restoreBreakpoint = getXInfoDB()->findBreakPointByThreadID(nChildThreadId, XInfoDB::BPT_CODE_STEP_TO_RESTORE);
-                result.debuggerStatus = (!stepBreakpoint.sUUID.isEmpty() || !restoreBreakpoint.sUUID.isEmpty()) ? DEBUGGER_STATUS_STEP
-                                                                                                                : DEBUGGER_STATUS_BREAKPOINT;
+                result.debuggerStatus = (!stepBreakpoint.sUUID.isEmpty() || !restoreBreakpoint.sUUID.isEmpty()) ? DEBUGGER_STATUS_STEP : DEBUGGER_STATUS_BREAKPOINT;
 #endif
             } else if (result.nCode == SIGABRT) {
                 result.debuggerStatus = DEBUGGER_STATUS_STOP;
@@ -887,8 +884,7 @@ void XUnixDebugger::_debugEvent()
                 if (result == BPSTATUS_UNKNOWN) {
                     qint32 nSignal = 0;
 
-                    if (((state.debuggerStatus == DEBUGGER_STATUS_EXCEPTION) || (state.debuggerStatus == DEBUGGER_STATUS_STOP)) &&
-                        (state.nCode != SIGSTOP)) {
+                    if (((state.debuggerStatus == DEBUGGER_STATUS_EXCEPTION) || (state.debuggerStatus == DEBUGGER_STATUS_STOP)) && (state.nCode != SIGSTOP)) {
                         // Preserve signal-delivery semantics for faults and ordinary signals. A
                         // debugger-generated SIGSTOP is deliberately suppressed when continuing.
                         nSignal = state.nCode;
@@ -902,9 +898,7 @@ void XUnixDebugger::_debugEvent()
 #endif
 
                     if (!resumeThread(state.nThreadId, nSignal)) {
-                        emit errorMessage(QString("%1 %2: %3").arg(tr("Cannot continue thread"))
-                                              .arg(state.nThreadId)
-                                              .arg(QString::fromLocal8Bit(strerror(errno))));
+                        emit errorMessage(QString("%1 %2: %3").arg(tr("Cannot continue thread")).arg(state.nThreadId).arg(QString::fromLocal8Bit(strerror(errno))));
                     }
                 } else if (result == BPSTATUS_HANDLED) {
                     resumeAllThreads();
@@ -944,16 +938,15 @@ XAbstractDebugger::BPSTATUS XUnixDebugger::_handleBreakpoint(STATE state, XInfoD
         getXInfoDB()->suspendAllThreads();
 
         if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_BRK) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_UD2) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_HLT) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_CLI) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_STI) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSB) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSD) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSB) ||
-            (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSD) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG)) {
+            (bpType == XInfoDB::BPT_CODE_SOFTWARE_UD2) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_HLT) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_CLI) ||
+            (bpType == XInfoDB::BPT_CODE_SOFTWARE_STI) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSB) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INSD) ||
+            (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSB) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_OUTSD) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG)) {
             if ((bpType == XInfoDB::BPT_CODE_SOFTWARE_INT1) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3) || (bpType == XInfoDB::BPT_CODE_SOFTWARE_INT3LONG)) {
                 getXInfoDB()->setCurrentIntructionPointer_Id(state.nThreadId, _currentBP.nAddress);  // go to prev instruction address
             }
 
-            const bool bOriginalInstructionRestored = _currentBP.bOneShot ? getXInfoDB()->removeBreakPoint(_currentBP.sUUID)
-                                                                          : getXInfoDB()->disableBreakPoint(_currentBP.sUUID);
+            const bool bOriginalInstructionRestored =
+                _currentBP.bOneShot ? getXInfoDB()->removeBreakPoint(_currentBP.sUUID) : getXInfoDB()->disableBreakPoint(_currentBP.sUUID);
 
             XInfoDB::BREAKPOINT_INFO breakPointInfo = {};
             breakPointInfo.nAddress = state.nAddress;

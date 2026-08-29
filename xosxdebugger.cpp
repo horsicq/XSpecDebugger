@@ -122,8 +122,8 @@ kern_return_t sendExceptionReply(DARWIN_EXCEPTION_MESSAGE *pMessage)
 {
     kern_return_t result = KERN_SUCCESS;
     do {
-        result = mach_msg(&pMessage->reply.header, MACH_SEND_MSG | MACH_SEND_INTERRUPT, pMessage->reply.header.msgh_size, 0,
-                          MACH_PORT_NULL, MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
+        result = mach_msg(&pMessage->reply.header, MACH_SEND_MSG | MACH_SEND_INTERRUPT, pMessage->reply.header.msgh_size, 0, MACH_PORT_NULL, MACH_MSG_TIMEOUT_NONE,
+                          MACH_PORT_NULL);
     } while (result == MACH_SEND_INTERRUPTED);
 
     return result;
@@ -247,9 +247,8 @@ void terminateAndReapChild(pid_t nProcessID)
 
 extern "C" boolean_t mach_exc_server(mach_msg_header_t *pRequest, mach_msg_header_t *pReply);
 
-extern "C" kern_return_t catch_mach_exception_raise(mach_port_t hExceptionPort, mach_port_t hThread, mach_port_t hTask,
-                                                     exception_type_t exceptionType, mach_exception_data_t pCodes,
-                                                     mach_msg_type_number_t nCodeCount)
+extern "C" kern_return_t catch_mach_exception_raise(mach_port_t hExceptionPort, mach_port_t hThread, mach_port_t hTask, exception_type_t exceptionType,
+                                                    mach_exception_data_t pCodes, mach_msg_type_number_t nCodeCount)
 {
     Q_UNUSED(hExceptionPort)
 
@@ -273,10 +272,9 @@ extern "C" kern_return_t catch_mach_exception_raise(mach_port_t hExceptionPort, 
     return KERN_SUCCESS;
 }
 
-extern "C" kern_return_t catch_mach_exception_raise_state(mach_port_t hExceptionPort, exception_type_t exceptionType,
-                                                           const mach_exception_data_t pCodes, mach_msg_type_number_t nCodeCount, int *pFlavor,
-                                                           const thread_state_t pOldState, mach_msg_type_number_t nOldStateCount,
-                                                           thread_state_t pNewState, mach_msg_type_number_t *pNewStateCount)
+extern "C" kern_return_t catch_mach_exception_raise_state(mach_port_t hExceptionPort, exception_type_t exceptionType, const mach_exception_data_t pCodes,
+                                                          mach_msg_type_number_t nCodeCount, int *pFlavor, const thread_state_t pOldState,
+                                                          mach_msg_type_number_t nOldStateCount, thread_state_t pNewState, mach_msg_type_number_t *pNewStateCount)
 {
     Q_UNUSED(hExceptionPort)
     Q_UNUSED(exceptionType)
@@ -291,10 +289,10 @@ extern "C" kern_return_t catch_mach_exception_raise_state(mach_port_t hException
     return KERN_FAILURE;
 }
 
-extern "C" kern_return_t catch_mach_exception_raise_state_identity(
-    mach_port_t hExceptionPort, mach_port_t hThread, mach_port_t hTask, exception_type_t exceptionType, mach_exception_data_t pCodes,
-    mach_msg_type_number_t nCodeCount, int *pFlavor, thread_state_t pOldState, mach_msg_type_number_t nOldStateCount, thread_state_t pNewState,
-    mach_msg_type_number_t *pNewStateCount)
+extern "C" kern_return_t catch_mach_exception_raise_state_identity(mach_port_t hExceptionPort, mach_port_t hThread, mach_port_t hTask, exception_type_t exceptionType,
+                                                                   mach_exception_data_t pCodes, mach_msg_type_number_t nCodeCount, int *pFlavor,
+                                                                   thread_state_t pOldState, mach_msg_type_number_t nOldStateCount, thread_state_t pNewState,
+                                                                   mach_msg_type_number_t *pNewStateCount)
 {
     Q_UNUSED(hExceptionPort)
     Q_UNUSED(pFlavor)
@@ -359,8 +357,7 @@ bool XOSXDebugger::installExceptionPort(task_t hTask)
 
     if (result == KERN_SUCCESS) {
         m_pDarwinState->nSavedPortCount = EXC_TYPES_COUNT;
-        result = task_get_exception_ports(hTask, m_pDarwinState->exceptionMask, m_pDarwinState->savedMasks,
-                                          &m_pDarwinState->nSavedPortCount, m_pDarwinState->savedPorts,
+        result = task_get_exception_ports(hTask, m_pDarwinState->exceptionMask, m_pDarwinState->savedMasks, &m_pDarwinState->nSavedPortCount, m_pDarwinState->savedPorts,
                                           m_pDarwinState->savedBehaviors, m_pDarwinState->savedFlavors);
         if (result != KERN_SUCCESS) {
             m_pDarwinState->nSavedPortCount = 0;
@@ -368,8 +365,8 @@ bool XOSXDebugger::installExceptionPort(task_t hTask)
     }
 
     if (result == KERN_SUCCESS) {
-        result = task_set_exception_ports(hTask, m_pDarwinState->exceptionMask, m_pDarwinState->hExceptionPort,
-                                          EXCEPTION_DEFAULT | MACH_EXCEPTION_CODES, THREAD_STATE_NONE);
+        result =
+            task_set_exception_ports(hTask, m_pDarwinState->exceptionMask, m_pDarwinState->hExceptionPort, EXCEPTION_DEFAULT | MACH_EXCEPTION_CODES, THREAD_STATE_NONE);
     }
 
     if (result != KERN_SUCCESS) {
@@ -388,8 +385,8 @@ void XOSXDebugger::shutdownExceptionPort(bool bForwardPending)
 
     if ((m_pDarwinState->hTask != MACH_PORT_NULL) && m_pDarwinState->nSavedPortCount) {
         for (mach_msg_type_number_t i = 0; i < m_pDarwinState->nSavedPortCount; i++) {
-            task_set_exception_ports(m_pDarwinState->hTask, m_pDarwinState->savedMasks[i], m_pDarwinState->savedPorts[i],
-                                     m_pDarwinState->savedBehaviors[i], m_pDarwinState->savedFlavors[i]);
+            task_set_exception_ports(m_pDarwinState->hTask, m_pDarwinState->savedMasks[i], m_pDarwinState->savedPorts[i], m_pDarwinState->savedBehaviors[i],
+                                     m_pDarwinState->savedFlavors[i]);
         }
     }
 
@@ -519,19 +516,16 @@ bool XOSXDebugger::receiveException(STATE *pState)
         pState->nAddress = getXInfoDB()->getCurrentInstructionPointer_Id(pState->nThreadId);
         pState->nExceptionAddress = pState->nAddress;
 
-        if ((capture.exceptionType == EXC_SOFTWARE) && (capture.listCodes.count() >= 2) &&
-            (capture.listCodes.at(0) == EXC_SOFT_SIGNAL)) {
+        if ((capture.exceptionType == EXC_SOFTWARE) && (capture.listCodes.count() >= 2) && (capture.listCodes.at(0) == EXC_SOFT_SIGNAL)) {
             pState->nCode = static_cast<quint32>(capture.listCodes.at(1));
             if (pState->nCode == SIGTRAP) {
                 pState->debuggerStatus = DEBUGGER_STATUS_SIGTRAP;
             } else {
-                pState->debuggerStatus = ((pState->nCode == SIGSTOP) || (pState->nCode == SIGABRT)) ? DEBUGGER_STATUS_STOP
-                                                                                                   : DEBUGGER_STATUS_EXCEPTION;
+                pState->debuggerStatus = ((pState->nCode == SIGSTOP) || (pState->nCode == SIGABRT)) ? DEBUGGER_STATUS_STOP : DEBUGGER_STATUS_EXCEPTION;
             }
         } else if (capture.exceptionType == EXC_BREAKPOINT) {
-            const bool bPendingStep =
-                !getXInfoDB()->findBreakPointByThreadID(pState->nThreadId, XInfoDB::BPT_CODE_STEP_FLAG).sUUID.isEmpty() ||
-                !getXInfoDB()->findBreakPointByThreadID(pState->nThreadId, XInfoDB::BPT_CODE_STEP_TO_RESTORE).sUUID.isEmpty();
+            const bool bPendingStep = !getXInfoDB()->findBreakPointByThreadID(pState->nThreadId, XInfoDB::BPT_CODE_STEP_FLAG).sUUID.isEmpty() ||
+                                      !getXInfoDB()->findBreakPointByThreadID(pState->nThreadId, XInfoDB::BPT_CODE_STEP_TO_RESTORE).sUUID.isEmpty();
             bool bHardwareStep = bPendingStep;
 #if defined(Q_PROCESSOR_X86_64)
             bHardwareStep = bHardwareStep || (!capture.listCodes.isEmpty() && (capture.listCodes.at(0) == EXC_I386_SGL));
@@ -558,9 +552,8 @@ bool XOSXDebugger::receiveException(STATE *pState)
     while (true) {
         DARWIN_EXCEPTION_MESSAGE message = {};
         message.capture.hExpectedTask = m_pDarwinState->hTask;
-        const kern_return_t receiveResult = mach_msg(&message.request.header,
-                                                     MACH_RCV_MSG | MACH_RCV_INTERRUPT | MACH_RCV_TIMEOUT,
-                                                     0, sizeof(message.request.data), m_pDarwinState->hExceptionPort, 0, MACH_PORT_NULL);
+        const kern_return_t receiveResult = mach_msg(&message.request.header, MACH_RCV_MSG | MACH_RCV_INTERRUPT | MACH_RCV_TIMEOUT, 0, sizeof(message.request.data),
+                                                     m_pDarwinState->hExceptionPort, 0, MACH_PORT_NULL);
 
         if (receiveResult == MACH_RCV_TIMED_OUT) {
             break;
@@ -738,12 +731,11 @@ bool XOSXDebugger::replyCurrentException(qint32 nSignal, bool bForwardException)
     }
 
     DARWIN_EXCEPTION_MESSAGE &message = m_pDarwinState->currentMessage;
-    const bool bSoftSignal = (message.capture.exceptionType == EXC_SOFTWARE) && (message.capture.listCodes.count() >= 2) &&
-                             (message.capture.listCodes.at(0) == EXC_SOFT_SIGNAL);
+    const bool bSoftSignal =
+        (message.capture.exceptionType == EXC_SOFTWARE) && (message.capture.listCodes.count() >= 2) && (message.capture.listCodes.at(0) == EXC_SOFT_SIGNAL);
 
     if (bSoftSignal &&
-        (ptrace(PT_THUPDATE, getXInfoDB()->getProcessInfo()->nProcessID,
-                reinterpret_cast<caddr_t>(static_cast<uintptr_t>(message.capture.hThread)), nSignal) == -1)) {
+        (ptrace(PT_THUPDATE, getXInfoDB()->getProcessInfo()->nProcessID, reinterpret_cast<caddr_t>(static_cast<uintptr_t>(message.capture.hThread)), nSignal) == -1)) {
         return false;
     }
 
@@ -809,8 +801,8 @@ bool XOSXDebugger::continueAfterException(X_ID nThreadId, qint32 nSignal, bool b
 
     const QList<XInfoDB::THREAD_INFO> listThreadInfos = *(getXInfoDB()->getThreadInfos());
     for (const XInfoDB::THREAD_INFO &threadInfo : listThreadInfos) {
-        const XInfoDB::THREAD_STATUS status = (!nStepThreadId || (threadInfo.nThreadID == nStepThreadId)) ? XInfoDB::THREAD_STATUS_RUNNING
-                                                                                                         : XInfoDB::THREAD_STATUS_PAUSED;
+        const XInfoDB::THREAD_STATUS status =
+            (!nStepThreadId || (threadInfo.nThreadID == nStepThreadId)) ? XInfoDB::THREAD_STATUS_RUNNING : XInfoDB::THREAD_STATUS_PAUSED;
         getXInfoDB()->setThreadStatus(threadInfo.nThreadID, status);
     }
 

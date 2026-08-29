@@ -134,8 +134,7 @@ bool XWindowsDebugger::load()
 
     const wchar_t *pApplicationName = reinterpret_cast<const wchar_t *>(sFileName.utf16());
     const wchar_t *pCurrentDirectory = sDirectory.isEmpty() ? nullptr : reinterpret_cast<const wchar_t *>(sDirectory.utf16());
-    BOOL bCreateProcess = CreateProcessW(pApplicationName, commandLineBuffer.data(), nullptr, nullptr, 0, nFlags, nullptr, pCurrentDirectory, &sturtupInfo,
-                                         &processInfo);
+    BOOL bCreateProcess = CreateProcessW(pApplicationName, commandLineBuffer.data(), nullptr, nullptr, 0, nFlags, nullptr, pCurrentDirectory, &sturtupInfo, &processInfo);
 
     if (bCreateProcess) {
         cleanUp();

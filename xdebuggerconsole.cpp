@@ -63,8 +63,7 @@ bool XDebuggerConsole::run(XAbstractDebugger::OPTIONS options)
 
 #ifdef Q_OS_WIN
     connect(g_pThread, SIGNAL(started()), g_pDebugger, SLOT(process()));
-    connect(
-        g_pThread, &QThread::started, this, [this]() { g_nWorkerFinished.storeRelease(1); }, Qt::DirectConnection);
+    connect(g_pThread, &QThread::started, this, [this]() { g_nWorkerFinished.storeRelease(1); }, Qt::DirectConnection);
 #endif
     //    connect(pDebugger,SIGNAL(finished()),pDebugger,SLOT(deleteLater()));
 

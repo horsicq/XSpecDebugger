@@ -146,7 +146,7 @@ public slots:
     // Runs cleanup in the debugger's affinity thread, then asks its QThread to stop.
     void shutdown();
     void onDebuggerCommand(qint32 nCommand, quint64 nRequestId);  // runs on the worker thread (see DBGCOMMAND)
-    void testSlot(X_ID nThreadId);  // TODO remove
+    void testSlot(X_ID nThreadId);                                // TODO remove
 
 signals:
     void shutdownFinished();
